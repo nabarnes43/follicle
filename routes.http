@@ -1,0 +1,9 @@
+
+# Follicle API Routes
+# Use this file with REST Client extensions in VS Code or similar HTTP client
+
+#ML Classfication API Test
+http://localhost:3000/api/test-ml
+
+#Firebase API Test
+http://localhost:3000/api/test-firebase
