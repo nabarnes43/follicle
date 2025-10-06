@@ -2,45 +2,41 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { ProgressBar } from '@/components/quiz/ProgressBar'
 import { QuizQuestion } from '@/components/quiz/QuizQuestion'
 import { Button } from '@/components/ui/button'
-import { QUIZ_QUESTIONS } from '@/lib/quiz/questions'
+import { SHORT_QUIZ_QUESTIONS } from '@/lib/quiz/questions-short'
+import { saveQuizResults } from '@/lib/firebase/quiz'
+import { useAuth } from '@/contexts/auth'
 
 const QUESTIONS_PER_PAGE = 5
 
-type AnswerValue = string | string[] | number
-type Answers = Record<string, AnswerValue>
-
 export default function QuizPage() {
   const [currentPage, setCurrentPage] = useState(0)
-  const [answers, setAnswers] = useState<Answers>({})
+  const [answers, setAnswers] = useState<Record<string, any>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
+  const { user } = useAuth()
 
-  const totalPages = Math.ceil(QUIZ_QUESTIONS.length / QUESTIONS_PER_PAGE)
+  const totalPages = Math.ceil(SHORT_QUIZ_QUESTIONS.length / QUESTIONS_PER_PAGE)
   const startIdx = currentPage * QUESTIONS_PER_PAGE
-  const endIdx = Math.min(startIdx + QUESTIONS_PER_PAGE, QUIZ_QUESTIONS.length)
-  const currentQuestions = QUIZ_QUESTIONS.slice(startIdx, endIdx)
+  const endIdx = Math.min(
+    startIdx + QUESTIONS_PER_PAGE,
+    SHORT_QUIZ_QUESTIONS.length
+  )
+  const currentQuestions = SHORT_QUIZ_QUESTIONS.slice(startIdx, endIdx)
 
-  // Load saved answers from localStorage on mount
+  // Load from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('quizAnswers')
-    if (saved) {
-      try {
-        setAnswers(JSON.parse(saved))
-      } catch (e) {
-        console.error('Failed to load saved answers:', e)
-      }
-    }
+    if (saved) setAnswers(JSON.parse(saved))
   }, [])
 
-  // Save answers to localStorage whenever they change
+  // Save to localStorage
   useEffect(() => {
     localStorage.setItem('quizAnswers', JSON.stringify(answers))
   }, [answers])
-
-  const handleAnswer = (questionId: string, value: AnswerValue) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }))
-  }
 
   const handleNext = () => {
     if (currentPage < totalPages - 1) {
@@ -58,12 +54,36 @@ export default function QuizPage() {
     }
   }
 
-  const handleSubmit = () => {
-    console.log('Quiz submitted:', answers)
-    // TODO: Send to backend/ML service
+  const handleSubmit = async () => {
+    console.log('1. handleSubmit called')
+    console.log('2. User:', user)
+    console.log('3. Answers:', answers)
+
+    if (!user?.uid) {
+      console.log('4. NO USER UID - stopping')
+      return
+    }
+
+    console.log('5. User is valid, proceeding...')
+    const email = user.email || undefined
+
+    console.log('6. Starting submission...')
+    setIsSubmitting(true)
+
+    try {
+      console.log('7. Calling saveQuizResults...')
+      const follicleId = await saveQuizResults(user.uid, email, answers)
+      console.log('8. Got follicleId:', follicleId)
+
+      localStorage.removeItem('quizAnswers')
+      console.log('9. Navigating to results...')
+      router.push(`/quiz/results?follicleId=${follicleId}`)
+    } catch (error) {
+      console.error('10. ERROR:', error)
+      setIsSubmitting(false)
+    }
   }
 
-  // Check if current page has all required questions answered
   const canProceed = currentQuestions.every((q) => {
     if (!q.required) return true
     const answer = answers[q.id]
@@ -73,17 +93,15 @@ export default function QuizPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      {/* Clean Header with just progress */}
       <div className="bg-card sticky top-0 z-40 border-b">
         <div className="mx-auto max-w-3xl px-6 py-4">
           <ProgressBar
             currentStep={startIdx + 1}
-            totalSteps={QUIZ_QUESTIONS.length}
+            totalSteps={SHORT_QUIZ_QUESTIONS.length}
           />
         </div>
       </div>
 
-      {/* Quiz Content */}
       <div className="mx-auto max-w-3xl p-6">
         <div className="mb-8 space-y-12">
           {currentQuestions.map((question) => (
@@ -91,25 +109,34 @@ export default function QuizPage() {
               <QuizQuestion
                 question={question}
                 value={answers[question.id]}
-                onChange={(value) => handleAnswer(question.id, value)}
+                onChange={(value) =>
+                  setAnswers((prev) => ({ ...prev, [question.id]: value }))
+                }
               />
             </div>
           ))}
         </div>
 
-        {/* Navigation */}
         <div className="flex items-center justify-between pb-8">
           <Button
             onClick={handleBack}
-            disabled={currentPage === 0}
+            disabled={currentPage === 0 || isSubmitting}
             variant="outline"
             size="lg"
           >
             Back
           </Button>
 
-          <Button onClick={handleNext} disabled={!canProceed} size="lg">
-            {currentPage === totalPages - 1 ? 'Submit Quiz' : 'Continue'}
+          <Button
+            onClick={handleNext}
+            disabled={!canProceed || isSubmitting}
+            size="lg"
+          >
+            {isSubmitting
+              ? 'Submitting...'
+              : currentPage === totalPages - 1
+                ? 'Get My Results'
+                : 'Continue'}
           </Button>
         </div>
       </div>

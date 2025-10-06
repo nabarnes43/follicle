@@ -15,49 +15,52 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { User, ProviderData } from '@/types/user'
 
-// Get profile data from providers
-function getProfileData(providers: any[]) {
+// Helper typed function
+function getProfileData(providers: ProviderData[]) {
   const googleProvider = providers.find((p) => p.providerId === 'google.com')
   if (googleProvider) {
     return {
-      displayName: googleProvider.displayName,
-      photoURL: googleProvider.photoURL,
-      email: googleProvider.email,
+      email: googleProvider.email || null, // Change to null
+      photoUrl: googleProvider.photoURL || null, // Change to null
     }
   }
-
   return {
-    displayName: null,
-    photoURL: null,
-    email: providers[0]?.email || null,
+    email: providers[0]?.email || null, // Change to null
+    photoUrl: null,
   }
 }
 
 // Update Firestore with user profile
-async function updateUserProfile(user: any) {
-  const profile = getProfileData(user.providerData)
-
-  await setDoc(
-    doc(db, 'users', user.uid),
-    {
-      uid: user.uid,
-      isAnonymous: user.isAnonymous,
-      email: profile.email,
-      displayName: profile.displayName,
-      photoURL: profile.photoURL,
-      providerData: user.providerData.map((p: any) => ({
-        providerId: p.providerId,
-        email: p.email,
-        displayName: p.displayName,
-        photoURL: p.photoURL,
-      })),
-      lastLoginAt: serverTimestamp(),
-    },
-    { merge: true }
+async function updateUserProfile(firebaseUser: any) {
+  const providerData: ProviderData[] = firebaseUser.providerData.map(
+    (p: any) => ({
+      providerId: p.providerId,
+      email: p.email,
+      displayName: p.displayName,
+      photoURL: p.photoURL,
+      uid: p.uid,
+      phoneNumber: p.phoneNumber,
+    })
   )
-}
 
+  const profile = getProfileData(providerData)
+
+  const userData: Partial<User> = {
+    userId: firebaseUser.uid,
+    email: profile.email,
+    photoUrl: profile.photoUrl,
+    follicleId: '',
+    quizComplete: null,
+    isAnonymous: firebaseUser.isAnonymous,
+    providerData: providerData,
+    lastLoginAt: serverTimestamp(),
+  }
+
+  await setDoc(doc(db, 'users', firebaseUser.uid), userData, { merge: true })
+  console.log('✅ User profile updated')
+}
 interface SignUpFormProps {
   onSuccess: () => void
 }
