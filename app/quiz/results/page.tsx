@@ -12,9 +12,10 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Copy, Check } from 'lucide-react'
-import { getUser } from '@/lib/firebase/quiz'
+import { getUser, linkAnonymousResults } from '@/lib/firebase/quiz'
 import { getFollicleIdDescription } from '@/lib/quiz/follicleId'
 import { useAuth } from '@/contexts/auth'
+import AuthDialog from '@/components/auth/AuthDialog'
 import { User } from '@/types/user'
 
 export default function QuizResultsPage() {
@@ -25,10 +26,32 @@ export default function QuizResultsPage() {
   const [copied, setCopied] = useState(false)
   const [userData, setUserData] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [authTab, setAuthTab] = useState<'signup' | 'signin'>('signup')
+  const [previousUserId, setPreviousUserId] = useState<string | null>(null)
+
+  // Track when user was anonymous (before they sign in)
+  useEffect(() => {
+    if (authUser?.isAnonymous) {
+      setPreviousUserId(authUser.uid)
+    }
+  }, [authUser])
 
   useEffect(() => {
+    // If no follicleId in URL but user is logged in, get it from their profile
+    if (!follicleId && userData?.follicleId) {
+      router.replace(`/quiz/results?follicleId=${userData.follicleId}`)
+    }
+  }, [follicleId, userData, router])
+
+  // Load user data
+  useEffect(() => {
     async function loadUser() {
-      if (!authUser?.uid) return
+      if (!authUser?.uid) {
+        setLoading(false)
+        return
+      }
+
       try {
         const data = await getUser(authUser.uid)
         setUserData(data)
@@ -40,6 +63,34 @@ export default function QuizResultsPage() {
     }
     loadUser()
   }, [authUser])
+
+  // Handle linking anonymous results after sign in/signup
+  useEffect(() => {
+    async function handleAccountLink() {
+      if (!authUser || authUser.isAnonymous || !previousUserId) return
+
+      // User just signed in/up, and we have their previous anonymous ID
+      if (previousUserId !== authUser.uid) {
+        console.log('🔗 Linking anonymous results...')
+        try {
+          await linkAnonymousResults(
+            authUser.uid,
+            authUser.email || '',
+            previousUserId
+          )
+
+          // Reload user data to show updated info
+          const data = await getUser(authUser.uid)
+          setUserData(data)
+
+          setPreviousUserId(null) // Clear so we don't link again
+        } catch (error) {
+          console.error('Failed to link anonymous results:', error)
+        }
+      }
+    }
+    handleAccountLink()
+  }, [authUser, previousUserId])
 
   const copyFollicleId = () => {
     if (follicleId) {
@@ -58,6 +109,7 @@ export default function QuizResultsPage() {
   }
 
   const hair = userData?.hairAnalysis
+  const isAnonymous = authUser?.isAnonymous
 
   return (
     <div className="bg-background min-h-screen p-6">
@@ -97,6 +149,53 @@ export default function QuizResultsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Save Results Prompt for Anonymous Users */}
+        {isAnonymous && (
+          <Card className="border-primary mb-8">
+            <CardHeader>
+              <CardTitle>Save Your Results</CardTitle>
+              <CardDescription>
+                Create an account to save your hair profile and get personalized
+                recommendations
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => {
+                  setAuthTab('signup')
+                  setShowAuthDialog(true)
+                }}
+              >
+                Create Account
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setAuthTab('signin')
+                  setShowAuthDialog(true)
+                }}
+              >
+                Already Have an Account? Sign In
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Success message after linking */}
+        {!isAnonymous && authUser && (
+          <Card className="bg-primary/5 border-primary mb-8">
+            <CardContent className="pt-6">
+              <p className="text-center font-medium">
+                Your results have been saved to your account!
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Hair Analysis */}
         <Card className="mb-8">
@@ -141,11 +240,18 @@ export default function QuizResultsPage() {
 
         {/* CTA */}
         <div className="text-center">
-          <Button size="lg" onClick={() => router.push('/products')}>
-            Discover Products For Your Hair
+          <Button size="lg" variant="outline" onClick={() => router.push('/')}>
+            Back to Home
           </Button>
         </div>
       </div>
+
+      {/* Auth Dialog */}
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        defaultTab={authTab}
+      />
     </div>
   )
 }

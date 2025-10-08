@@ -5,7 +5,7 @@ import { auth, db } from '@/lib/firebase/client'
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth'
 import { User as FirebaseUser } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
-import { User, ProviderData } from '@/types/user'
+import { ProviderData } from '@/types/user'
 
 const AuthContext = createContext<{
   user: FirebaseUser | null
@@ -44,12 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           })
         )
 
-        const userData: Partial<User> = {
+        // Only update auth-related fields, don't touch quiz data
+        const authData = {
           userId: currentUser.uid,
           email: currentUser.email || null,
           photoUrl: currentUser.photoURL || null,
-          follicleId: '',
-          quizComplete: null,
+          displayName: currentUser.displayName || null,
           isAnonymous: currentUser.isAnonymous,
           providerData: providerData,
           lastLoginAt: serverTimestamp(),
@@ -58,13 +58,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!userDoc.exists()) {
           console.log('📝 Creating new user document')
           await setDoc(userDocRef, {
-            ...userData,
+            ...authData,
             createdAt: serverTimestamp(),
+            // Don't set follicleId or quizComplete - let quiz handle that
           })
           console.log('✅ User document created')
         } else {
           console.log('🔄 Updating existing user document')
-          await setDoc(userDocRef, userData, { merge: true })
+          // Use merge: true to only update auth fields, preserve quiz data
+          await setDoc(userDocRef, authData, { merge: true })
           console.log('✅ User document updated')
         }
 

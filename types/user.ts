@@ -4,6 +4,7 @@ export interface User {
   userId: string
   email: string | null // Remove undefined option
   photoUrl: string | null // Remove undefined option
+  displayName?: string | null
   follicleId: string
   quizComplete: Timestamp | FieldValue | null
   createdAt: Timestamp | FieldValue

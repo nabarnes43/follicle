@@ -20,15 +20,20 @@ import { User, ProviderData } from '@/types/user'
 // Helper typed function
 function getProfileData(providers: ProviderData[]) {
   const googleProvider = providers.find((p) => p.providerId === 'google.com')
-  if (googleProvider) {
+  if (googleProvider?.displayName) {
     return {
-      email: googleProvider.email || null, // Change to null
-      photoUrl: googleProvider.photoURL || null, // Change to null
+      email: googleProvider.email || null,
+      photoUrl: googleProvider.photoURL || null,
+      displayName: googleProvider.displayName || null, // Add this
     }
   }
+
+  // Email provider has no displayName/photoURL
+  const providerWithEmail = providers.find((p) => p.email)
   return {
-    email: providers[0]?.email || null, // Change to null
+    email: providerWithEmail?.email || null,
     photoUrl: null,
+    displayName: null, // Add this
   }
 }
 
@@ -37,11 +42,11 @@ async function updateUserProfile(firebaseUser: any) {
   const providerData: ProviderData[] = firebaseUser.providerData.map(
     (p: any) => ({
       providerId: p.providerId,
-      email: p.email,
-      displayName: p.displayName,
-      photoURL: p.photoURL,
+      email: p.email || null,
+      displayName: p.displayName || null,
+      photoURL: p.photoURL || null,
       uid: p.uid,
-      phoneNumber: p.phoneNumber,
+      phoneNumber: p.phoneNumber || null,
     })
   )
 
@@ -51,6 +56,7 @@ async function updateUserProfile(firebaseUser: any) {
     userId: firebaseUser.uid,
     email: profile.email,
     photoUrl: profile.photoUrl,
+    displayName: profile.displayName, // Add this
     follicleId: '',
     quizComplete: null,
     isAnonymous: firebaseUser.isAnonymous,
@@ -163,7 +169,7 @@ export default function SignUpForm({ onSuccess }: SignUpFormProps) {
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="w-full rounded-2xl bg-[#DB4437] text-white hover:bg-[#DB4437]/50 hover:text-white"
         onClick={handleGoogleSignUp}
         disabled={loading}
       >

@@ -90,7 +90,7 @@ export default function SignInForm({ onSuccess }: SignInFormProps) {
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className=" rounded-2xl w-full bg-[#DB4437] text-white hover:bg-[#DB4437]/50 hover:text-white"
         onClick={handleGoogleSignIn}
         disabled={loading}
       >
