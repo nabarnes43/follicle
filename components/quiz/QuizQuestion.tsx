@@ -109,7 +109,7 @@ function SelectQuestion({
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select an option..." />
         </SelectTrigger>
-        <SelectContent className="z-50 bg-white">
+        <SelectContent>
           {question.options?.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}

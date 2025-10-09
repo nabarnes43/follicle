@@ -17,6 +17,7 @@ import { getFollicleIdDescription } from '@/lib/quiz/follicleId'
 import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { User } from '@/types/user'
+import { productsCache } from '@/lib/matching/productsCache'
 
 export default function QuizResultsPage() {
   const searchParams = useSearchParams()
@@ -64,6 +65,11 @@ export default function QuizResultsPage() {
     loadUser()
   }, [authUser])
 
+  // Prefetch products in the background
+  useEffect(() => {
+    console.log('🚀 Starting prefetch...')
+    productsCache.prefetch()
+  }, [])
   // Handle linking anonymous results after sign in/signup
   useEffect(() => {
     async function handleAccountLink() {
@@ -239,7 +245,10 @@ export default function QuizResultsPage() {
         </Card>
 
         {/* CTA */}
-        <div className="text-center">
+        <div className="flex justify-center gap-4">
+          <Button size="lg" onClick={() => router.push('/recommendations')}>
+            View Product Recommendations
+          </Button>
           <Button size="lg" variant="outline" onClick={() => router.push('/')}>
             Back to Home
           </Button>

@@ -1,9 +1,38 @@
-
 # Follicle API Routes
 # Use this file with REST Client extensions in VS Code or similar HTTP client
 
-#ML Classfication API Test
-http://localhost:3000/api/test-ml
+### ML Classification API Test
+GET http://localhost:3000/api/test-ml
 
-#Firebase API Test
-http://localhost:3000/api/test-firebase
+### Firebase API Test
+GET http://localhost:3000/api/test-firebase
+
+
+### PRODUCT ROUTES ###
+
+### Get all product recommendations for a user
+GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1
+
+### Get recommendations with limit
+GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&limit=5
+
+### Get Shampoo recommendations
+GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Shampoos&limit=5
+
+### Get Conditioner recommendations
+GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Conditioners&limit=5
+
+### Get Leave-in Conditioner recommendations
+GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Leave-in Conditioners&limit=3
+
+### Get Hair Oils recommendations
+GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Hair Oils&limit=5
+
+### Get Hair Masks recommendations
+GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Hair Masks&limit=3
+
+### Test error: Missing userId
+GET http://localhost:3000/api/productRecommendations
+
+### Test error: Invalid userId
+GET http://localhost:3000/api/productRecommendations?userId=invalid-user-id

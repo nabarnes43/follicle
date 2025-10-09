@@ -4,28 +4,28 @@ export interface Product {
   name: string
   category: string
   price: number
-  imageUrl: string
+  image_url: string
 
   // Ingredient data
   ingredients: string[] // Raw ingredient names as listed
-  ingredientsNormalized: string[] // Uppercase normalized names
-  ingredientRefs: (string | null)[] // References to Ingredient docs (null if unmapped)
-  ingredientCount: number
-  unmappedIngredients: string[] // Ingredients not yet in database
+  ingredients_normalized: string[] // Uppercase normalized names
+  ingredient_refs: (string | null)[] // References to Ingredient docs (null if unmapped)
+  ingredient_count: number
+  unmapped_ingredients: string[] // Ingredients not yet in database
 
   // User engagement by hair type
-  engagementStats: ProductEngagementStats
+  engagement_stats: ProductEngagementStats
 
   // Metadata
   rating: number | null
-  reviewCount: number
-  createdAt: Date
-  updatedAt: Date
-  dataSource: string // e.g., "skinsort_migration", "manual_entry"
+  review_count: number
+  created_at: Date
+  updated_at: Date
+  data_source: string // e.g., "skinsort_migration", "manual_entry"
 
   // Optional fields
   description?: string
-  affiliateUrl?: string
+  affiliate_url?: string
 }
 
 export interface ProductEngagementStats {
@@ -34,12 +34,13 @@ export interface ProductEngagementStats {
   curly: HairTypeEngagement
   coily: HairTypeEngagement
   protective: HairTypeEngagement
-  lastUpdated: Date
+  last_updated: Date
 }
 
 export interface HairTypeEngagement {
   likes: number
   dislikes: number
+  saves: number // How many lists include this product
   rerolls: number // How many times users skipped this product
   routines: number // How many routines include this product
   views: number
@@ -48,11 +49,11 @@ export interface HairTypeEngagement {
 //This is really for the future and because it is already a field in the database
 export interface ProductReview {
   id: string
-  productId: string
-  userId: string
-  follicleId: string
+  product_id: string
+  user_id: string
+  follicle_id: string
   rating: number // 1-5
   review: string
   helpful: number
-  createdAt: Date
+  created_at: Date
 }
