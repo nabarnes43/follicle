@@ -12,6 +12,9 @@ export interface User {
   isAnonymous: boolean
   providerData: ProviderData[]
   lastLoginAt: Timestamp | FieldValue
+  likedProducts?: string[] // Cache for fast UI checks
+  dislikedProducts?: string[] // Cache for fast UI checks
+  savedProducts?: string[] // Cache for fast UI checks
 }
 
 export interface ProviderData {

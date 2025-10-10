@@ -14,7 +14,7 @@ export interface Product {
   unmapped_ingredients: string[] // Ingredients not yet in database
 
   // User engagement by hair type
-  engagement_stats: ProductEngagementStats
+  //engagement_stats: ProductEngagementStats
 
   // Metadata
   rating: number | null
@@ -28,6 +28,7 @@ export interface Product {
   affiliate_url?: string
 }
 
+//Deprecated for now new system.
 export interface ProductEngagementStats {
   straight: HairTypeEngagement
   wavy: HairTypeEngagement
@@ -37,6 +38,7 @@ export interface ProductEngagementStats {
   last_updated: Date
 }
 
+//Deprecated for now new system.
 export interface HairTypeEngagement {
   likes: number
   dislikes: number

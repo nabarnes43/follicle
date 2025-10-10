@@ -15,16 +15,29 @@ interface ProductCardProps {
  * - Product image, brand, name, and price
  * - Match score (how well it fits the user's hair)
  * - Match reasons (why this product was recommended)
+ *
+ * Click to view details (interactions happen on detail page)
  */
 export function ProductCard({ match, userHairType }: ProductCardProps) {
+  const { product } = match
+
+  const handleCardClick = () => {
+    // TODO: Navigate to product detail page
+    console.log('View product:', product.id)
+    // router.push(`/products/${product.id}`)
+  }
+
   return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-lg">
+    <Card
+      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
+      onClick={handleCardClick}
+    >
       {/* Product Image */}
-      {match.product.image_url && (
+      {product.image_url && (
         <div className="aspect-square overflow-hidden bg-gray-100">
           <img
-            src={match.product.image_url}
-            alt={match.product.name}
+            src={product.image_url}
+            alt={product.name}
             className="h-full w-full object-cover"
           />
         </div>
@@ -32,15 +45,13 @@ export function ProductCard({ match, userHairType }: ProductCardProps) {
 
       <CardContent className="p-4">
         {/* Brand & Name */}
-        <p className="text-muted-foreground text-sm">{match.product.brand}</p>
-        <h3 className="mb-2 line-clamp-2 font-semibold">
-          {match.product.name}
-        </h3>
+        <p className="text-muted-foreground text-sm">{product.brand}</p>
+        <h3 className="mb-2 line-clamp-2 font-semibold">{product.name}</h3>
 
         {/* Price & Match Score */}
         <div className="mb-3 flex items-center justify-between">
-          {match.product.price && (
-            <p className="font-bold">${match.product.price}</p>
+          {product.price && (
+            <p className="font-bold">${product.price.toFixed(2)}</p>
           )}
           <div className="text-right">
             <p className="text-primary text-2xl font-bold">
@@ -54,7 +65,7 @@ export function ProductCard({ match, userHairType }: ProductCardProps) {
         <div className="space-y-1">
           {match.matchReasons.map((reason, idx) => (
             <p key={idx} className="text-muted-foreground text-xs">
-              {reason}
+              • {reason}
             </p>
           ))}
         </div>

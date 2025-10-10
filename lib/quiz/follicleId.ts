@@ -1,18 +1,19 @@
-// lib/quiz/follicleId.ts
 import { HairAnalysis } from '@/types/user'
 
 /**
  * Generates follicleId from HairAnalysis
- * Format: [TEXTURE]-[POROSITY]-[DENSITY]-[THICKNESS]-[DAMAGE]
- * Example: 3B-M-H-C-S
+ * Format: [HAIRTYPE]-[POROSITY]-[DENSITY]-[THICKNESS]-[DAMAGE]
+ * Example: CU-H-M-F-N (Curly, High Porosity, Medium Density, Fine, No Damage)
+ *
+ * Uses 1 letter when possible, 2 letters only to avoid conflicts
  */
 export function generateFollicleId(hairAnalysis: HairAnalysis): string {
   const textureMap: Record<string, string> = {
-    straight: '1',
-    wavy: '2',
-    curly: '3',
-    coily: '4',
-    protective: 'P',
+    straight: 'ST',
+    wavy: 'WV',
+    curly: 'CU',
+    coily: 'CO',
+    protective: 'PR',
   }
 
   const porosityMap: Record<string, string> = {
@@ -40,7 +41,7 @@ export function generateFollicleId(hairAnalysis: HairAnalysis): string {
   }
 
   const parts = [
-    textureMap[hairAnalysis.hairType] || '3',
+    textureMap[hairAnalysis.hairType] || 'CU',
     porosityMap[hairAnalysis.porosity] || 'M',
     densityMap[hairAnalysis.density] || 'M',
     thicknessMap[hairAnalysis.thickness] || 'M',
@@ -48,6 +49,67 @@ export function generateFollicleId(hairAnalysis: HairAnalysis): string {
   ]
 
   return parts.join('-')
+}
+
+/**
+ * Decode a follicle ID back into display-ready components
+ * Example: 'CU-H-M-F-N' → { hairType: 'curly hair', porosity: 'high porosity', ... }
+ *
+ * Returns display-ready strings for use in UI and match reasons
+ */
+export function decodeFollicleId(follicleId: string): {
+  hairType: string
+  porosity: string
+  density: string
+  thickness: string
+  damage: string
+} | null {
+  const parts = follicleId.split('-')
+
+  if (parts.length !== 5) {
+    console.warn('Invalid follicle ID format:', follicleId)
+    return null
+  }
+
+  const textureMap: Record<string, string> = {
+    ST: 'straight hair',
+    WV: 'wavy hair',
+    CU: 'curly hair',
+    CO: 'coily hair',
+    PR: 'protective styles',
+  }
+
+  const porosityMap: Record<string, string> = {
+    L: 'low porosity',
+    M: 'medium porosity',
+    H: 'high porosity',
+  }
+
+  const densityMap: Record<string, string> = {
+    L: 'low density',
+    M: 'medium density',
+    H: 'high density',
+  }
+
+  const thicknessMap: Record<string, string> = {
+    F: 'fine strands',
+    M: 'medium strands',
+    C: 'coarse strands',
+  }
+
+  const damageMap: Record<string, string> = {
+    N: 'healthy hair',
+    S: 'some damage',
+    V: 'severe damage',
+  }
+
+  return {
+    hairType: textureMap[parts[0]] || 'curly hair',
+    porosity: porosityMap[parts[1]] || 'medium porosity',
+    density: densityMap[parts[2]] || 'medium density',
+    thickness: thicknessMap[parts[3]] || 'medium strands',
+    damage: damageMap[parts[4]] || 'healthy hair',
+  }
 }
 
 /**
@@ -74,49 +136,22 @@ export function answersToHairAnalysis(
 }
 
 /**
- * Get human-readable description
+ * Get human-readable description for display
+ * Uses bullet points to separate characteristics
  */
 export function getFollicleIdDescription(follicleId: string): string {
-  const parts = follicleId.split('-')
+  const decoded = decodeFollicleId(follicleId)
 
-  const textureDesc: Record<string, string> = {
-    '1': 'Straight',
-    '2': 'Wavy',
-    '3': 'Curly',
-    '4': 'Coily',
-    P: 'Protective',
-  }
-
-  const porosityDesc: Record<string, string> = {
-    L: 'Low porosity',
-    M: 'Medium porosity',
-    H: 'High porosity',
-  }
-
-  const densityDesc: Record<string, string> = {
-    L: 'Low density',
-    M: 'Medium density',
-    H: 'High density',
-  }
-
-  const thicknessDesc: Record<string, string> = {
-    F: 'Fine strands',
-    M: 'Medium strands',
-    C: 'Coarse strands',
-  }
-
-  const damageDesc: Record<string, string> = {
-    N: 'No damage',
-    S: 'Some damage',
-    V: 'Severe damage',
+  if (!decoded) {
+    return 'Invalid follicle ID'
   }
 
   return [
-    textureDesc[parts[0]],
-    porosityDesc[parts[1]],
-    densityDesc[parts[2]],
-    thicknessDesc[parts[3]],
-    damageDesc[parts[4]],
+    decoded.hairType,
+    decoded.porosity,
+    decoded.density,
+    decoded.thickness,
+    decoded.damage,
   ]
     .filter(Boolean)
     .join(' • ')
