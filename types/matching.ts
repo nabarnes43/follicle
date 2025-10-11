@@ -14,7 +14,6 @@ export interface RecommendationsResponse {
   category: string
   user: {
     follicleId: string
-    hairType: string
     budget?: number
   }
   recommendations: MatchScore[]

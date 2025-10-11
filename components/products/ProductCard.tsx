@@ -5,7 +5,7 @@ import { MatchScore } from '@/types/matching'
 
 interface ProductCardProps {
   match: MatchScore
-  userHairType: string
+  onClick?: () => void
 }
 
 /**
@@ -18,56 +18,59 @@ interface ProductCardProps {
  *
  * Click to view details (interactions happen on detail page)
  */
-export function ProductCard({ match, userHairType }: ProductCardProps) {
+export function ProductCard({ match, onClick }: ProductCardProps) {
   const { product } = match
-
-  const handleCardClick = () => {
-    // TODO: Navigate to product detail page
-    console.log('View product:', product.id)
-    // router.push(`/products/${product.id}`)
-  }
 
   return (
     <Card
-      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
-      onClick={handleCardClick}
+      className="flex h-full cursor-pointer flex-col overflow-hidden transition-shadow hover:shadow-lg"
+      onClick={onClick}
     >
       {/* Product Image */}
-      {product.image_url && (
-        <div className="aspect-square overflow-hidden bg-gray-100">
+      {product.image_url ? (
+        <div className="flex aspect-square items-center justify-center overflow-hidden bg-white">
           <img
             src={product.image_url}
             alt={product.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain p-4"
           />
+        </div>
+      ) : (
+        <div className="flex aspect-square items-center justify-center bg-gray-100">
+          <span className="text-muted-foreground text-sm">No image</span>
         </div>
       )}
 
-      <CardContent className="p-4">
-        {/* Brand & Name */}
+      <CardContent className="flex flex-1 flex-col p-4">
+        {/* Brand */}
         <p className="text-muted-foreground text-sm">{product.brand}</p>
-        <h3 className="mb-2 line-clamp-2 font-semibold">{product.name}</h3>
 
-        {/* Price & Match Score */}
-        <div className="mb-3 flex items-center justify-between">
-          {product.price && (
-            <p className="font-bold">${product.price.toFixed(2)}</p>
-          )}
+        {/* Product Name - Fixed height to prevent layout shift */}
+        <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] font-semibold">
+          {product.name}
+        </h3>
+
+        {/* Spacer to push price/match to bottom */}
+        <div className="flex-1" />
+
+        {/* Price & Match Score - Always in same position */}
+        <div className="flex items-end justify-between gap-4">
+          {/* Price - Fixed width to prevent match score from shifting */}
+          <div className="min-w-[4rem]">
+            {product.price ? (
+              <p className="font-bold">${product.price.toFixed(2)}</p>
+            ) : (
+              <p className="text-muted-foreground text-sm">Price N/A</p>
+            )}
+          </div>
+
+          {/* Match Score - Always right-aligned */}
           <div className="text-right">
             <p className="text-primary text-2xl font-bold">
               {Math.round(match.totalScore * 100)}%
             </p>
             <p className="text-muted-foreground text-xs">Match</p>
           </div>
-        </div>
-
-        {/* Match Reasons - Why this product was recommended */}
-        <div className="space-y-1">
-          {match.matchReasons.map((reason, idx) => (
-            <p key={idx} className="text-muted-foreground text-xs">
-              • {reason}
-            </p>
-          ))}
         </div>
       </CardContent>
     </Card>

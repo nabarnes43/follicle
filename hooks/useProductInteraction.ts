@@ -1,50 +1,179 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/auth'
-import type { InteractionType } from '@/types/interaction'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase/client'
+import type {
+  InteractionType,
+  UserProductInteractions,
+} from '@/types/interaction'
+import type { User } from '@/types/user'
 
-export function useProductInteraction() {
-  const { user } = useAuth()
+export function useProductInteraction(productId: string) {
+  const { user: authUser } = useAuth() // Firebase Auth user
+  const [firestoreUser, setFirestoreUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  const interact = async (
-    productId: string,
-    type: InteractionType // Use the proper type!
-  ) => {
-    // Must be logged in
-    if (!user) {
-      console.warn('User must be logged in to interact with products')
-      return { success: false, error: 'Not authenticated' }
-    }
+  // Track current interaction state for this product
+  const [interactions, setInteractions] = useState<UserProductInteractions>({
+    like: false,
+    dislike: false,
+    save: false,
+    view: false,
+  })
 
-    setIsLoading(true)
+  /**
+   * Fetch Firestore user document to get follicleId and cache arrays
+   */
+  const fetchFirestoreUser = useCallback(async () => {
+    if (!authUser?.uid) {
+      setFirestoreUser(null)
+      return
+    }
 
     try {
-      const response = await fetch('/api/interactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.uid,
-          productId,
-          type,
-        }),
-      })
-
-      const data = await response.json()
-      return data
+      const userDoc = await getDoc(doc(db, 'users', authUser.uid))
+      if (userDoc.exists()) {
+        setFirestoreUser(userDoc.data() as User)
+      }
     } catch (error) {
-      console.error('Interaction failed:', error)
-      return { success: false, error: 'Request failed' }
-    } finally {
-      setIsLoading(false)
+      console.error('Failed to fetch user document:', error)
     }
-  }
+  }, [authUser])
 
-  // Convenience methods for cleaner usage
+  useEffect(() => {
+    fetchFirestoreUser()
+  }, [fetchFirestoreUser])
+
+  /**
+   * Initialize interaction state from user cache arrays
+   */
+  useEffect(() => {
+    if (!firestoreUser || !productId) return
+
+    setInteractions({
+      like: firestoreUser.likedProducts?.includes(productId) ?? false,
+      dislike: firestoreUser.dislikedProducts?.includes(productId) ?? false,
+      save: firestoreUser.savedProducts?.includes(productId) ?? false,
+      view: false,
+    })
+  }, [firestoreUser, productId])
+
+  /**
+   * Generic interaction handler
+   */
+  const interact = useCallback(
+    async (type: InteractionType, shouldDelete: boolean = false) => {
+      if (!authUser?.uid || !firestoreUser?.follicleId) {
+        console.warn('User must be logged in with follicleId to interact')
+        return { success: false, error: 'Not authenticated' }
+      }
+
+      // Optimistic update
+      const previousState = interactions[type]
+      setInteractions((prev) => ({ ...prev, [type]: !previousState }))
+      setIsLoading(true)
+
+      try {
+        let response
+
+        if (shouldDelete) {
+          response = await fetch(
+            `/api/interactions?userId=${authUser.uid}&productId=${productId}&type=${type}`,
+            { method: 'DELETE' }
+          )
+        } else {
+          response = await fetch('/api/interactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: authUser.uid,
+              productId,
+              follicleId: firestoreUser.follicleId,
+              type,
+            }),
+          })
+        }
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Request failed')
+        }
+
+        // ✅ Refetch user to sync cache arrays
+        await fetchFirestoreUser()
+
+        return { success: true, data }
+      } catch (error) {
+        // Rollback optimistic update
+        setInteractions((prev) => ({ ...prev, [type]: previousState }))
+
+        const errorMessage =
+          error instanceof Error ? error.message : 'Request failed'
+        console.error('Interaction failed:', errorMessage)
+
+        return { success: false, error: errorMessage }
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [authUser, firestoreUser, productId, interactions, fetchFirestoreUser]
+  )
+
+  /**
+   * Toggle like (removes dislike if adding like)
+   */
+  const toggleLike = useCallback(async () => {
+    const isCurrentlyLiked = interactions.like
+    const isCurrentlyDisliked = interactions.dislike
+
+    // If adding like, also remove dislike optimistically
+    if (!isCurrentlyLiked && isCurrentlyDisliked) {
+      setInteractions((prev) => ({ ...prev, dislike: false }))
+    }
+
+    return interact('like', isCurrentlyLiked)
+  }, [interactions.like, interactions.dislike, interact])
+
+  /**
+   * Toggle dislike (removes like if adding dislike)
+   */
+  const toggleDislike = useCallback(async () => {
+    const isCurrentlyDisliked = interactions.dislike
+    const isCurrentlyLiked = interactions.like
+
+    // If adding dislike, also remove like optimistically
+    if (!isCurrentlyDisliked && isCurrentlyLiked) {
+      setInteractions((prev) => ({ ...prev, like: false }))
+    }
+
+    return interact('dislike', isCurrentlyDisliked)
+  }, [interactions.like, interactions.dislike, interact])
+
+  /**
+   * Toggle save
+   */
+  const toggleSave = useCallback(async () => {
+    return interact('save', interactions.save)
+  }, [interactions.save, interact])
+
+  /**
+   * Track view (allow multiple views)
+   */
+  const trackView = useCallback(async () => {
+    // Don't update local state for views (we don't cache them)
+    return interact('view', false)
+  }, [interact])
+
   return {
-    like: (productId: string) => interact(productId, 'like'),
-    dislike: (productId: string) => interact(productId, 'dislike'),
-    save: (productId: string) => interact(productId, 'save'),
-    view: (productId: string) => interact(productId, 'view'),
+    // State
+    interactions,
     isLoading,
+
+    // Actions
+    toggleLike,
+    toggleDislike,
+    toggleSave,
+    trackView,
   }
 }

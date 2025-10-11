@@ -92,9 +92,9 @@ export const EXACT_MATCH_BOOST = 1.5 // 50% boost
  * Controls how many reasons are shown to users
  */
 export const MATCH_REASONS_CONFIG = {
-  maxReasonsTotal: 10, // Maximum total reasons to show
-  maxBeneficialPerCharacteristic: 2, // Max beneficial ingredients per characteristic
-  maxAvoidedPerCharacteristic: 2, // Max avoided ingredients per characteristic
+  maxReasonsTotal: 100, // Maximum total reasons to show
+  maxBeneficialPerCharacteristic: 10, // Max beneficial ingredients per characteristic
+  maxAvoidedPerCharacteristic: 10, // Max avoided ingredients per characteristic
 } as const
 
 // ============================================================================

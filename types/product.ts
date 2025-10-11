@@ -28,26 +28,6 @@ export interface Product {
   affiliate_url?: string
 }
 
-//Deprecated for now new system.
-export interface ProductEngagementStats {
-  straight: HairTypeEngagement
-  wavy: HairTypeEngagement
-  curly: HairTypeEngagement
-  coily: HairTypeEngagement
-  protective: HairTypeEngagement
-  last_updated: Date
-}
-
-//Deprecated for now new system.
-export interface HairTypeEngagement {
-  likes: number
-  dislikes: number
-  saves: number // How many lists include this product
-  rerolls: number // How many times users skipped this product
-  routines: number // How many routines include this product
-  views: number
-}
-
 //This is really for the future and because it is already a field in the database
 export interface ProductReview {
   id: string

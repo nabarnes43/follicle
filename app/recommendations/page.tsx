@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/auth'
 import { ProductCard } from '@/components/products/ProductCard'
+import { ProductDetailDialog } from '@/components/products/ProductDetailDialog'
 import { productsCache } from '@/lib/matching/productsCache'
 import { matchProductsForUser } from '@/lib/matching/productMatcher'
 import { generateFollicleId } from '@/lib/quiz/follicleId'
@@ -19,15 +20,17 @@ const LOAD_MORE_INCREMENT = 24
 
 export default function RecommendationsPage() {
   const { user } = useAuth()
+
+  // Data
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [hairAnalysis, setHairAnalysis] = useState<HairAnalysis | null>(null)
   const [follicleId, setFollicleId] = useState<string>('')
-
-  // Store ALL scored products (scored once)
   const [allScoredProducts, setAllScoredProducts] = useState<MatchScore[]>([])
 
+  // UI State
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [displayLimit, setDisplayLimit] = useState(INITIAL_DISPLAY_LIMIT)
+  const [selectedMatch, setSelectedMatch] = useState<MatchScore | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isScoring, setIsScoring] = useState(false)
   const [hasScored, setHasScored] = useState(false)
@@ -40,10 +43,7 @@ export default function RecommendationsPage() {
   // Score all products ONCE when we have data
   useEffect(() => {
     if (hairAnalysis && allProducts.length > 0 && !hasScored && follicleId) {
-      scoreAllProducts().catch((err) => {
-        console.error('Scoring error:', err)
-        // At least it won't crash - user can refresh
-      })
+      scoreAllProducts()
     }
   }, [hairAnalysis, allProducts, hasScored, follicleId])
 
@@ -60,18 +60,17 @@ export default function RecommendationsPage() {
 
     setIsLoading(true)
     try {
-      console.log('📦 Fetching products from cache...')
+      // Get products from cache
       const products = await productsCache.getProducts()
       setAllProducts(products)
-      console.log(`✅ Got ${products.length} products from cache`)
 
+      // Get user's hair analysis
       const userDoc = await getDoc(doc(db, 'users', user.uid))
       const userData = userDoc.data()
 
       if (userData?.hairAnalysis) {
         setHairAnalysis(userData.hairAnalysis)
-        const fid = generateFollicleId(userData.hairAnalysis)
-        setFollicleId(fid)
+        setFollicleId(generateFollicleId(userData.hairAnalysis))
       }
     } catch (error) {
       console.error('Failed to fetch data:', error)
@@ -81,47 +80,17 @@ export default function RecommendationsPage() {
   }
 
   const scoreAllProducts = async () => {
-    if (!hairAnalysis || !user || !follicleId) {
-      console.log('⚠️ Missing data for scoring:', {
-        hasHairAnalysis: !!hairAnalysis,
-        hasUser: !!user,
-        hasFolicleId: !!follicleId,
-      })
-      return
-    }
+    if (!hairAnalysis || !user || !follicleId) return
 
-    console.log('🔍 Checking cache for:', { userId: user.uid, follicleId })
-
-    // Check cache first
-    const cached = productsCache.getScoredProducts(user.uid, follicleId)
-    if (cached) {
-      console.log('✅ Using cached scored products')
-      setAllScoredProducts(cached)
-      setHasScored(true)
-      return
-    }
-
-    console.log('❌ No cached scores found, will score now')
-
+    // Score products
     setIsScoring(true)
-    console.log('🧮 Starting to score ALL products...')
-
     try {
       const scored = await matchProductsForUser(
         { hairAnalysis },
         allProducts,
         follicleId,
-        {
-          category: undefined,
-          limit: 9999,
-        }
+        { category: undefined, limit: 9999 }
       )
-
-      console.log(`✅ Scored ${scored.length} products`)
-      console.log('💾 Saving to cache:', { userId: user.uid, follicleId })
-
-      // Cache the results
-      productsCache.setScoredProducts(user.uid, follicleId, scored)
 
       setAllScoredProducts(scored)
       setHasScored(true)
@@ -132,29 +101,23 @@ export default function RecommendationsPage() {
     }
   }
 
-  // Filter scored products by category in memory (instant!)
+  // Filter by category (instant - client-side)
   const filteredRecommendations = useMemo(() => {
-    if (selectedCategory === 'all') {
-      return allScoredProducts
-    }
-
+    if (selectedCategory === 'all') return allScoredProducts
     return allScoredProducts.filter(
-      (match) => match.product.category === selectedCategory
+      (m) => m.product.category === selectedCategory
     )
   }, [allScoredProducts, selectedCategory])
 
-  // Apply budget filter if needed
+  // Filter by budget (instant - client-side)
   const budgetFilteredRecommendations = useMemo(() => {
-    if (!hairAnalysis?.budget) {
-      return filteredRecommendations
-    }
-
+    if (!hairAnalysis?.budget) return filteredRecommendations
     return filteredRecommendations.filter(
-      (match) => match.product.price <= hairAnalysis.budget!
+      (m) => m.product.price <= hairAnalysis.budget!
     )
   }, [filteredRecommendations, hairAnalysis])
 
-  // Slice for display
+  // Slice for pagination
   const displayedRecommendations = budgetFilteredRecommendations.slice(
     0,
     displayLimit
@@ -164,6 +127,7 @@ export default function RecommendationsPage() {
     setDisplayLimit((prev) => prev + LOAD_MORE_INCREMENT)
   }
 
+  // Loading state
   if (isLoading) {
     return (
       <div className="container mx-auto p-8">
@@ -179,6 +143,7 @@ export default function RecommendationsPage() {
     )
   }
 
+  // Not logged in
   if (!user) {
     return (
       <div className="container mx-auto p-8">
@@ -190,6 +155,7 @@ export default function RecommendationsPage() {
     )
   }
 
+  // No hair analysis
   if (!hairAnalysis) {
     return (
       <div className="container mx-auto p-8">
@@ -210,6 +176,7 @@ export default function RecommendationsPage() {
 
   return (
     <div className="container mx-auto p-8">
+      {/* Header */}
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold">Your Recommendations</h1>
         <p className="text-muted-foreground">
@@ -217,6 +184,7 @@ export default function RecommendationsPage() {
         </p>
       </div>
 
+      {/* Category Filter */}
       <div className="mb-6">
         <div className="flex flex-wrap gap-2">
           <Button
@@ -231,7 +199,6 @@ export default function RecommendationsPage() {
             const count = allScoredProducts.filter(
               (m) => m.product.category === category
             ).length
-
             return (
               <Button
                 key={category}
@@ -246,6 +213,7 @@ export default function RecommendationsPage() {
         </div>
       </div>
 
+      {/* Scoring Progress */}
       {isScoring && (
         <div className="mb-4 py-8 text-center">
           <div className="border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2"></div>
@@ -260,6 +228,7 @@ export default function RecommendationsPage() {
         </div>
       )}
 
+      {/* Product Count */}
       {!isScoring && budgetFilteredRecommendations.length > 0 && (
         <div className="mb-4">
           <p className="text-muted-foreground text-sm">
@@ -270,6 +239,7 @@ export default function RecommendationsPage() {
         </div>
       )}
 
+      {/* Empty State */}
       {budgetFilteredRecommendations.length === 0 && !isScoring ? (
         <div className="py-12 text-center">
           <p className="text-muted-foreground text-lg">
@@ -279,16 +249,18 @@ export default function RecommendationsPage() {
         </div>
       ) : (
         <>
+          {/* Product Grid */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {displayedRecommendations.map((match) => (
               <ProductCard
                 key={match.product.id}
                 match={match}
-                userHairType={hairAnalysis.hairType}
+                onClick={() => setSelectedMatch(match)}
               />
             ))}
           </div>
 
+          {/* Load More Button */}
           {displayedRecommendations.length <
             budgetFilteredRecommendations.length &&
             !isScoring && (
@@ -303,6 +275,13 @@ export default function RecommendationsPage() {
             )}
         </>
       )}
+
+      {/* Product Detail Dialog - Where all interactions happen */}
+      <ProductDetailDialog
+        match={selectedMatch}
+        isOpen={selectedMatch !== null}
+        onClose={() => setSelectedMatch(null)}
+      />
     </div>
   )
 }
