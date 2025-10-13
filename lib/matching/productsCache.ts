@@ -2,25 +2,42 @@ import { Product } from '@/types/product'
 import { MatchScore } from '@/types/matching'
 
 /**
- * ProductsCache - Simple in-memory caching for products API calls
+ * ProductsCache - In-memory caching for products and match scores
  *
- * Why cache products?
- * - Products are fetched from server (which has its own cache)
- * - Prevents redundant API calls during the same page session
- * - Cache is cleared on page refresh (intentional - ensures fresh data)
- * -  No repeated API calls during navigation (in-memory cache)
+ * Products Cache:
+ * - Prevents redundant API calls during same page session
+ * - Cleared on page refresh (ensures fresh data)
+ * - Sever side caching to prevent repeat calls on refresh
  *
- * Why NOT cache scored products?
- * - Scores are based on engagement stats that change frequently
- * - During testing, we want fresh scores on every refresh
- * - Matching algorithm is fast enough to recalculate on demand
+ * Match Scores Cache:
+ * - Prevents expensive recalculation on tab switches
+ * - Keyed by userId (scores use user's full profile + engagement data)
+ * - Cleared when user updates profile or on page refresh
+ *
+ * Usage:
+ * ```typescript
+ * // Try to get cached scores
+ * let scored = productsCache.getScoredProducts(userId, productIds)
+ *
+ * if (!scored) {
+ *   // Calculate scores
+ *   scored = await matchProductsForUser(...)
+ *   // Cache them
+ *   productsCache.setScoredProducts(userId, scored)
+ * }
+ * ```
  */
+
 class ProductsCache {
   private static instance: ProductsCache
 
-  // In-memory cache for products (cleared on page refresh)
+  // Products cache
   private products: Product[] | null = null
   private fetchPromise: Promise<Product[]> | null = null
+
+  // Match scores cache - keyed by userId
+  // Stores ALL scored products for a user
+  private scoredProducts: Map<string, MatchScore[]> = new Map()
 
   private constructor() {}
 
@@ -38,19 +55,16 @@ class ProductsCache {
    * - Cache persists only during current page session
    */
   async getProducts(): Promise<Product[]> {
-    // Return cached products if available
     if (this.products) {
       console.log('✅ Using cached products from memory')
       return this.products
     }
 
-    // If fetch is already in progress, wait for it
     if (this.fetchPromise) {
       console.log('⏳ Waiting for in-progress fetch...')
       return this.fetchPromise
     }
 
-    // Start new fetch
     console.log('🚀 Fetching products from API...')
     this.fetchPromise = this.fetchFromAPI()
 
@@ -59,7 +73,6 @@ class ProductsCache {
 
   /**
    * Fetch products from API
-   * Server has its own cache, so this is fast after first request
    */
   private async fetchFromAPI(): Promise<Product[]> {
     try {
@@ -72,7 +85,6 @@ class ProductsCache {
       const data = await response.json()
       const products: Product[] = data.products
 
-      // Cache in memory for this session
       this.products = products
 
       const cacheStatus = data.cached
@@ -90,8 +102,74 @@ class ProductsCache {
   }
 
   /**
+   * Get ALL scored products for a user
+   * Returns null if not cached
+   */
+  getAllScoredProducts(userId: string): MatchScore[] | null {
+    const cached = this.scoredProducts.get(userId)
+    if (cached) {
+      console.log(
+        `✅ Using cached scores for userId: ${userId} (${cached.length} products)`
+      )
+    }
+    return cached || null
+  }
+
+  /**
+   * Get scored products filtered by product IDs
+   * Useful for saved/liked/disliked tabs where you only need specific products
+   * Returns null if full cache doesn't exist
+   */
+  getScoredProducts(
+    userId: string,
+    productIds?: string[]
+  ): MatchScore[] | null {
+    const allScored = this.getAllScoredProducts(userId)
+    if (!allScored) return null
+
+    // If no filter, return all
+    if (!productIds || productIds.length === 0) return allScored
+
+    // Filter by product IDs
+    const idSet = new Set(productIds)
+    const filtered = allScored.filter((m) => idSet.has(m.product.id))
+
+    console.log(
+      `✅ Filtered ${filtered.length}/${allScored.length} cached scores for userId: ${userId}`
+    )
+    return filtered
+  }
+
+  /**
+   * Cache ALL scored products for a user
+   * This should be the full scored product list (usually from recommendations page)
+   */
+  setAllScoredProducts(userId: string, scored: MatchScore[]): void {
+    this.scoredProducts.set(userId, scored)
+    console.log(
+      `💾 Cached ${scored.length} scored products for userId: ${userId}`
+    )
+  }
+
+  /**
+   * Clear scored products cache for a specific user
+   * Call this when user updates their hair profile
+   */
+  clearScoredProducts(userId: string): void {
+    this.scoredProducts.delete(userId)
+    console.log(`🗑️ Cleared scored products cache for userId: ${userId}`)
+  }
+
+  /**
+   * Clear all scored products (all users)
+   */
+  clearAllScoredProducts(): void {
+    this.scoredProducts.clear()
+    console.log('🗑️ Cleared all scored products cache')
+  }
+
+  /**
    * Prefetch products in background
-   * Useful to call early in app lifecycle
    */
   prefetch(): void {
     this.getProducts().catch((err) => {
@@ -101,7 +179,6 @@ class ProductsCache {
 
   /**
    * Clear products cache
-   * Useful for testing or forcing a refresh
    */
   clearProducts(): void {
     this.products = null
@@ -116,6 +193,13 @@ class ProductsCache {
   }
 
   /**
+   * Check if scores are cached for a user
+   */
+  hasCachedScores(userId: string): boolean {
+    return this.scoredProducts.has(userId)
+  }
+
+  /**
    * Get cache stats for debugging
    */
   getCacheStats() {
@@ -123,6 +207,11 @@ class ProductsCache {
       productsLoaded: this.products !== null,
       productCount: this.products?.length ?? 0,
       fetchInProgress: this.fetchPromise !== null,
+      scoredProductsCached: this.scoredProducts.size,
+      cachedFollicleIds: Array.from(this.scoredProducts.keys()),
+      scoredProductCounts: Array.from(this.scoredProducts.entries()).map(
+        ([id, scores]) => ({ userId: id, count: scores.length })
+      ),
     }
   }
 }

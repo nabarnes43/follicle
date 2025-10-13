@@ -4,6 +4,15 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '@/contexts/auth'
 import { ProductCard } from '@/components/products/ProductCard'
 import { ProductDetailDialog } from '@/components/products/ProductDetailDialog'
+import { Spinner } from '@/components/ui/spinner'
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
 import { productsCache } from '@/lib/matching/productsCache'
 import { matchProductsForUser } from '@/lib/matching/productMatcher'
 import { generateFollicleId } from '@/lib/quiz/follicleId'
@@ -15,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Package } from 'lucide-react'
 import type { Product } from '@/types/product'
 import type { HairAnalysis } from '@/types/user'
 import type { MatchScore } from '@/types/matching'
@@ -24,7 +34,6 @@ import { db } from '@/lib/firebase/client'
 const INITIAL_DISPLAY_LIMIT = 24
 const LOAD_MORE_INCREMENT = 24
 
-// All categories for dropdown
 const ALL_CATEGORIES = [
   'Shampoos',
   'Conditioners',
@@ -113,7 +122,15 @@ export default function RecommendationsPage() {
   const scoreAllProducts = async () => {
     if (!hairAnalysis || !user || !follicleId) return
 
-    // Score products
+    // Check cache first using userId
+    const cached = productsCache.getAllScoredProducts(user.uid)
+    if (cached) {
+      setAllScoredProducts(cached)
+      setHasScored(true)
+      return
+    }
+
+    // Cache miss - score products
     setIsScoring(true)
     try {
       const scored = await matchProductsForUser(
@@ -122,6 +139,9 @@ export default function RecommendationsPage() {
         follicleId,
         { category: undefined, limit: 9999 }
       )
+
+      // Cache for future use (keyed by userId)
+      productsCache.setAllScoredProducts(user.uid, scored)
 
       setAllScoredProducts(scored)
       setHasScored(true)
@@ -132,27 +152,40 @@ export default function RecommendationsPage() {
     }
   }
 
-  // Filter by category (instant - client-side)
-  const filteredRecommendations = useMemo(() => {
-    if (selectedCategory === 'all') return allScoredProducts
-    return allScoredProducts.filter(
-      (m) => m.product.category === selectedCategory
-    )
-  }, [allScoredProducts, selectedCategory])
+  // Combined filtering and pagination
+  const displayedRecommendations = useMemo(() => {
+    // Filter by category
+    let filtered =
+      selectedCategory === 'all'
+        ? allScoredProducts
+        : allScoredProducts.filter(
+            (m) => m.product.category === selectedCategory
+          )
 
-  // Filter by budget (instant - client-side)
-  const budgetFilteredRecommendations = useMemo(() => {
-    if (!hairAnalysis?.budget) return filteredRecommendations
-    return filteredRecommendations.filter(
-      (m) => m.product.price <= hairAnalysis.budget!
-    )
-  }, [filteredRecommendations, hairAnalysis])
+    // Filter by budget
+    if (hairAnalysis?.budget) {
+      filtered = filtered.filter((m) => m.product.price <= hairAnalysis.budget!)
+    }
 
-  // Slice for pagination
-  const displayedRecommendations = budgetFilteredRecommendations.slice(
-    0,
-    displayLimit
-  )
+    // Paginate
+    return filtered.slice(0, displayLimit)
+  }, [allScoredProducts, selectedCategory, hairAnalysis, displayLimit])
+
+  // Get total count for UI
+  const totalFilteredCount = useMemo(() => {
+    let filtered =
+      selectedCategory === 'all'
+        ? allScoredProducts
+        : allScoredProducts.filter(
+            (m) => m.product.category === selectedCategory
+          )
+
+    if (hairAnalysis?.budget) {
+      filtered = filtered.filter((m) => m.product.price <= hairAnalysis.budget!)
+    }
+
+    return filtered.length
+  }, [allScoredProducts, selectedCategory, hairAnalysis])
 
   const loadMore = () => {
     setDisplayLimit((prev) => prev + LOAD_MORE_INCREMENT)
@@ -161,14 +194,12 @@ export default function RecommendationsPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="container mx-auto">
-        <div className="flex min-h-[400px] items-center justify-center">
-          <div className="text-center">
-            <div className="border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2"></div>
-            <p className="text-lg">
-              Loading your personalized recommendations...
-            </p>
-          </div>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-12 w-12" />
+          <p className="text-muted-foreground text-lg">
+            Loading your personalized recommendations...
+          </p>
         </div>
       </div>
     )
@@ -177,11 +208,18 @@ export default function RecommendationsPage() {
   // Not logged in
   if (!user) {
     return (
-      <div className="container mx-auto">
-        <div className="text-center">
-          <h1 className="mb-4 text-3xl font-bold">Please Log In</h1>
-          <p>You need to be logged in to see personalized recommendations.</p>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Package />
+            </EmptyMedia>
+            <EmptyTitle>Please Log In</EmptyTitle>
+            <EmptyDescription>
+              You need to be logged in to see personalized recommendations.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </div>
     )
   }
@@ -189,25 +227,30 @@ export default function RecommendationsPage() {
   // No hair analysis
   if (!hairAnalysis) {
     return (
-      <div className="container mx-auto">
-        <div className="text-center">
-          <h1 className="mb-4 text-3xl font-bold">
-            Complete Your Hair Analysis
-          </h1>
-          <p className="mb-4">
-            Take our 10-minute analisys to get personalized product
-            recommendations.
-          </p>
-          <Button onClick={() => (window.location.href = '/quiz')}>
-            Take Quiz
-          </Button>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Package />
+            </EmptyMedia>
+            <EmptyTitle>Complete Your Hair Analysis</EmptyTitle>
+            <EmptyDescription>
+              Take our 10-minute analysis to get personalized product
+              recommendations.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button onClick={() => (window.location.href = '/quiz')}>
+              Take Quiz
+            </Button>
+          </EmptyContent>
+        </Empty>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold">
@@ -241,38 +284,40 @@ export default function RecommendationsPage() {
 
       {/* Scoring Progress */}
       {isScoring && (
-        <div className="mb-4 py-8 text-center">
-          <div className="border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2"></div>
+        <div className="flex flex-col items-center justify-center gap-4 py-8">
+          <Spinner className="h-12 w-12" />
           <p className="text-muted-foreground text-sm">
             Analyzing {allProducts.length} products with follicle matching
             algorithm...
-            <br />
-            <span className="text-xs">
-              This happens once and takes 30-60 seconds
-            </span>
           </p>
         </div>
       )}
 
       {/* Product Count */}
-      {!isScoring && budgetFilteredRecommendations.length > 0 && (
+      {!isScoring && totalFilteredCount > 0 && (
         <div className="mb-4">
           <p className="text-muted-foreground text-sm">
-            Showing {displayedRecommendations.length} of{' '}
-            {budgetFilteredRecommendations.length} products
+            Showing {displayedRecommendations.length} of {totalFilteredCount}{' '}
+            products
             {hairAnalysis.budget && ` (under $${hairAnalysis.budget})`}
           </p>
         </div>
       )}
 
       {/* Empty State */}
-      {budgetFilteredRecommendations.length === 0 && !isScoring ? (
-        <div className="py-12 text-center">
-          <p className="text-muted-foreground text-lg">
-            No products found in this category
-            {hairAnalysis.budget && ` under $${hairAnalysis.budget}`}.
-          </p>
-        </div>
+      {totalFilteredCount === 0 && !isScoring ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Package />
+            </EmptyMedia>
+            <EmptyTitle>No Products Found</EmptyTitle>
+            <EmptyDescription>
+              No products found in this category
+              {hairAnalysis.budget && ` under $${hairAnalysis.budget}`}.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <>
           {/* Product Grid */}
@@ -287,14 +332,12 @@ export default function RecommendationsPage() {
           </div>
 
           {/* Load More Button */}
-          {displayedRecommendations.length <
-            budgetFilteredRecommendations.length &&
+          {displayedRecommendations.length < totalFilteredCount &&
             !isScoring && (
               <div className="mt-8 text-center">
                 <Button onClick={loadMore} size="lg">
                   Load More Products (
-                  {budgetFilteredRecommendations.length -
-                    displayedRecommendations.length}{' '}
+                  {totalFilteredCount - displayedRecommendations.length}{' '}
                   remaining)
                 </Button>
               </div>
@@ -302,7 +345,7 @@ export default function RecommendationsPage() {
         </>
       )}
 
-      {/* Product Detail Dialog - Where all interactions happen */}
+      {/* Product Detail Dialog */}
       <ProductDetailDialog
         match={selectedMatch}
         isOpen={selectedMatch !== null}
