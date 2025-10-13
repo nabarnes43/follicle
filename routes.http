@@ -1,38 +1,116 @@
-# Follicle API Routes
-# Use this file with REST Client extensions in VS Code or similar HTTP client
+### ==============================================
+### FOLLICLE API TESTING
+### ==============================================
+###
+### Test your API routes with real data
+### Make sure dev server is running: npm run dev
+###
+### ==============================================
 
-### ML Classification API Test
-GET http://localhost:3000/api/test-ml
+@baseUrl = http://localhost:3000
+@userId = MzCTihlddchzDsiVoAjcHbxGaRt1
+@follicleId = PR-M-M-C-N
+@productId = 100_pure_burdock_and_neem_healthy_scalp_conditioner
 
-### Firebase API Test
-GET http://localhost:3000/api/test-firebase
+### ==============================================
+### PRODUCTS API
+### ==============================================
 
+### Get all products (with server cache)
+GET {{baseUrl}}/api/products
 
-### PRODUCT ROUTES ###
+### ==============================================
+### INTERACTIONS API
+### ==============================================
 
-### Get all product recommendations for a user
-GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1
+### Create LIKE interaction
+POST {{baseUrl}}/api/interactions
+Content-Type: application/json
 
-### Get recommendations with limit
-GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&limit=5
+{
+  "userId": "{{userId}}",
+  "productId": "{{productId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "like"
+}
 
-### Get Shampoo recommendations
-GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Shampoos&limit=5
+### Create DISLIKE interaction (removes like)
+POST {{baseUrl}}/api/interactions
+Content-Type: application/json
 
-### Get Conditioner recommendations
-GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Conditioners&limit=5
+{
+  "userId": "{{userId}}",
+  "productId": "{{productId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "dislike"
+}
 
-### Get Leave-in Conditioner recommendations
-GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Leave-in Conditioners&limit=3
+### Create SAVE interaction
+POST {{baseUrl}}/api/interactions
+Content-Type: application/json
 
-### Get Hair Oils recommendations
-GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Hair Oils&limit=5
+{
+  "userId": "{{userId}}",
+  "productId": "{{productId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "save"
+}
 
-### Get Hair Masks recommendations
-GET http://localhost:3000/api/productRecommendations?userId=MzCTihlddchzDsiVoAjcHbxGaRt1&category=Hair Masks&limit=3
+### Create VIEW interaction (allows multiple)
+POST {{baseUrl}}/api/interactions
+Content-Type: application/json
 
-### Test error: Missing userId
-GET http://localhost:3000/api/productRecommendations
+{
+  "userId": "{{userId}}",
+  "productId": "{{productId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "view"
+}
 
-### Test error: Invalid userId
-GET http://localhost:3000/api/productRecommendations?userId=invalid-user-id
+### Delete LIKE interaction
+DELETE {{baseUrl}}/api/interactions?userId={{userId}}&productId={{productId}}&type=like
+
+### Delete DISLIKE interaction
+DELETE {{baseUrl}}/api/interactions?userId={{userId}}&productId={{productId}}&type=dislike
+
+### Delete SAVE interaction
+DELETE {{baseUrl}}/api/interactions?userId={{userId}}&productId={{productId}}&type=save
+
+### Test missing field (should return 400)
+POST {{baseUrl}}/api/interactions
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "productId": "{{productId}}",
+  "type": "like"
+}
+
+### Test invalid type (should return 400)
+POST {{baseUrl}}/api/interactions
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "productId": "{{productId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "invalid"
+}
+
+### ==============================================
+### NOTES
+### ==============================================
+###
+### Expected Responses:
+### - 201: Created successfully
+### - 200: Deleted successfully  
+### - 400: Bad request (missing/invalid data)
+### - 404: Not found
+### - 409: Conflict (duplicate)
+### - 500: Server error
+###
+### After each test, check Firestore console:
+### - interactions/ collection
+### - users/{userId}/likedProducts, dislikedProducts, savedProducts
+###
+### ==============================================
