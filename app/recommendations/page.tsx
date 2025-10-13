@@ -8,7 +8,13 @@ import { productsCache } from '@/lib/matching/productsCache'
 import { matchProductsForUser } from '@/lib/matching/productMatcher'
 import { generateFollicleId } from '@/lib/quiz/follicleId'
 import { Button } from '@/components/ui/button'
-import { PRODUCT_CATEGORIES } from '@/lib/matching/config/categories'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Product } from '@/types/product'
 import type { HairAnalysis } from '@/types/user'
 import type { MatchScore } from '@/types/matching'
@@ -17,6 +23,31 @@ import { db } from '@/lib/firebase/client'
 
 const INITIAL_DISPLAY_LIMIT = 24
 const LOAD_MORE_INCREMENT = 24
+
+// All categories for dropdown
+const ALL_CATEGORIES = [
+  'Shampoos',
+  'Conditioners',
+  'Hair Masks',
+  'Styling Creams & Sprays',
+  'Hair Oils',
+  'Leave-in Conditioners',
+  'Hair Serums',
+  'Gel, Pomade & Wax',
+  'Leave-in Treatments',
+  'Scalp Treatments',
+  'Styling Tools',
+  'Hair Sprays',
+  'Dry Shampoos',
+  'Mousse & Foam',
+  'Heat Protectants',
+  'Scalp Scrubs',
+  'Detanglers',
+  'Other Hair Cleansers',
+  'Hair Loss',
+  'Other Haircare',
+  'Other Styling',
+]
 
 export default function RecommendationsPage() {
   const { user } = useAuth()
@@ -130,7 +161,7 @@ export default function RecommendationsPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto">
         <div className="flex min-h-[400px] items-center justify-center">
           <div className="text-center">
             <div className="border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2"></div>
@@ -146,7 +177,7 @@ export default function RecommendationsPage() {
   // Not logged in
   if (!user) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto">
         <div className="text-center">
           <h1 className="mb-4 text-3xl font-bold">Please Log In</h1>
           <p>You need to be logged in to see personalized recommendations.</p>
@@ -158,13 +189,14 @@ export default function RecommendationsPage() {
   // No hair analysis
   if (!hairAnalysis) {
     return (
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto">
         <div className="text-center">
           <h1 className="mb-4 text-3xl font-bold">
             Complete Your Hair Analysis
           </h1>
           <p className="mb-4">
-            Take our 5-minute quiz to get personalized product recommendations.
+            Take our 10-minute analisys to get personalized product
+            recommendations.
           </p>
           <Button onClick={() => (window.location.href = '/quiz')}>
             Take Quiz
@@ -175,42 +207,36 @@ export default function RecommendationsPage() {
   }
 
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">Your Recommendations</h1>
+        <h1 className="mb-2 text-3xl font-bold">
+          Your Product Recommendations
+        </h1>
         <p className="text-muted-foreground">
-          Personalized with fuzzy follicle matching
+          Personalized with follicle matching algorithm
         </p>
       </div>
 
       {/* Category Filter */}
-      <div className="mb-6">
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedCategory === 'all' ? 'default' : 'outline'}
-            onClick={() => setSelectedCategory('all')}
-            disabled={isScoring}
-          >
-            All Products{' '}
-            {allScoredProducts.length > 0 && `(${allScoredProducts.length})`}
-          </Button>
-          {PRODUCT_CATEGORIES.map((category) => {
-            const count = allScoredProducts.filter(
-              (m) => m.product.category === category
-            ).length
-            return (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? 'default' : 'outline'}
-                onClick={() => setSelectedCategory(category)}
-                disabled={isScoring || count === 0}
-              >
-                {category} {count > 0 && `(${count})`}
-              </Button>
-            )
-          })}
-        </div>
+      <div className="mb-8">
+        <Select
+          value={selectedCategory}
+          onValueChange={setSelectedCategory}
+          disabled={isScoring}
+        >
+          <SelectTrigger className="w-[280px]">
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Products</SelectItem>
+            {ALL_CATEGORIES.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Scoring Progress */}
@@ -218,8 +244,8 @@ export default function RecommendationsPage() {
         <div className="mb-4 py-8 text-center">
           <div className="border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2"></div>
           <p className="text-muted-foreground text-sm">
-            Analyzing {allProducts.length} products with fuzzy follicle
-            matching...
+            Analyzing {allProducts.length} products with follicle matching
+            algorithm...
             <br />
             <span className="text-xs">
               This happens once and takes 30-60 seconds
