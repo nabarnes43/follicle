@@ -5,9 +5,10 @@ import { MatchScore } from '@/types/matching'
  * ProductsCache - Simple in-memory caching for products API calls
  *
  * Why cache products?
- * - Products are fetched from server (which has its own 1-hour cache)
+ * - Products are fetched from server (which has its own cache)
  * - Prevents redundant API calls during the same page session
  * - Cache is cleared on page refresh (intentional - ensures fresh data)
+ * -  No repeated API calls during navigation (in-memory cache)
  *
  * Why NOT cache scored products?
  * - Scores are based on engagement stats that change frequently
@@ -58,7 +59,7 @@ class ProductsCache {
 
   /**
    * Fetch products from API
-   * Server has its own 1-hour cache, so this is fast after first request
+   * Server has its own cache, so this is fast after first request
    */
   private async fetchFromAPI(): Promise<Product[]> {
     try {
