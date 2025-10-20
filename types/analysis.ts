@@ -1,16 +1,16 @@
 export type QuestionType = 'radio' | 'select' | 'slider' | 'multiselect'
 
-export interface QuestionOption {
+export interface AnalysisOption {
   value: string
   label: string
   description?: string
 }
 
-export interface QuizQuestion {
+export interface AnalysisQuestion {
   id: string
   type: QuestionType
   question: string
-  options?: QuestionOption[]
+  options?: AnalysisOption[]
   min?: number
   max?: number
   step?: number

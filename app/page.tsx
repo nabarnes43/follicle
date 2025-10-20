@@ -14,24 +14,24 @@ import {
 import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'
 import SignOutButton from '@/components/auth/SignOutButton'
-import { getUser } from '@/lib/firebase/quiz'
+import { getUser } from '@/lib/firebase/analysis'
 
 export default function HomePage() {
   const router = useRouter()
   const { user, loading } = useAuth()
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [authTab, setAuthTab] = useState<'signup' | 'signin'>('signup')
-  const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false)
-  const [checkingQuiz, setCheckingQuiz] = useState(true)
+  const [hasCompletedAnalysis, setHasCompletedAnalysis] = useState(false)
+  const [checkingAnalysis, setCheckingAnalysis] = useState(true)
 
-  // Check if user has completed quiz
+  // Check if user has completed analysis
   useEffect(() => {
-    async function checkQuizStatus() {
-      console.log('1. Checking quiz status for user:', user)
+    async function checkAnalysis() {
+      console.log('1. Checking analysis status for user:', user)
 
       if (!user || user.isAnonymous) {
         console.log('2. User is anonymous or null, skipping check')
-        setCheckingQuiz(false)
+        setCheckingAnalysis(false)
         return
       }
 
@@ -40,17 +40,17 @@ export default function HomePage() {
         const userData = await getUser(user.uid)
         console.log('4. User data:', userData)
         console.log('5. Has follicleId?', !!userData?.follicleId)
-        setHasCompletedQuiz(!!userData?.follicleId)
+        setHasCompletedAnalysis(!!userData?.follicleId)
       } catch (error) {
-        console.error('Failed to check quiz status:', error)
+        console.error('Failed to check analysis status:', error)
       } finally {
-        setCheckingQuiz(false)
+        setCheckingAnalysis(false)
       }
     }
 
-    checkQuizStatus()
+    checkAnalysis()
   }, [user])
-  if (loading || checkingQuiz) {
+  if (loading || checkingAnalysis) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Loading...</p>
@@ -58,12 +58,12 @@ export default function HomePage() {
     )
   }
 
-  const startQuiz = () => {
-    router.push('/quiz')
+  const startAnalysis = () => {
+    router.push('/analysis')
   }
 
   const viewResults = () => {
-    router.push('/quiz/results')
+    router.push('/analysis/results')
   }
 
   return (
@@ -80,20 +80,20 @@ export default function HomePage() {
           )}
 
           <CardTitle className="mb-4 text-4xl">
-            {hasCompletedQuiz
+            {hasCompletedAnalysis
               ? 'Your Hair Care Profile'
               : 'Discover Your Perfect Hair Care Routine'}
           </CardTitle>
           <CardDescription className="text-lg">
-            {hasCompletedQuiz
-              ? 'View your results or retake the quiz to update your profile'
-              : 'Take our 5-minute hair analysis quiz to get your unique Follicle ID and personalized product recommendations.'}
+            {hasCompletedAnalysis
+              ? 'View your results or retake the analysis to update your profile'
+              : 'Take our 10-minute hair analysis to get your unique Follicle ID and personalized product recommendations.'}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
           {/* Main CTA */}
-          {hasCompletedQuiz ? (
+          {hasCompletedAnalysis ? (
             <div className="space-y-3">
               <Button
                 size="lg"
@@ -106,18 +106,18 @@ export default function HomePage() {
                 size="lg"
                 variant="outline"
                 className="w-full py-6 text-lg"
-                onClick={startQuiz}
+                onClick={startAnalysis}
               >
-                Retake Quiz
+                Retake Analysis
               </Button>
             </div>
           ) : (
             <Button
               size="lg"
               className="w-full py-6 text-lg"
-              onClick={startQuiz}
+              onClick={startAnalysis}
             >
-              Take Hair Quiz
+              Take Hair Analysis
             </Button>
           )}
 

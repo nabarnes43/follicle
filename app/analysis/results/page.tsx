@@ -1,4 +1,4 @@
-// app/quiz/results/page.tsx
+// app/analysis/results/page.tsx
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -12,14 +12,14 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Copy, Check } from 'lucide-react'
-import { getUser, linkAnonymousResults } from '@/lib/firebase/quiz'
-import { getFollicleIdDescription } from '@/lib/quiz/follicleId'
+import { getUser, linkAnonymousResults } from '@/lib/firebase/analysis'
+import { getFollicleIdDescription } from '@/lib/analysis/follicleId'
 import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { User } from '@/types/user'
 import { productsCache } from '@/lib/matching/productsCache'
 
-export default function QuizResultsPage() {
+export default function AnalysisResultsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const follicleId = searchParams.get('follicleId')
@@ -41,7 +41,7 @@ export default function QuizResultsPage() {
   useEffect(() => {
     // If no follicleId in URL but user is logged in, get it from their profile
     if (!follicleId && userData?.follicleId) {
-      router.replace(`/quiz/results?follicleId=${userData.follicleId}`)
+      router.replace(`/analysis/results?follicleId=${userData.follicleId}`)
     }
   }, [follicleId, userData, router])
 

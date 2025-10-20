@@ -113,7 +113,7 @@ export function decodeFollicleId(follicleId: string): {
 }
 
 /**
- * Convert quiz answers directly to HairAnalysis
+ * Convert analysis answers directly to HairAnalysis
  */
 export function answersToHairAnalysis(
   answers: Record<string, any>

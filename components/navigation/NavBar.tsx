@@ -21,32 +21,32 @@ export default function NavBar() {
   const { user, loading } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
-  const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false)
-  const [checkingQuiz, setCheckingQuiz] = useState(true)
+  const [hasCompletedAnalysis, setHasCompletedAnalysis] = useState(false)
+  const [checkingAnalysis, setCheckingAnalysis] = useState(true)
 
   useEffect(() => {
-    const checkQuizCompletion = async () => {
+    const checkAnalysisCompletion = async () => {
       if (!user) {
-        setCheckingQuiz(false)
+        setCheckingAnalysis(false)
         return
       }
 
       try {
         const userDoc = await getDoc(doc(db, 'users', user.uid))
         const follicleId = userDoc.data()?.follicleId
-        setHasCompletedQuiz(!!follicleId)
+        setHasCompletedAnalysis(!!follicleId)
       } catch (error) {
-        console.error('Error checking quiz completion:', error)
-        setHasCompletedQuiz(false)
+        console.error('Error checking analysis completion:', error)
+        setHasCompletedAnalysis(false)
       } finally {
-        setCheckingQuiz(false)
+        setCheckingAnalysis(false)
       }
     }
 
-    checkQuizCompletion()
+    checkAnalysisCompletion()
   }, [user])
 
-  if (loading || checkingQuiz || !hasCompletedQuiz) {
+  if (loading || checkingAnalysis || !hasCompletedAnalysis) {
     return null
   }
 
@@ -68,7 +68,7 @@ export default function NavBar() {
     <nav className="bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 border-b backdrop-blur">
       <div className="container mx-auto flex h-16 items-center justify-between">
         {/* Logo - Left */}
-        <Link href="/recommendations">
+        <Link href="/">
           <span className="text-xl font-bold">Follicle</span>
         </Link>
 
@@ -83,7 +83,7 @@ export default function NavBar() {
                 key={link.href}
                 href={link.href}
                 className={`hover:text-primary flex items-center space-x-2 text-sm font-medium transition-colors ${
-                  isActive ? 'text-foreground' : 'text-muted-foreground'
+                  isActive ? 'text-black' : 'text-muted-foreground'
                 }`}
               >
                 <Icon className="h-4 w-4" />

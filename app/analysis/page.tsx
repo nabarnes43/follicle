@@ -1,41 +1,43 @@
-// app/quiz/page.tsx
+// app/analysis/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ProgressBar } from '@/components/quiz/ProgressBar'
-import { QuizQuestion } from '@/components/quiz/QuizQuestion'
+import { ProgressBar } from '@/components/analysis/ProgressBar'
+import { AnalysisQuestion } from '@/components/analysis/AnalysisQuestion'
 import { Button } from '@/components/ui/button'
-import { SHORT_QUIZ_QUESTIONS } from '@/lib/quiz/questions-short'
-import { saveQuizResults } from '@/lib/firebase/quiz'
+import { SHORT_ANALYSIS_QUESTIONS } from '@/lib/analysis/questions-short'
+import { saveAnalysisResults } from '@/lib/firebase/analysis'
 import { useAuth } from '@/contexts/auth'
 
 const QUESTIONS_PER_PAGE = 5
 
-export default function QuizPage() {
+export default function AnalysisPage() {
   const [currentPage, setCurrentPage] = useState(0)
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
   const { user } = useAuth()
 
-  const totalPages = Math.ceil(SHORT_QUIZ_QUESTIONS.length / QUESTIONS_PER_PAGE)
+  const totalPages = Math.ceil(
+    SHORT_ANALYSIS_QUESTIONS.length / QUESTIONS_PER_PAGE
+  )
   const startIdx = currentPage * QUESTIONS_PER_PAGE
   const endIdx = Math.min(
     startIdx + QUESTIONS_PER_PAGE,
-    SHORT_QUIZ_QUESTIONS.length
+    SHORT_ANALYSIS_QUESTIONS.length
   )
-  const currentQuestions = SHORT_QUIZ_QUESTIONS.slice(startIdx, endIdx)
+  const currentQuestions = SHORT_ANALYSIS_QUESTIONS.slice(startIdx, endIdx)
 
   // Load from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('quizAnswers')
+    const saved = localStorage.getItem('analysisAnswers')
     if (saved) setAnswers(JSON.parse(saved))
   }, [])
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem('quizAnswers', JSON.stringify(answers))
+    localStorage.setItem('analysisAnswers', JSON.stringify(answers))
   }, [answers])
 
   const handleNext = () => {
@@ -71,13 +73,13 @@ export default function QuizPage() {
     setIsSubmitting(true)
 
     try {
-      console.log('7. Calling saveQuizResults...')
-      const follicleId = await saveQuizResults(user.uid, email, answers)
+      console.log('7. Calling saveAnalysisResults...')
+      const follicleId = await saveAnalysisResults(user.uid, email, answers)
       console.log('8. Got follicleId:', follicleId)
 
-      localStorage.removeItem('quizAnswers')
+      localStorage.removeItem('analysisAnswers')
       console.log('9. Navigating to results...')
-      router.push(`/quiz/results?follicleId=${follicleId}`)
+      router.push(`/analysis/results?follicleId=${follicleId}`)
     } catch (error) {
       console.error('10. ERROR:', error)
       setIsSubmitting(false)
@@ -97,7 +99,7 @@ export default function QuizPage() {
         <div className="mx-auto max-w-3xl px-6 py-4">
           <ProgressBar
             currentStep={startIdx + 1}
-            totalSteps={SHORT_QUIZ_QUESTIONS.length}
+            totalSteps={SHORT_ANALYSIS_QUESTIONS.length}
           />
         </div>
       </div>
@@ -106,7 +108,7 @@ export default function QuizPage() {
         <div className="mb-8 space-y-12">
           {currentQuestions.map((question) => (
             <div key={question.id} className="bg-card rounded-lg border p-6">
-              <QuizQuestion
+              <AnalysisQuestion
                 question={question}
                 value={answers[question.id]}
                 onChange={(value) =>

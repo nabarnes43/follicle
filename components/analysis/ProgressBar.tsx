@@ -1,4 +1,4 @@
-// components/quiz/ProgressBar.tsx
+// components/analysis/ProgressBar.tsx
 import { Progress } from '@/components/ui/progress'
 
 interface ProgressBarProps {

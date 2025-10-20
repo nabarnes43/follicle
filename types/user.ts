@@ -6,7 +6,7 @@ export interface User {
   photoUrl: string | null // Remove undefined option
   displayName?: string | null
   follicleId: string
-  quizComplete: Timestamp | FieldValue | null
+  analysisComplete: Timestamp | FieldValue | null
   createdAt: Timestamp | FieldValue
   hairAnalysis?: HairAnalysis // This can stay optional with ?
   isAnonymous: boolean

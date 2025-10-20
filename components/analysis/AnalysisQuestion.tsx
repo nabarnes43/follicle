@@ -1,4 +1,4 @@
-// components/quiz/QuizQuestion.tsx
+// components/analysis/AnalysisQuestion.tsx
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
@@ -10,15 +10,19 @@ import {
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Checkbox } from '@/components/ui/checkbox'
-import { QuizQuestion as QuizQuestionType } from '@/types/quiz'
+import { AnalysisQuestion as AnalysisQuestionType } from '@/types/analysis'
 
-interface QuizQuestionProps {
-  question: QuizQuestionType
+interface AnalysisQuestionProps {
+  question: AnalysisQuestionType
   value?: string | string[] | number
   onChange: (value: string | string[] | number) => void
 }
 
-export function QuizQuestion({ question, value, onChange }: QuizQuestionProps) {
+export function AnalysisQuestion({
+  question,
+  value,
+  onChange,
+}: AnalysisQuestionProps) {
   switch (question.type) {
     case 'radio':
       return (
@@ -63,7 +67,7 @@ function RadioQuestion({
   value,
   onChange,
 }: {
-  question: QuizQuestionType
+  question: AnalysisQuestionType
   value?: string
   onChange: (value: string) => void
 }) {
@@ -98,7 +102,7 @@ function SelectQuestion({
   value,
   onChange,
 }: {
-  question: QuizQuestionType
+  question: AnalysisQuestionType
   value?: string
   onChange: (value: string) => void
 }) {
@@ -127,7 +131,7 @@ function SliderQuestion({
   value,
   onChange,
 }: {
-  question: QuizQuestionType
+  question: AnalysisQuestionType
   value?: number
   onChange: (value: number) => void
 }) {
@@ -170,7 +174,7 @@ function MultiSelectQuestion({
   value = [],
   onChange,
 }: {
-  question: QuizQuestionType
+  question: AnalysisQuestionType
   value?: string[]
   onChange: (value: string[]) => void
 }) {

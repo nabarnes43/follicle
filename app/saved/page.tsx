@@ -1,18 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/auth'
-import {
-  doc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-} from 'firebase/firestore'
+import { useSearchParams } from 'next/navigation'
+import { RequireAuth } from '@/components/auth/RequireAuth'
+import { User } from '@/types/user'
+import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { Product } from '@/types/product'
-import { User, HairAnalysis } from '@/types/user'
 import { MatchScore } from '@/types/matching'
 import { ProductCard } from '@/components/products/ProductCard'
 import { ProductDetailDialog } from '@/components/products/ProductDetailDialog'
@@ -25,17 +19,16 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { matchProductsForUser } from '@/lib/matching/productMatcher'
-import { generateFollicleId } from '@/lib/quiz/follicleId'
+import { generateFollicleId } from '@/lib/analysis/follicleId'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Heart, Bookmark, ThumbsDown } from 'lucide-react'
 import { productsCache } from '@/lib/matching/productsCache'
 
-export default function SavedPage() {
-  const { user } = useAuth()
+function SavedContent({ userData }: { userData: User }) {
+  const searchParams = useSearchParams()
+  const defaultTab = searchParams.get('tab') || 'saved'
 
   // Data
-  const [hairAnalysis, setHairAnalysis] = useState<HairAnalysis | null>(null)
-  const [follicleId, setFollicleId] = useState<string>('')
   const [likedMatches, setLikedMatches] = useState<MatchScore[]>([])
   const [savedMatches, setSavedMatches] = useState<MatchScore[]>([])
   const [dislikedMatches, setDislikedMatches] = useState<MatchScore[]>([])
@@ -45,42 +38,33 @@ export default function SavedPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchUserAndProducts()
-  }, [user])
+    fetchUserProducts()
+  }, [userData])
 
-  const fetchUserAndProducts = async () => {
-    if (!user) return
-
+  const fetchUserProducts = async () => {
     try {
-      // Fetch user document
-      const userDoc = await getDoc(doc(db, 'users', user.uid))
-      if (!userDoc.exists()) return
-
-      const userData = userDoc.data() as User
       const analysis = userData.hairAnalysis
       if (!analysis) return
 
-      setHairAnalysis(analysis)
-      const fid = generateFollicleId(analysis)
-      setFollicleId(fid)
+      const follicleId = generateFollicleId(analysis)
 
-      // Get product IDs
+      // Get product IDs from userData
       const likedIds = userData.likedProducts || []
       const savedIds = userData.savedProducts || []
       const dislikedIds = userData.dislikedProducts || []
 
       // Check cache first using userId
-      const cachedScores = productsCache.getAllScoredProducts(user.uid)
+      const cachedScores = productsCache.getAllScoredProducts(userData.userId)
 
       if (cachedScores) {
         // Use cached scores - instant!
         console.log('✅ Using cached scores for saved page')
         const likedScored =
-          productsCache.getScoredProducts(user.uid, likedIds) || []
+          productsCache.getScoredProducts(userData.userId, likedIds) || []
         const savedScored =
-          productsCache.getScoredProducts(user.uid, savedIds) || []
+          productsCache.getScoredProducts(userData.userId, savedIds) || []
         const dislikedScored =
-          productsCache.getScoredProducts(user.uid, dislikedIds) || []
+          productsCache.getScoredProducts(userData.userId, dislikedIds) || []
 
         setLikedMatches(likedScored)
         setSavedMatches(savedScored)
@@ -95,19 +79,19 @@ export default function SavedPage() {
         const likedScored = await matchProductsForUser(
           { hairAnalysis: analysis },
           likedProducts,
-          fid,
+          follicleId,
           { limit: 9999 }
         )
         const savedScored = await matchProductsForUser(
           { hairAnalysis: analysis },
           savedProducts,
-          fid,
+          follicleId,
           { limit: 9999 }
         )
         const dislikedScored = await matchProductsForUser(
           { hairAnalysis: analysis },
           dislikedProducts,
-          fid,
+          follicleId,
           { limit: 9999 }
         )
 
@@ -150,14 +134,6 @@ export default function SavedPage() {
     return allProducts
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Spinner className="h-12 w-12" />
-      </div>
-    )
-  }
-
   // Render tab content
   const renderTabContent = (
     matches: MatchScore[],
@@ -192,11 +168,19 @@ export default function SavedPage() {
     )
   }
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner className="h-12 w-12" />
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="mb-8 text-3xl font-bold">My Products</h1>
 
-      <Tabs defaultValue="saved" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="mb-8">
           <TabsTrigger value="saved" className="flex items-center gap-2">
             <Bookmark className="h-4 w-4" />
@@ -244,5 +228,13 @@ export default function SavedPage() {
         onClose={() => setSelectedMatch(null)}
       />
     </div>
+  )
+}
+
+export default function SavedPage() {
+  return (
+    <RequireAuth requireFollicleId>
+      {(userData) => <SavedContent userData={userData} />}
+    </RequireAuth>
   )
 }

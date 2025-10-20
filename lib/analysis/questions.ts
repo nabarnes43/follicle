@@ -1,7 +1,7 @@
-// lib/quiz/questions.ts
-import { QuizQuestion } from '@/types/quiz'
+// lib/analysis/questions.ts
+import { AnalysisQuestion } from '@/types/analysis'
 
-export const QUIZ_QUESTIONS: QuizQuestion[] = [
+export const ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
   // === POROSITY & MOISTURE ===
   {
     id: 'dryTime',

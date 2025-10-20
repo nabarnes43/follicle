@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { useAuth } from '@/contexts/auth'
+import { RequireAuth } from '@/components/auth/RequireAuth'
+import { User } from '@/types/user'
 import { ProductCard } from '@/components/products/ProductCard'
 import { ProductDetailDialog } from '@/components/products/ProductDetailDialog'
 import { Spinner } from '@/components/ui/spinner'
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/empty'
 import { productsCache } from '@/lib/matching/productsCache'
 import { matchProductsForUser } from '@/lib/matching/productMatcher'
-import { generateFollicleId } from '@/lib/quiz/follicleId'
+import { generateFollicleId } from '@/lib/analysis/follicleId'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -26,10 +27,7 @@ import {
 } from '@/components/ui/select'
 import { Package } from 'lucide-react'
 import type { Product } from '@/types/product'
-import type { HairAnalysis } from '@/types/user'
 import type { MatchScore } from '@/types/matching'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase/client'
 
 const INITIAL_DISPLAY_LIMIT = 24
 const LOAD_MORE_INCREMENT = 24
@@ -58,13 +56,9 @@ const ALL_CATEGORIES = [
   'Other Styling',
 ]
 
-export default function RecommendationsPage() {
-  const { user } = useAuth()
-
+function RecommendationsContent({ userData }: { userData: User }) {
   // Data
   const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [hairAnalysis, setHairAnalysis] = useState<HairAnalysis | null>(null)
-  const [follicleId, setFollicleId] = useState<string>('')
   const [allScoredProducts, setAllScoredProducts] = useState<MatchScore[]>([])
 
   // UI State
@@ -75,62 +69,51 @@ export default function RecommendationsPage() {
   const [isScoring, setIsScoring] = useState(false)
   const [hasScored, setHasScored] = useState(false)
 
-  // Fetch products and user data once
+  const hairAnalysis = userData.hairAnalysis!
+  const follicleId = generateFollicleId(hairAnalysis)
+
+  // Fetch products once
   useEffect(() => {
-    fetchInitialData()
-  }, [user])
+    fetchProducts()
+  }, [])
 
   // Score all products ONCE when we have data
   useEffect(() => {
-    if (hairAnalysis && allProducts.length > 0 && !hasScored && follicleId) {
+    if (allProducts.length > 0 && !hasScored) {
       scoreAllProducts()
     }
-  }, [hairAnalysis, allProducts, hasScored, follicleId])
+  }, [allProducts, hasScored])
 
   // Reset display limit when category changes
   useEffect(() => {
     setDisplayLimit(INITIAL_DISPLAY_LIMIT)
   }, [selectedCategory])
 
-  const fetchInitialData = async () => {
-    if (!user) {
-      setIsLoading(false)
-      return
-    }
-
+  const fetchProducts = async () => {
     setIsLoading(true)
     try {
       // Get products from cache
       const products = await productsCache.getProducts()
       setAllProducts(products)
-
-      // Get user's hair analysis
-      const userDoc = await getDoc(doc(db, 'users', user.uid))
-      const userData = userDoc.data()
-
-      if (userData?.hairAnalysis) {
-        setHairAnalysis(userData.hairAnalysis)
-        setFollicleId(generateFollicleId(userData.hairAnalysis))
-      }
     } catch (error) {
-      console.error('Failed to fetch data:', error)
+      console.error('Failed to fetch products:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
   const scoreAllProducts = async () => {
-    if (!hairAnalysis || !user || !follicleId) return
-
     // Check cache first using userId
-    const cached = productsCache.getAllScoredProducts(user.uid)
+    const cached = productsCache.getAllScoredProducts(userData.userId)
     if (cached) {
+      console.log('✅ Using cached scores for recommendations')
       setAllScoredProducts(cached)
       setHasScored(true)
       return
     }
 
     // Cache miss - score products
+    console.log('❌ No cached scores - scoring all products')
     setIsScoring(true)
     try {
       const scored = await matchProductsForUser(
@@ -141,7 +124,7 @@ export default function RecommendationsPage() {
       )
 
       // Cache for future use (keyed by userId)
-      productsCache.setAllScoredProducts(user.uid, scored)
+      productsCache.setAllScoredProducts(userData.userId, scored)
 
       setAllScoredProducts(scored)
       setHasScored(true)
@@ -201,50 +184,6 @@ export default function RecommendationsPage() {
             Loading your personalized recommendations...
           </p>
         </div>
-      </div>
-    )
-  }
-
-  // Not logged in
-  if (!user) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Package />
-            </EmptyMedia>
-            <EmptyTitle>Please Log In</EmptyTitle>
-            <EmptyDescription>
-              You need to be logged in to see personalized recommendations.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </div>
-    )
-  }
-
-  // No hair analysis
-  if (!hairAnalysis) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Package />
-            </EmptyMedia>
-            <EmptyTitle>Complete Your Hair Analysis</EmptyTitle>
-            <EmptyDescription>
-              Take our 10-minute analysis to get personalized product
-              recommendations.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <Button onClick={() => (window.location.href = '/quiz')}>
-              Take Quiz
-            </Button>
-          </EmptyContent>
-        </Empty>
       </div>
     )
   }
@@ -352,5 +291,13 @@ export default function RecommendationsPage() {
         onClose={() => setSelectedMatch(null)}
       />
     </div>
+  )
+}
+
+export default function RecommendationsPage() {
+  return (
+    <RequireAuth requireFollicleId>
+      {(userData) => <RecommendationsContent userData={userData} />}
+    </RequireAuth>
   )
 }

@@ -29,6 +29,7 @@
   --color-input: #e5e5e5;
   --color-ring: #6c6063;
   --color-popover: #ffffff;
+  --color-card: #ffffff;
 
   /* Border Radius */
   --radius-lg: var(--radius);

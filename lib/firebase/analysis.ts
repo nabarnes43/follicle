@@ -1,13 +1,16 @@
-// lib/firebase/quiz.ts
+// lib/firebase/analysis.ts
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from './client'
 import { User, HairAnalysis } from '@/types/user'
-import { generateFollicleId, answersToHairAnalysis } from '../quiz/follicleId'
+import {
+  generateFollicleId,
+  answersToHairAnalysis,
+} from '../analysis/follicleId'
 
 /**
- * Save quiz results
+ * Save analysis results
  */
-export async function saveQuizResults(
+export async function saveAnalysisResults(
   userId: string,
   email: string | undefined,
   answers: Record<string, any>
@@ -22,7 +25,7 @@ export async function saveQuizResults(
       email: email || null,
       follicleId,
       hairAnalysis,
-      quizComplete: serverTimestamp(),
+      analysisComplete: serverTimestamp(),
       createdAt: serverTimestamp(),
     },
     { merge: true }
@@ -40,7 +43,7 @@ export async function getUser(userId: string): Promise<User | null> {
 }
 
 /**
- * Link anonymous quiz results to authenticated user
+ * Link anonymous analysis results to authenticated user
  * Called after sign in/signup from results page
  */
 export async function linkAnonymousResults(
@@ -64,7 +67,7 @@ export async function linkAnonymousResults(
       email,
       follicleId: anonymousData.follicleId,
       hairAnalysis: anonymousData.hairAnalysis,
-      quizComplete: serverTimestamp(),
+      analysisComplete: serverTimestamp(),
       createdAt: serverTimestamp(),
     },
     { merge: true }

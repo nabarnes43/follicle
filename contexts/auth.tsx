@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           })
         )
 
-        // Only update auth-related fields, don't touch quiz data
+        // Only update auth-related fields, don't touch analysis data
         const authData = {
           userId: currentUser.uid,
           email: currentUser.email || null,
@@ -60,12 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await setDoc(userDocRef, {
             ...authData,
             createdAt: serverTimestamp(),
-            // Don't set follicleId or quizComplete - let quiz handle that
+            // Don't set follicleId or analysisComplete - let analysis handle that
           })
           console.log('✅ User document created')
         } else {
           console.log('🔄 Updating existing user document')
-          // Use merge: true to only update auth fields, preserve quiz data
+          // Use merge: true to only update auth fields, preserve analysis data
           await setDoc(userDocRef, authData, { merge: true })
           console.log('✅ User document updated')
         }

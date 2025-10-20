@@ -1,7 +1,7 @@
-// lib/quiz/questions-short.ts
-import { QuizQuestion } from '@/types/quiz'
+// lib/analysis/questions-short.ts
+import { AnalysisQuestion } from '@/types/analysis'
 
-export const SHORT_QUIZ_QUESTIONS: QuizQuestion[] = [
+export const SHORT_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
   // 1. Hair Type
   {
     id: 'hairType',

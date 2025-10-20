@@ -58,7 +58,7 @@ async function updateUserProfile(firebaseUser: any) {
     photoUrl: profile.photoUrl,
     displayName: profile.displayName, // Add this
     follicleId: '',
-    quizComplete: null,
+    analysisComplete: null,
     isAnonymous: firebaseUser.isAnonymous,
     providerData: providerData,
     lastLoginAt: serverTimestamp(),

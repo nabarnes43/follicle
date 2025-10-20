@@ -1,6 +1,6 @@
 import { Product } from '@/types/product'
 import { HairAnalysis } from '@/types/user'
-import { generateFollicleId, decodeFollicleId } from '@/lib/quiz/follicleId'
+import { generateFollicleId, decodeFollicleId } from '@/lib/analysis/follicleId'
 import { INGREDIENT_PROFILES } from '../config/ingredientProfiles'
 import {
   INGREDIENT_CATEGORY_WEIGHTS,
