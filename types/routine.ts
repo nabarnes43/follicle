@@ -1,37 +1,51 @@
+// Main routine interface
 export interface Routine {
-  routineId: string
-  userId: string
-  creatorName: string
-  follicleId: string // Matches users with same hairAnalysis
-  title: string
-  description: string
+  id: string
+  user_id: string
+  follicle_id: string
+  name: string
+  description?: string
   steps: RoutineStep[]
-  frequency: string
-  visibility: 'public' | 'private'
-  engagementStats: EngagementStats
-  createdAt: Date
-  updatedAt?: Date // Optional for tracking edits
+  frequency: Frequency // Overall routine frequency
+  is_public: boolean
+  created_at: Date
+  updated_at: Date
 }
 
+// Frequency structure for routines and steps
+export interface Frequency {
+  interval: number // 1, 2, 3...
+  unit: 'day' | 'week' | 'month'
+  days_of_week?: string[] // For weekly: ['Mo', 'Tu']
+  day_of_month?: number // For monthly: 1-31
+}
+// Product within a routine step (with amount)
+export interface StepProduct {
+  product_id: string
+  amount?: string // Free text: "Dime-sized", "2 pumps", etc.
+}
+
+// Individual step in a routine
 export interface RoutineStep {
   order: number
-  type: 'shampoo' | 'condition' | 'style' | 'treatment' | 'detangle' | 'other'
-  productId: string
-  amount: string // e.g., "dime-sized", "quarter-sized", "2 pumps"
-  technique: string // e.g., "scrunch", "rake through", "prayer hands"
-  notes?: string // Optional additional notes
+  step_name: string // Free text or from suggested categories
+  products: StepProduct[] // Multiple products per step
+  frequency: Frequency
+  notes?: string
+  technique?: string
 }
 
-export interface EngagementStats {
-  straight: HairTypeEngagement
-  wavy: HairTypeEngagement
-  curly: HairTypeEngagement
-  coily: HairTypeEngagement
-  protective: HairTypeEngagement
-}
-
-export interface HairTypeEngagement {
-  saves: number
-  tries: number
-  success: number
-}
+// Suggested step categories for the dropdown
+export const SUGGESTED_STEP_NAMES = [
+  'Shampoo',
+  'Condition',
+  'Deep Condition',
+  'Detangle',
+  'Scalp Treatment',
+  'Hair Mask',
+  'Diffuse',
+  'Air Dry',
+  'Plop',
+  'Refresh',
+  'Other',
+] as const
