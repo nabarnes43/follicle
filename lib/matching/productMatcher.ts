@@ -1,7 +1,6 @@
 import { Product } from '@/types/product'
 import { HairAnalysis } from '@/types/user'
 import { MatchScore } from '@/types/matching'
-import { generateFollicleId } from '@/lib/analysis/follicleId'
 import { scoreByIngredients } from './scoring/ingredientScoring'
 import { scoreByEngagement } from './scoring/engagementScoring'
 import { ALGORITHM_WEIGHTS } from './config/weights'
