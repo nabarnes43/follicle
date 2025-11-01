@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Products collection
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Ingredients collection
+    match /ingredients/{ingredientId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Interactions collection
+    match /interactions/{interactionId} {
+      allow read: if true;
+      
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.follicleId is string
+                    && request.resource.data.productId is string
+                    && request.resource.data.type in ['like', 'dislike', 'save', 'view'];
+      
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+      
+      allow update: if false;
+    }
+    
+    // Routines collection
+    match /routines/{routineId} {
+      // Allow anyone to read public routines
+      allow read: if resource.data.is_public == true;
+      
+      // Allow authenticated users to read their own routines (public or private)
+      allow read: if request.auth != null && request.auth.uid == resource.data.user_id;
+      
+      // Allow authenticated users to create routines (for client-side operations)
+      allow create: if request.auth != null 
+                    && request.resource.data.user_id == request.auth.uid;
+      
+      // Allow users to update/delete their own routines
+      allow update, delete: if request.auth != null 
+                            && request.auth.uid == resource.data.user_id;
+    }
+  }
+}

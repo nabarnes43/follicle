@@ -98,6 +98,89 @@ Content-Type: application/json
 }
 
 ### ==============================================
+### ROUTINES API
+### ==============================================
+
+@routineId = iGdBbXfyZ3xS5HZwR82X
+
+### Get all routines for a user
+GET {{baseUrl}}/api/routines?userId={{userId}}
+
+### Get single routine (public or owned)
+GET {{baseUrl}}/api/routines/{{routineId}}?userId={{userId}}
+
+### Get single PUBLIC routine (no userId needed)
+GET {{baseUrl}}/api/routines/{{routineId}}
+
+### Create new routine
+POST {{baseUrl}}/api/routines
+Content-Type: application/json
+
+{
+  "user_id": "{{userId}}",
+  "follicle_id": "{{follicleId}}",
+  "name": "Test Moisture Routine",
+  "description": "My test routine for API testing",
+  "frequency": {
+    "interval": 1,
+    "unit": "week"
+  },
+  "steps": [
+    {
+      "order": 1,
+      "step_name": "Shampoo",
+      "products": [
+        {
+          "product_id": "{{productId}}",
+          "amount": "Dime-sized"
+        }
+      ],
+      "frequency": {
+        "interval": 1,
+        "unit": "week"
+      },
+      "technique": "Massage into scalp",
+      "notes": "Focus on roots"
+    }
+  ],
+  "is_public": true
+}
+
+### Update routine
+PUT {{baseUrl}}/api/routines/{{routineId}}
+Content-Type: application/json
+
+{
+  "user_id": "{{userId}}",
+  "name": "Updated Moisture Routine",
+  "description": "Updated description",
+  "is_public": false
+}
+
+### Delete routine (soft delete)
+DELETE {{baseUrl}}/api/routines/{{routineId}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}"
+}
+
+### Test missing userId (should return 400)
+GET {{baseUrl}}/api/routines
+
+### Test unauthorized update (wrong userId - should return 403)
+PUT {{baseUrl}}/api/routines/{{routineId}}
+Content-Type: application/json
+
+{
+  "user_id": "wrong_user_id",
+  "name": "Hacked Routine"
+}
+
+### Test viewing private routine without auth (should return 403)
+GET {{baseUrl}}/api/routines/private_routine_id
+
+### ==============================================
 ### NOTES
 ### ==============================================
 ###

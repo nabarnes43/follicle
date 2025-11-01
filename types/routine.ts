@@ -1,3 +1,5 @@
+import { Timestamp } from 'firebase/firestore'
+
 // Main routine interface
 export interface Routine {
   id: string
@@ -10,8 +12,9 @@ export interface Routine {
   is_public: boolean
   created_at: Date
   updated_at: Date
+  deleted_at?: Timestamp | null
 }
-
+//TODO Make sure type matches functionality after the changes I made.
 // Frequency structure for routines and steps
 export interface Frequency {
   interval: number // 1, 2, 3...
