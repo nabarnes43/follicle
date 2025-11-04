@@ -134,55 +134,31 @@ export async function PUT(
 
 /**
  * DELETE /api/routines/[id]
- * Soft deletes a routine (owner only)
+ * Soft deletes a routine (sets deleted_at timestamp)
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const routineId = params.id
-    const { userId } = await request.json()
+    // Await params in Next.js 15+
+    const { id: routineId } = await params
 
-    if (!userId) {
+    if (!routineId) {
       return Response.json(
-        { error: 'Missing userId in request' },
+        { error: 'Missing routineId parameter' },
         { status: 400 }
       )
     }
 
-    console.log(`🗑️ Deleting routine: ${routineId}`)
+    console.log(`🗑️ Soft deleting routine: ${routineId}`)
 
-    // Check ownership
-    const doc = await adminDb.collection('routines').doc(routineId).get()
-
-    if (!doc.exists) {
-      return Response.json({ error: 'Routine not found' }, { status: 404 })
-    }
-
-    const routine = doc.data()
-
-    if (routine?.user_id !== userId) {
-      return Response.json(
-        { error: 'Unauthorized - you do not own this routine' },
-        { status: 403 }
-      )
-    }
-
-    if (routine?.deleted_at) {
-      return Response.json(
-        { error: 'Routine already deleted' },
-        { status: 400 }
-      )
-    }
-
-    // Soft delete
+    // Soft delete by setting deleted_at timestamp
     await adminDb.collection('routines').doc(routineId).update({
       deleted_at: Timestamp.now(),
-      updated_at: Timestamp.now(),
     })
 
-    console.log(`✅ Routine soft-deleted: ${routineId}`)
+    console.log(`✅ Routine soft deleted: ${routineId}`)
 
     return Response.json({
       success: true,
