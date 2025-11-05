@@ -9,6 +9,7 @@ import { useProductInteraction } from '@/hooks/useProductInteraction'
 interface ProductCardProps {
   match: MatchScore
   onClick?: () => void
+  showMatchScore?: boolean
 }
 
 /**
@@ -16,14 +17,18 @@ interface ProductCardProps {
  *
  * Shows:
  * - Product image, brand, name, and price
- * - Match score (how well it fits the user's hair)
+ * - Match score (how well it fits the user's hair) - optional via showMatchScore prop
  * - Match reasons (why this product was recommended)
  * - Save button (bookmark icon)
  *
  * Click card to view details
  * Click bookmark to save/unsave (doesn't open dialog)
  */
-export function ProductCard({ match, onClick }: ProductCardProps) {
+export function ProductCard({
+  match,
+  onClick,
+  showMatchScore = true, // Default to true for backward compatibility
+}: ProductCardProps) {
   const { product } = match
   const { interactions, toggleSave, isLoading } = useProductInteraction(
     product.id
@@ -94,13 +99,15 @@ export function ProductCard({ match, onClick }: ProductCardProps) {
             )}
           </div>
 
-          {/* Match Score - Always right-aligned */}
-          <div className="text-right">
-            <p className="text-primary text-2xl font-bold">
-              {Math.round(match.totalScore * 100)}%
-            </p>
-            <p className="text-muted-foreground text-xs">Match</p>
-          </div>
+          {/* Match Score - Conditionally rendered */}
+          {showMatchScore && (
+            <div className="text-right">
+              <p className="text-primary text-2xl font-bold">
+                {Math.round(match.totalScore * 100)}%
+              </p>
+              <p className="text-muted-foreground text-xs">Match</p>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

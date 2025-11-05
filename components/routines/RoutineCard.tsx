@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Routine } from '@/types/routine'
 import { Product } from '@/types/product'
-import { Eye, Share2, Trash2, Lock, Globe } from 'lucide-react'
+import { Share2, Trash2, Lock, Globe } from 'lucide-react'
 
 interface RoutineCardProps {
   routine: Routine
@@ -36,8 +36,21 @@ export function RoutineCard({
   const slots = [0, 1, 2]
   const remainingCount = Math.max(0, routine.steps.length - 3)
 
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    onShare()
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click
+    onDelete()
+  }
+
   return (
-    <Card className="overflow-hidden transition-shadow hover:shadow-md">
+    <Card
+      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
+      onClick={onView}
+    >
       <CardContent className="p-4">
         {/* Header */}
         <div className="mb-3 flex items-start justify-between gap-4">
@@ -53,16 +66,13 @@ export function RoutineCard({
             </h3>
           </div>
           <div className="flex flex-shrink-0 gap-1">
-            <Button onClick={onView} variant="default" size="sm">
-              <Eye className="h-4 w-4" />
-            </Button>
             {routine.is_public && (
-              <Button onClick={onShare} variant="outline" size="sm">
+              <Button onClick={handleShareClick} variant="outline" size="sm">
                 <Share2 className="h-4 w-4" />
               </Button>
             )}
             <Button
-              onClick={onDelete}
+              onClick={handleDeleteClick}
               variant="ghost"
               size="sm"
               className="text-destructive hover:text-destructive"

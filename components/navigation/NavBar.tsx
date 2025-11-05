@@ -15,7 +15,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Sparkles, Bookmark, User, LogOut, ChevronDown } from 'lucide-react'
+import {
+  Beaker,
+  Bookmark,
+  User,
+  LogOut,
+  ChevronDown,
+  SoapDispenserDroplet,
+  CalendarDays,
+  Plus,
+} from 'lucide-react'
 
 export default function NavBar() {
   const { user, loading } = useAuth()
@@ -60,8 +69,10 @@ export default function NavBar() {
   }
 
   const navLinks = [
-    { href: '/recommendations', label: 'Products', icon: Sparkles },
+    { href: '/recommendations', label: 'Products', icon: Beaker },
     { href: '/saved', label: 'Saved', icon: Bookmark },
+    { href: '/myRoutines', label: 'My Routines', icon: CalendarDays },
+    { href: '/routineBuilder', label: 'Create Routine', icon: Plus },
   ]
 
   return (

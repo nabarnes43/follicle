@@ -15,8 +15,10 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { productsCache } from '@/lib/matching/productsCache'
 import { Plus } from 'lucide-react'
+import { useAuth } from '@/contexts/auth'
 
 function CreateRoutineContent({ userData }: { userData: User }) {
+  const { user } = useAuth()
   const router = useRouter()
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [isSaving, setIsSaving] = useState(false)
@@ -108,9 +110,14 @@ function CreateRoutineContent({ userData }: { userData: User }) {
 
     setIsSaving(true)
     try {
+      const token = await user?.getIdToken() //
+
       const response = await fetch('/api/routines', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(routine),
       })
 

@@ -18,12 +18,14 @@ interface ProductDetailDialogProps {
   match: MatchScore | null
   isOpen: boolean
   onClose: () => void
+  showMatchScore?: boolean // Control match score visibility
 }
 
 export function ProductDetailDialog({
   match,
   isOpen,
   onClose,
+  showMatchScore = true, // Default to true for backward compatibility
 }: ProductDetailDialogProps) {
   const {
     interactions,
@@ -47,7 +49,7 @@ export function ProductDetailDialog({
     if (!isOpen) {
       hasTrackedView.current = false
     }
-  }, [isOpen, match?.product.id]) // Remove trackView from dependencies
+  }, [isOpen, match?.product.id])
 
   if (!match) return null
 
@@ -79,7 +81,10 @@ export function ProductDetailDialog({
 
         {/* Price & Match Score */}
         <div className="flex items-center gap-3">
-          <Badge className="px-3 py-1 text-lg">{scorePercent}% Match</Badge>
+          {/* Only show match score if enabled */}
+          {showMatchScore && matchReasons.length > 0 && (
+            <Badge className="px-3 py-1 text-lg">{scorePercent}% Match</Badge>
+          )}
           <span className="text-xl font-bold">
             {product.price
               ? `$${product.price.toFixed(2)}`
@@ -87,8 +92,8 @@ export function ProductDetailDialog({
           </span>
         </div>
 
-        {/* Match Reasons */}
-        {matchReasons.length > 0 && (
+        {/* Match Reasons - Only show if showMatchScore is true */}
+        {showMatchScore && matchReasons.length > 0 && (
           <div className="space-y-1">
             {matchReasons.map((reason, idx) => (
               <p key={idx} className="text-muted-foreground text-sm">
