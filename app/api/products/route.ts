@@ -1,12 +1,11 @@
 import { NextRequest } from 'next/server'
-import { collection, getDocs } from 'firebase/firestore'
-import { db } from '@/lib/firebase/client'
+import { adminDb } from '@/lib/firebase/admin' // ✅ Change this
 import { Product } from '@/types/product'
 
 // Server-side in-memory cache
 let cachedProducts: Product[] | null = null
 let cacheTimestamp: number = 0
-const CACHE_DURATION = 1000 * 60 * 120 // 2 hour (adjust as needed)
+const CACHE_DURATION = 1000 * 60 * 120 // 2 hours
 
 /**
  * GET /api/products
@@ -40,8 +39,8 @@ export async function GET(request: NextRequest) {
       '🚀 Fetching products from Firestore (cache miss or expired)...'
     )
 
-    // Fetch all products from Firestore
-    const productsSnapshot = await getDocs(collection(db, 'products'))
+    // Fetch all products from Firestore using Admin SDK
+    const productsSnapshot = await adminDb.collection('products').get()
     const products: Product[] = productsSnapshot.docs.map(
       (doc) =>
         ({

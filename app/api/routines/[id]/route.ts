@@ -3,11 +3,12 @@
 import { NextRequest } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase/admin'
+import { verifyAuthToken } from '@/lib/firebase/auth' // ✅ Add this
 import { Routine } from '@/types/routine'
 
 /**
- * GET /api/routines/[id]?userId={uid}
- * Fetches a single routine (public or owned by user)
+ * GET /api/routines/[id]
+ * Fetches a single routine (public or owned by authenticated user)
  */
 export async function GET(
   request: NextRequest,
@@ -15,8 +16,7 @@ export async function GET(
 ) {
   try {
     const routineId = params.id
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId') // Optional - for private routines
+    const userId = await verifyAuthToken(request) // ✅ Changed from searchParams
 
     console.log(`📖 Fetching routine: ${routineId}`)
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
+import { verifyAuthToken } from '@/lib/firebase/auth' 
 import { FieldValue } from 'firebase-admin/firestore'
 import { ProductInteraction, InteractionType } from '@/types/interaction'
 
@@ -8,19 +9,25 @@ import { ProductInteraction, InteractionType } from '@/types/interaction'
  */
 export async function POST(request: NextRequest) {
   try {
+    // ✅ Verify auth token
+    const userId = await verifyAuthToken(request)
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
-    const { userId, productId, follicleId, type } = body as {
-      userId: string
+    const { productId, follicleId, type } = body as {
       productId: string
       follicleId: string
       type: InteractionType
     }
 
-    // Validation
-    if (!userId || !productId || !follicleId || !type) {
+    // Validation (removed userId check - we get it from token)
+    if (!productId || !follicleId || !type) {
       return NextResponse.json(
         {
-          error: 'Missing required fields: userId, productId, follicleId, type',
+          error: 'Missing required fields: productId, follicleId, type',
         },
         { status: 400 }
       )
@@ -75,7 +82,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use batch write (Admin SDK doesn't have runTransaction the same way)
+    // Use batch write
     const batch = adminDb.batch()
 
     // Delete opposite interaction if exists
@@ -148,15 +155,21 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    // ✅ Verify auth token
+    const userId = await verifyAuthToken(request)
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const productId = searchParams.get('productId')
     const type = searchParams.get('type') as InteractionType
 
-    // Validation
-    if (!userId || !productId || !type) {
+    // Validation (removed userId check - we get it from token)
+    if (!productId || !type) {
       return NextResponse.json(
-        { error: 'Missing required query params: userId, productId, type' },
+        { error: 'Missing required query params: productId, type' },
         { status: 400 }
       )
     }

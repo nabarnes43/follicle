@@ -74,19 +74,28 @@ export function useProductInteraction(productId: string) {
       setIsLoading(true)
 
       try {
+        const token = await authUser.getIdToken()
         let response
 
         if (shouldDelete) {
           response = await fetch(
-            `/api/interactions?userId=${authUser.uid}&productId=${productId}&type=${type}`,
-            { method: 'DELETE' }
+            `/api/interactions?productId=${productId}&type=${type}`,
+            {
+              method: 'DELETE',
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
           )
         } else {
           response = await fetch('/api/interactions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify({
-              userId: authUser.uid,
+              // Don't send userId - server gets it from token
               productId,
               follicleId: firestoreUser.follicleId,
               type,

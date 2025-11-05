@@ -27,10 +27,11 @@ import { Button } from '@/components/ui/button'
 import { productsCache } from '@/lib/matching/productsCache'
 import { ClipboardCheck, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/auth'
 
 function MyRoutinesContent({ userData }: { userData: User }) {
   const router = useRouter()
-
+  const { user } = useAuth()
   // Data
   const [routines, setRoutines] = useState<Routine[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
@@ -51,8 +52,14 @@ function MyRoutinesContent({ userData }: { userData: User }) {
       const products = await productsCache.getProducts()
       setAllProducts(products)
 
+      const token = await user?.getIdToken()
+
       // Fetch user's routines
-      const response = await fetch(`/api/routines?userId=${userData.userId}`)
+      const response = await fetch('/api/routines', {
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ Add this
+        },
+      })
       const data = await response.json()
 
       if (data.routines) {
@@ -86,10 +93,14 @@ function MyRoutinesContent({ userData }: { userData: User }) {
 
     setDeleting(true)
     try {
+      const token = await user?.getIdToken()
+
       const response = await fetch(`/api/routines/${routineToDelete.id}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       })
-
       if (response.ok) {
         toast.success('Routine deleted')
         setRoutines((prev) => prev.filter((r) => r.id !== routineToDelete.id))

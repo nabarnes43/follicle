@@ -1,20 +1,28 @@
 import { NextRequest } from 'next/server'
 import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase/admin'
+import { verifyAuthToken } from '@/lib/firebase/auth' // ✅ Add this
 import { Routine } from '@/types/routine'
 
 /**
  * POST /api/routines
- * Creates a new routine
+ * Creates a new routine (authenticated users only)
  */
 export async function POST(request: NextRequest) {
   try {
+    // ✅ Verify auth token first
+    const userId = await verifyAuthToken(request)
+
+    if (!userId) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const routine: Routine = await request.json()
 
-    // Validate required fields
-    if (!routine.user_id || !routine.follicle_id || !routine.name) {
+    // Validate required fields (removed user_id check - we get it from token)
+    if (!routine.follicle_id || !routine.name) {
       return Response.json(
-        { error: 'Missing required fields: user_id, follicle_id, or name' },
+        { error: 'Missing required fields: follicle_id or name' },
         { status: 400 }
       )
     }
@@ -31,13 +39,14 @@ export async function POST(request: NextRequest) {
 
     console.log(`💾 Saving routine: ${routine.name} (${routineId})`)
 
-    // Use Admin SDK to write to Firestore
+    // ✅ Use userId from verified token (can't be spoofed)
     await adminDb
       .collection('routines')
       .doc(routineId)
       .set({
         ...routine,
         id: routineId,
+        user_id: userId, // ✅ Force verified userId from token
         updated_at: Timestamp.now(),
         created_at: Timestamp.now(),
         deleted_at: null,
@@ -63,19 +72,16 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Get /api/routines
- * Gets all routines desc order
+ * GET /api/routines
+ * Gets all routines for authenticated user (desc order)
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    // ✅ Get userId from auth token (not search params)
+    const userId = await verifyAuthToken(request)
 
     if (!userId) {
-      return Response.json(
-        { error: 'Missing userId parameter' },
-        { status: 400 }
-      )
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const snapshot = await adminDb
