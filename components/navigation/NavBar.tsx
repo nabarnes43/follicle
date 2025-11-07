@@ -21,6 +21,8 @@ import {
   User,
   LogOut,
   ChevronDown,
+  Globe,
+  Lock,
   SoapDispenserDroplet,
   CalendarDays,
   Plus,
@@ -69,10 +71,11 @@ export default function NavBar() {
   }
 
   const navLinks = [
-    { href: '/recommendations', label: 'Products', icon: Beaker },
-    { href: '/saved', label: 'Saved', icon: Bookmark },
-    { href: '/myRoutines', label: 'My Routines', icon: CalendarDays },
-    { href: '/routineBuilder', label: 'Create Routine', icon: Plus },
+    { href: '/products', label: 'Products', icon: Beaker },
+    { href: '/products/saved', label: 'Saved Products', icon: Bookmark },
+    { href: '/routines/public', label: 'Browse Routines', icon: Globe },
+    { href: '/routines/private', label: 'My Routines', icon: CalendarDays },
+    { href: '/routines/create', label: 'Create Routine', icon: Plus },
   ]
 
   return (

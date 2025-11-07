@@ -55,9 +55,9 @@ function MyRoutinesContent({ userData }: { userData: User }) {
       const token = await user?.getIdToken()
 
       // Fetch user's routines
-      const response = await fetch('/api/routines', {
+      const response = await fetch('/api/routines/private', {
         headers: {
-          Authorization: `Bearer ${token}`, // ✅ Add this
+          Authorization: `Bearer ${token}`,
         },
       })
       const data = await response.json()

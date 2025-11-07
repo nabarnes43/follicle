@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { RequireAuth } from '@/components/auth/RequireAuth'
 import { User } from '@/types/user'
 import { ProductCard } from '@/components/products/ProductCard'
@@ -17,7 +17,6 @@ import {
 import { productsCache } from '@/lib/matching/productsCache'
 import { matchProductsForUser } from '@/lib/matching/productMatcher'
 import { generateFollicleId } from '@/lib/analysis/follicleId'
-import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -25,154 +24,142 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Package } from 'lucide-react'
+import { Package, Search, X } from 'lucide-react'
 import type { Product } from '@/types/product'
 import type { MatchScore } from '@/types/matching'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { PRODUCT_CATEGORIES } from '@/lib/matching/config/categories'
 
-const INITIAL_DISPLAY_LIMIT = 24
-const LOAD_MORE_INCREMENT = 24
-
-const ALL_CATEGORIES = [
-  'Shampoos',
-  'Conditioners',
-  'Hair Masks',
-  'Styling Creams & Sprays',
-  'Hair Oils',
-  'Leave-in Conditioners',
-  'Hair Serums',
-  'Gel, Pomade & Wax',
-  'Leave-in Treatments',
-  'Scalp Treatments',
-  'Styling Tools',
-  'Hair Sprays',
-  'Dry Shampoos',
-  'Mousse & Foam',
-  'Heat Protectants',
-  'Scalp Scrubs',
-  'Detanglers',
-  'Other Hair Cleansers',
-  'Hair Loss',
-  'Other Haircare',
-  'Other Styling',
-]
+const INITIAL_DISPLAY_LIMIT = 48
+const LOAD_MORE_INCREMENT = 48
 
 function RecommendationsContent({ userData }: { userData: User }) {
-  // Data
+  // Data state
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [allScoredProducts, setAllScoredProducts] = useState<MatchScore[]>([])
-
-  // UI State
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [displayLimit, setDisplayLimit] = useState(INITIAL_DISPLAY_LIMIT)
   const [selectedMatch, setSelectedMatch] = useState<MatchScore | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isScoring, setIsScoring] = useState(false)
   const [hasScored, setHasScored] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+
+  // Infinite scroll trigger
+  const loadMoreRef = useRef<HTMLDivElement>(null)
 
   const hairAnalysis = userData.hairAnalysis!
   const follicleId = generateFollicleId(hairAnalysis)
 
-  // Fetch products once
+  // Fetch products once on mount
   useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true)
+      try {
+        const products = await productsCache.getProducts()
+        setAllProducts(products)
+      } catch (error) {
+        console.error('Failed to fetch products:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
     fetchProducts()
   }, [])
 
-  // Score all products ONCE when we have data
+  // Score all products once when loaded
   useEffect(() => {
-    if (allProducts.length > 0 && !hasScored) {
-      scoreAllProducts()
-    }
-  }, [allProducts, hasScored])
+    if (allProducts.length === 0 || hasScored) return
 
-  // Reset display limit when category changes
+    const scoreAllProducts = async () => {
+      // Try cache first
+      const cached = productsCache.getAllScoredProducts(userData.userId)
+      if (cached) {
+        console.log('✅ Using cached scores')
+        setAllScoredProducts(cached)
+        setHasScored(true)
+        return
+      }
+
+      // Score products
+      console.log('❌ Scoring all products')
+      setIsScoring(true)
+      try {
+        const scored = await matchProductsForUser(
+          { hairAnalysis },
+          allProducts,
+          follicleId,
+          { category: undefined, limit: 9999 }
+        )
+        productsCache.setAllScoredProducts(userData.userId, scored)
+        setAllScoredProducts(scored)
+        setHasScored(true)
+      } catch (error) {
+        console.error('Failed to score products:', error)
+      } finally {
+        setIsScoring(false)
+      }
+    }
+    scoreAllProducts()
+  }, [allProducts, hasScored, userData.userId, hairAnalysis, follicleId])
+
+  // Reset pagination when category changes
   useEffect(() => {
     setDisplayLimit(INITIAL_DISPLAY_LIMIT)
   }, [selectedCategory])
 
-  const fetchProducts = async () => {
-    setIsLoading(true)
-    try {
-      // Get products from cache
-      const products = await productsCache.getProducts()
-      setAllProducts(products)
-    } catch (error) {
-      console.error('Failed to fetch products:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Filter Search and paginate products
+  const { displayedProducts, totalCount } = useMemo(() => {
+    let filtered = allScoredProducts
 
-  const scoreAllProducts = async () => {
-    // Check cache first using userId
-    const cached = productsCache.getAllScoredProducts(userData.userId)
-    if (cached) {
-      console.log('✅ Using cached scores for recommendations')
-      setAllScoredProducts(cached)
-      setHasScored(true)
-      return
-    }
-
-    // Cache miss - score products
-    console.log('❌ No cached scores - scoring all products')
-    setIsScoring(true)
-    try {
-      const scored = await matchProductsForUser(
-        { hairAnalysis },
-        allProducts,
-        follicleId,
-        { category: undefined, limit: 9999 }
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (m) =>
+          m.product.name.toLowerCase().includes(query) ||
+          m.product.brand.toLowerCase().includes(query)
       )
-
-      // Cache for future use (keyed by userId)
-      productsCache.setAllScoredProducts(userData.userId, scored)
-
-      setAllScoredProducts(scored)
-      setHasScored(true)
-    } catch (error) {
-      console.error('Failed to score products:', error)
-    } finally {
-      setIsScoring(false)
     }
-  }
 
-  // Combined filtering and pagination
-  const displayedRecommendations = useMemo(() => {
     // Filter by category
-    let filtered =
-      selectedCategory === 'all'
-        ? allScoredProducts
-        : allScoredProducts.filter(
-            (m) => m.product.category === selectedCategory
-          )
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter((m) => m.product.category === selectedCategory)
+    }
 
     // Filter by budget
     if (hairAnalysis?.budget) {
       filtered = filtered.filter((m) => m.product.price <= hairAnalysis.budget!)
     }
 
-    // Paginate
-    return filtered.slice(0, displayLimit)
-  }, [allScoredProducts, selectedCategory, hairAnalysis, displayLimit])
-
-  // Get total count for UI
-  const totalFilteredCount = useMemo(() => {
-    let filtered =
-      selectedCategory === 'all'
-        ? allScoredProducts
-        : allScoredProducts.filter(
-            (m) => m.product.category === selectedCategory
-          )
-
-    if (hairAnalysis?.budget) {
-      filtered = filtered.filter((m) => m.product.price <= hairAnalysis.budget!)
+    return {
+      displayedProducts: filtered.slice(0, displayLimit),
+      totalCount: filtered.length,
     }
+  }, [
+    allScoredProducts,
+    searchQuery,
+    selectedCategory,
+    hairAnalysis,
+    displayLimit,
+  ])
 
-    return filtered.length
-  }, [allScoredProducts, selectedCategory, hairAnalysis])
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && displayLimit < totalCount) {
+          setDisplayLimit((prev) => prev + LOAD_MORE_INCREMENT)
+        }
+      },
+      { rootMargin: '4000px', threshold: 0 } // pre-load distance
+    )
 
-  const loadMore = () => {
-    setDisplayLimit((prev) => prev + LOAD_MORE_INCREMENT)
-  }
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current)
+    return () => observer.disconnect()
+  }, [displayLimit, totalCount])
 
   // Loading state
   if (isLoading) {
@@ -201,7 +188,31 @@ function RecommendationsContent({ userData }: { userData: User }) {
       </div>
 
       {/* Category Filter */}
-      <div className="mb-8">
+      <div className="mb-8 flex gap-4">
+        {/* Search Bar */}
+        <div className="relative max-w-md flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            type="text"
+            placeholder="Search by product or brand name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+            disabled={isScoring}
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+              onClick={() => setSearchQuery('')}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+
+        {/* Category Filter */}
         <Select
           value={selectedCategory}
           onValueChange={setSelectedCategory}
@@ -212,7 +223,7 @@ function RecommendationsContent({ userData }: { userData: User }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Products</SelectItem>
-            {ALL_CATEGORIES.map((category) => (
+            {PRODUCT_CATEGORIES.map((category) => (
               <SelectItem key={category} value={category}>
                 {category}
               </SelectItem>
@@ -233,18 +244,17 @@ function RecommendationsContent({ userData }: { userData: User }) {
       )}
 
       {/* Product Count */}
-      {!isScoring && totalFilteredCount > 0 && (
+      {!isScoring && totalCount > 0 && (
         <div className="mb-4">
           <p className="text-muted-foreground text-sm">
-            Showing {displayedRecommendations.length} of {totalFilteredCount}{' '}
-            products
+            Showing {displayedProducts.length} of {totalCount} products
             {hairAnalysis.budget && ` (under $${hairAnalysis.budget})`}
           </p>
         </div>
       )}
 
       {/* Empty State */}
-      {totalFilteredCount === 0 && !isScoring ? (
+      {totalCount === 0 && !isScoring ? (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -261,7 +271,7 @@ function RecommendationsContent({ userData }: { userData: User }) {
         <>
           {/* Product Grid */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {displayedRecommendations.map((match) => (
+            {displayedProducts.map((match) => (
               <ProductCard
                 key={match.product.id}
                 match={match}
@@ -270,17 +280,12 @@ function RecommendationsContent({ userData }: { userData: User }) {
             ))}
           </div>
 
-          {/* Load More Button */}
-          {displayedRecommendations.length < totalFilteredCount &&
-            !isScoring && (
-              <div className="mt-8 text-center">
-                <Button onClick={loadMore} size="lg">
-                  Load More Products (
-                  {totalFilteredCount - displayedRecommendations.length}{' '}
-                  remaining)
-                </Button>
-              </div>
-            )}
+          {/* Infinite scroll trigger */}
+          {displayLimit < totalCount && (
+            <div ref={loadMoreRef} className="mt-8 flex justify-center py-8">
+              <Spinner className="h-8 w-8" />
+            </div>
+          )}
         </>
       )}
 

@@ -12,7 +12,7 @@ interface RoutineCardProps {
   allProducts: Product[]
   onView: () => void
   onShare: () => void
-  onDelete: () => void
+  onDelete?: () => void
 }
 
 export function RoutineCard({
@@ -43,7 +43,7 @@ export function RoutineCard({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation() // Prevent card click
-    onDelete()
+    onDelete?.()
   }
 
   return (
@@ -71,14 +71,16 @@ export function RoutineCard({
                 <Share2 className="h-4 w-4" />
               </Button>
             )}
-            <Button
-              onClick={handleDeleteClick}
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {onDelete && (
+              <Button
+                onClick={handleDeleteClick}
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
 
