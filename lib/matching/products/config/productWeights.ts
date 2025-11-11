@@ -1,3 +1,4 @@
+
 /**
  * RECOMMENDATION ALGORITHM WEIGHTS
  *
@@ -7,81 +8,25 @@
  * Adjust these as you learn more about what matters for recommendations.
  */
 
-// ============================================================================
-// FOLLICLE ID WEIGHTS
-// ============================================================================
-
 /**
- * How important is each part of the follicle ID?
- *
- * Used for:
- * 1. Finding similar users (engagement scoring)
- * 2. Weighting ingredient categories (auto-calculated below)
- *
- * Example: CU-H-M-F-N
- *          ↑  ↑ ↑ ↑ ↑
- *          3  2 1 2 1  ← these weights
- *
- * Higher weight = more important
+ * Import and re-export shared constants
  */
-export const FOLLICLE_WEIGHTS = {
-  hairType: 3, // Position 0: ST/WV/CU/CO/PR
-  porosity: 2, // Position 1: L/M/H
-  density: 1, // Position 2: L/M/H
-  thickness: 2, // Position 3: F/M/C
-  damage: 1, // Position 4: N/S/V
-} as const
+import {
+  FOLLICLE_WEIGHTS,
+  TOTAL_FOLLICLE_WEIGHT,
+  SIMILARITY_THRESHOLDS,
+  MIN_SIMILARITY_THRESHOLD,
+  EXACT_MATCH_BOOST,
+} from '../../shared/constants'
 
-/**
- * Total weight (calculated automatically)
- */
-export const TOTAL_FOLLICLE_WEIGHT =
-  FOLLICLE_WEIGHTS.hairType +
-  FOLLICLE_WEIGHTS.porosity +
-  FOLLICLE_WEIGHTS.density +
-  FOLLICLE_WEIGHTS.thickness +
-  FOLLICLE_WEIGHTS.damage
-// = 9
-
-// ============================================================================
-// SIMILARITY THRESHOLDS
-// ============================================================================
-
-/**
- * Similarity thresholds for engagement scoring
- * Defines how we bucket users by hair similarity
- *
- * Users are categorized into buckets based on how similar their hair is:
- * - Exact (1.0): Identical follicle ID - "hair twins"
- * - Very High (0.8+): Nearly identical hair characteristics
- * - High (0.6+): Very similar hair profiles
- * - Medium (0.4+): Similar enough to provide valuable feedback
- *
- * Any user below the minimum threshold is excluded from scoring
- */
-export const SIMILARITY_THRESHOLDS = {
-  exact: 1.0,
-  veryHigh: 0.8,
-  high: 0.6,
-  medium: 0.4,
-} as const
-
-/**
- * Minimum similarity threshold for engagement scoring
- * Users below this similarity won't count toward product scores
- * Range: 0.0 (anyone) to 1.0 (exact match only)
- *
- * Set to 0.4 = only users with 40%+ similar hair characteristics
- * This should always match SIMILARITY_THRESHOLDS.medium to ensure
- * the "medium" bucket represents the floor of what we consider relevant
- */
-export const MIN_SIMILARITY_THRESHOLD = SIMILARITY_THRESHOLDS.medium
-
-/**
- * Exact match boost
- * How much extra weight for exact follicle ID matches?
- */
-export const EXACT_MATCH_BOOST = 1.5 // 50% boost
+// Re-export for convenience
+export {
+  FOLLICLE_WEIGHTS,
+  TOTAL_FOLLICLE_WEIGHT,
+  SIMILARITY_THRESHOLDS,
+  MIN_SIMILARITY_THRESHOLD,
+  EXACT_MATCH_BOOST,
+}
 
 // ============================================================================
 // DISPLAY SETTINGS
@@ -190,14 +135,6 @@ export const ENGAGEMENT_WEIGHTS = {
   dislike: -0.25, // Negative signal
   reroll: -0.15, // Weak negative signal
   view: 0.0, // Neutral
-} as const
-
-/**
- * Engagement normalization
- */
-export const ENGAGEMENT_NORMALIZATION = {
-  minViews: 1, // Min views to use engagement score
-  useWeightedAverage: true, // Weight by follicle similarity
 } as const
 
 // ============================================================================

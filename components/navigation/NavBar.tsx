@@ -106,6 +106,33 @@ export default function NavBar() {
             )
           })}
 
+          {process.env.NODE_ENV === 'development' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  const user = auth.currentUser
+                  if (user) {
+                    const token = await user.getIdToken()
+                    await navigator.clipboard.writeText(token)
+                    alert(
+                      '🎉 Token copied to clipboard!\n\nPaste it into routes.http as @authToken'
+                    )
+                  } else {
+                    alert('❌ No user logged in')
+                  }
+                } catch (error) {
+                  console.error('Error getting token:', error)
+                  alert('❌ Failed to get token')
+                }
+              }}
+              className="border-orange-500 text-orange-500 hover:bg-orange-50"
+            >
+              🔑 Copy Token
+            </Button>
+          )}
+
           {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

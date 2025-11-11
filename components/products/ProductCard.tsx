@@ -3,7 +3,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bookmark } from 'lucide-react'
-import { MatchScore } from '@/types/matching'
+import { MatchScore } from '@/types/productMatching'
 import { useProductInteraction } from '@/hooks/useProductInteraction'
 
 interface ProductCardProps {

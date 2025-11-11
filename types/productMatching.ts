@@ -16,7 +16,7 @@ export interface RecommendationsResponse {
     follicleId: string
     budget?: number
   }
-  recommendations: MatchScore[]
+  recommendations: ProductMatchScore[]
 }
 
 /**
@@ -25,7 +25,7 @@ export interface RecommendationsResponse {
  * This is the core data structure for product recommendations. It wraps a Product
  * with personalization data showing why it was recommended and how good the match is.
  */
-export interface MatchScore {
+export interface ProductMatchScore {
   product: Product
   totalScore: number
   breakdown: {

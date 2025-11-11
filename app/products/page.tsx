@@ -14,8 +14,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { productsCache } from '@/lib/matching/productsCache'
-import { matchProductsForUser } from '@/lib/matching/productMatcher'
+import { productsCache } from '@/lib/matching/products/productsCache'
+import { matchProductsForUser } from '@/lib/matching/products/productMatcher'
 import { generateFollicleId } from '@/lib/analysis/follicleId'
 import {
   Select,
@@ -26,10 +26,10 @@ import {
 } from '@/components/ui/select'
 import { Package, Search, X } from 'lucide-react'
 import type { Product } from '@/types/product'
-import type { MatchScore } from '@/types/matching'
+import type { MatchScore } from '@/types/productMatching'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { PRODUCT_CATEGORIES } from '@/lib/matching/config/categories'
+import { PRODUCT_CATEGORIES } from '@/lib/matching/products/config/categories'
 
 const INITIAL_DISPLAY_LIMIT = 48
 const LOAD_MORE_INCREMENT = 48

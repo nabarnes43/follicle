@@ -15,6 +15,10 @@ export interface User {
   likedProducts?: string[] // Cache for fast UI checks
   dislikedProducts?: string[] // Cache for fast UI checks
   savedProducts?: string[] // Cache for fast UI checks
+  savedRoutines?: string[]
+  likedRoutines?: string[]
+  dislikedRoutines?: string[]
+  adaptedRoutines?: string[]
 }
 
 export interface ProviderData {

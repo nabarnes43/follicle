@@ -1,5 +1,5 @@
 import { Product } from '@/types/product'
-import { MatchScore } from '@/types/matching'
+import { ProductMatchScore } from '@/types/productMatching'
 
 /**
  * ProductsCache - In-memory caching for products and match scores
@@ -37,7 +37,7 @@ class ProductsCache {
 
   // Match scores cache - keyed by userId
   // Stores ALL scored products for a user
-  private scoredProducts: Map<string, MatchScore[]> = new Map()
+  private scoredProducts: Map<string, ProductMatchScore[]> = new Map()
 
   private constructor() {}
 
@@ -105,7 +105,7 @@ class ProductsCache {
    * Get ALL scored products for a user
    * Returns null if not cached
    */
-  getAllScoredProducts(userId: string): MatchScore[] | null {
+  getAllScoredProducts(userId: string): ProductMatchScore[] | null {
     const cached = this.scoredProducts.get(userId)
     if (cached) {
       console.log(
@@ -123,12 +123,12 @@ class ProductsCache {
   getScoredProducts(
     userId: string,
     productIds?: string[]
-  ): MatchScore[] | null {
+  ): ProductMatchScore[] | null {
     const allScored = this.getAllScoredProducts(userId)
     if (!allScored) return null
 
-    // If no filter, return all
-    if (!productIds || productIds.length === 0) return allScored
+    // If no productIds provided or empty array, return empty array
+    if (!productIds || productIds.length === 0) return []
 
     // Filter by product IDs
     const idSet = new Set(productIds)
@@ -144,7 +144,7 @@ class ProductsCache {
    * Cache ALL scored products for a user
    * This should be the full scored product list (usually from recommendations page)
    */
-  setAllScoredProducts(userId: string, scored: MatchScore[]): void {
+  setAllScoredProducts(userId: string, scored: ProductMatchScore[]): void {
     this.scoredProducts.set(userId, scored)
     console.log(
       `💾 Cached ${scored.length} scored products for userId: ${userId}`

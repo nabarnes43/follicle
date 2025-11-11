@@ -12,11 +12,12 @@ import { Routine } from '@/types/routine'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ routineId: string }> }
 ) {
   try {
-    const routineId = params.id
-    const userId = await verifyAuthToken(request) // ✅ Changed from searchParams
+    const { routineId } = await params
+
+    const userId = await verifyAuthToken(request)
 
     console.log(`📖 Fetching routine: ${routineId}`)
 
@@ -64,10 +65,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ routineId: string }> }
 ) {
   try {
-    const routineId = params.id
+    const { routineId } = await params
     const updates = await request.json()
 
     if (!updates.user_id) {
@@ -138,11 +139,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ routineId: string }> }
 ) {
   try {
     // Await params in Next.js 15+
-    const { id: routineId } = await params
+    const { routineId } = await params
 
     if (!routineId) {
       return Response.json(

@@ -8,8 +8,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ProductDetailDialog } from '@/components/products/ProductDetailDialog'
 import { Routine } from '@/types/routine'
 import { Product } from '@/types/product'
-import { MatchScore } from '@/types/matching'
-import { productsCache } from '@/lib/matching/productsCache'
+import { ProductMatchScore } from '@/types/productMatching'
+import { productsCache } from '@/lib/matching/products/productsCache'
 import { ArrowLeft, Share2, Trash2, Lock, Globe, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -34,9 +34,8 @@ export default function RoutineDetailPage({
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedProduct, setSelectedProduct] = useState<MatchScore | null>(
-    null
-  )
+  const [selectedProduct, setSelectedProduct] =
+    useState<ProductMatchScore | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -51,7 +50,7 @@ export default function RoutineDetailPage({
 
         if (routineRes.status === 403) {
           toast.error('This routine is private')
-          router.push('/myRoutines')
+          router.push('/routines/private')
           return
         }
 
@@ -83,7 +82,7 @@ export default function RoutineDetailPage({
     fetchData()
   }, [id, user, router])
 
-  const createMatchScore = (product: Product): MatchScore => ({
+  const createMatchScore = (product: Product): ProductMatchScore => ({
     product,
     totalScore: 0,
     matchReasons: [],
@@ -110,7 +109,7 @@ export default function RoutineDetailPage({
 
       if (!response.ok) throw new Error('Failed to delete routine')
       toast.success('Routine deleted')
-      router.push('/myRoutines')
+      router.push('/routines/private')
     } catch (error) {
       console.error('Delete failed:', error)
       toast.error('Failed to delete routine')
@@ -152,7 +151,7 @@ export default function RoutineDetailPage({
           <p className="text-muted-foreground mb-6">
             {error || 'This routine does not exist or has been deleted.'}
           </p>
-          <Button onClick={() => router.push('/myRoutines')}>
+          <Button onClick={() => router.push('/routines/private')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to My Routines
           </Button>

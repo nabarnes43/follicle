@@ -3,24 +3,32 @@ import { useAuth } from '@/contexts/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import type {
-  InteractionType,
-  UserProductInteractions,
-} from '@/types/productInteraction'
+  RoutineInteractionType,
+  UserRoutineInteractions,
+} from '@/types/routineInteraction'
 import type { User } from '@/types/user'
 
-export function useProductInteraction(productId: string) {
+/**
+ * Hook for managing routine interactions (like, dislike, adapt, save, view)
+ *
+ * Pattern matches useProductInteraction but for routines
+ * Uses user cache arrays for fast UI updates
+ *
+ * @param routineId - The routine to interact with
+ * @returns interaction state and toggle functions
+ */
+export function useRoutineInteraction(routineId: string) {
   const { user: authUser } = useAuth() // Firebase Auth user
   const [firestoreUser, setFirestoreUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Track current interaction state for this product
-  const [interactions, setInteractions] = useState<UserProductInteractions>({
+  // Track current interaction state for this routine
+  const [interactions, setInteractions] = useState<UserRoutineInteractions>({
     like: false,
     dislike: false,
+    adapt: false,
     save: false,
     view: false,
-    routine: false,
-    reroll: false,
   })
 
   /**
@@ -50,23 +58,23 @@ export function useProductInteraction(productId: string) {
    * Initialize interaction state from user cache arrays
    */
   useEffect(() => {
-    if (!firestoreUser || !productId) return
+    if (!firestoreUser || !routineId) return
 
     setInteractions({
-      like: firestoreUser.likedProducts?.includes(productId) ?? false,
-      dislike: firestoreUser.dislikedProducts?.includes(productId) ?? false,
-      save: firestoreUser.savedProducts?.includes(productId) ?? false,
+      like: firestoreUser.likedRoutines?.includes(routineId) ?? false,
+      dislike: firestoreUser.dislikedRoutines?.includes(routineId) ?? false,
+      adapt: firestoreUser.adaptedRoutines?.includes(routineId) ?? false,
+      save: firestoreUser.savedRoutines?.includes(routineId) ?? false,
       view: false,
-      routine: false,
-      reroll: false,
     })
-  }, [firestoreUser, productId])
+  }, [firestoreUser, routineId])
 
   /**
    * Generic interaction handler
+   * Handles optimistic updates and rollback on error
    */
   const interact = useCallback(
-    async (type: InteractionType, shouldDelete: boolean = false) => {
+    async (type: RoutineInteractionType, shouldDelete: boolean = false) => {
       if (!authUser?.uid || !firestoreUser?.follicleId) {
         console.warn('User must be logged in with follicleId to interact')
         return { success: false, error: 'Not authenticated' }
@@ -83,7 +91,7 @@ export function useProductInteraction(productId: string) {
 
         if (shouldDelete) {
           response = await fetch(
-            `/api/interactions/products/${productId}/${type}`,
+            `/api/interactions/routines/${routineId}/${type}`,
             {
               method: 'DELETE',
               headers: {
@@ -92,15 +100,14 @@ export function useProductInteraction(productId: string) {
             }
           )
         } else {
-          response = await fetch('/api/interactions/products', {
+          response = await fetch('/api/routine-interactions', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              // Don't send userId - server gets it from token
-              productId,
+              routineId,
               follicleId: firestoreUser.follicleId,
               type,
             }),
@@ -123,18 +130,19 @@ export function useProductInteraction(productId: string) {
 
         const errorMessage =
           error instanceof Error ? error.message : 'Request failed'
-        console.error('Interaction failed:', errorMessage)
+        console.error('Routine interaction failed:', errorMessage)
 
         return { success: false, error: errorMessage }
       } finally {
         setIsLoading(false)
       }
     },
-    [authUser, firestoreUser, productId, interactions, fetchFirestoreUser]
+    [authUser, firestoreUser, routineId, interactions, fetchFirestoreUser]
   )
 
   /**
    * Toggle like (removes dislike if adding like)
+   * Like and Dislike are mutually exclusive
    */
   const toggleLike = useCallback(async () => {
     const isCurrentlyLiked = interactions.like
@@ -150,6 +158,7 @@ export function useProductInteraction(productId: string) {
 
   /**
    * Toggle dislike (removes like if adding dislike)
+   * Like and Dislike are mutually exclusive
    */
   const toggleDislike = useCallback(async () => {
     const isCurrentlyDisliked = interactions.dislike
@@ -164,7 +173,15 @@ export function useProductInteraction(productId: string) {
   }, [interactions.like, interactions.dislike, interact])
 
   /**
-   * Toggle save
+   * Toggle adapt (user copied this routine to their own)
+   * Strong positive signal - they're actually using it
+   */
+  const toggleAdapt = useCallback(async () => {
+    return interact('adapt', interactions.adapt)
+  }, [interactions.adapt, interact])
+
+  /**
+   * Toggle save (user bookmarked for later)
    */
   const toggleSave = useCallback(async () => {
     return interact('save', interactions.save)
@@ -172,6 +189,7 @@ export function useProductInteraction(productId: string) {
 
   /**
    * Track view (allow multiple views)
+   * Used for calculating engagement rates
    */
   const trackView = useCallback(async () => {
     // Don't update local state for views (we don't cache them)
@@ -186,6 +204,7 @@ export function useProductInteraction(productId: string) {
     // Actions
     toggleLike,
     toggleDislike,
+    toggleAdapt,
     toggleSave,
     trackView,
   }

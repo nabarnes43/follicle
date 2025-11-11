@@ -12,10 +12,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Heart, ThumbsDown, Bookmark } from 'lucide-react'
-import type { MatchScore } from '@/types/matching'
+import type { ProductMatchScore } from '@/types/productMatching'
 
 interface ProductDetailDialogProps {
-  match: MatchScore | null
+  match: ProductMatchScore | null
   isOpen: boolean
   onClose: () => void
   showMatchScore?: boolean // Control match score visibility

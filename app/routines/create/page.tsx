@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { productsCache } from '@/lib/matching/productsCache'
+import { productsCache } from '@/lib/matching/products/productsCache'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/auth'
 

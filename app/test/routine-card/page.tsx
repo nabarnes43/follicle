@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { RoutineCard } from '@/components/routines/RoutineCard'
 import { Routine } from '@/types/routine'
 import { Product } from '@/types/product'
-import { productsCache } from '@/lib/matching/productsCache'
+import { productsCache } from '@/lib/matching/products/productsCache'
 
 export default function RoutineCardTest() {
   const [routine, setRoutine] = useState<Routine | null>(null)

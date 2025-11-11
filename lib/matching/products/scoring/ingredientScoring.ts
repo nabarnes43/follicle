@@ -7,7 +7,7 @@ import {
   SCORING_MODIFIERS,
   MATCH_REASONS_CONFIG,
   getPositionScore,
-} from '../config/weights'
+} from '../config/productWeights'
 
 /**
  * Score a product based on its ingredients for a specific user

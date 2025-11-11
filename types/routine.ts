@@ -1,4 +1,6 @@
 import { Timestamp } from 'firebase/firestore'
+import { Product } from './product'
+import { ProductCategory } from '@/lib/matching/products/config/categories'
 
 // Main routine interface
 export interface Routine {
@@ -31,7 +33,7 @@ export interface StepProduct {
 // Individual step in a routine
 export interface RoutineStep {
   order: number
-  step_name: string // Free text or from suggested categories
+  step_name: ProductCategory // Must be one of the valid product categories
   products: StepProduct[] // Multiple products per step
   frequency: Frequency
   notes?: string

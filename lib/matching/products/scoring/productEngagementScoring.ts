@@ -1,14 +1,13 @@
 import { collection, query, where, getDocs, limit } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { Product } from '@/types/product'
-import { ProductInteraction } from '@/types/interaction'
-import { calculateFollicleSimilarity } from './follicleSimilarity'
+import { ProductInteraction } from '@/types/productInteraction'
+import { calculateFollicleSimilarity } from '../../shared/follicleSimilarity'
 import {
   ENGAGEMENT_WEIGHTS,
-  ENGAGEMENT_NORMALIZATION,
   MIN_SIMILARITY_THRESHOLD,
   MATCH_REASONS_CONFIG,
-} from '../config/weights'
+} from '../config/productWeights'
 
 /**
  * Score a product based on engagement from users with similar hair
@@ -35,12 +34,11 @@ export async function scoreByEngagement(
   const reasons: string[] = []
 
   try {
-    // Query interactions for this product (limit to prevent overload)
-    const interactionsRef = collection(db, 'interactions')
+    // Query interactions for this product
+    const interactionsRef = collection(db, 'product_interactions')
     const productInteractionsQuery = query(
       interactionsRef,
       where('productId', '==', product.id),
-      limit(100) // Limit to first 100 interactions
     )
 
     const snapshot = await getDocs(productInteractionsQuery)
@@ -50,9 +48,13 @@ export async function scoreByEngagement(
       return { score: 0.5, reasons }
     }
 
-    // Calculate weighted score based on follicle similarity
-    let totalWeightedScore = 0
-    let totalWeight = 0
+    // Calculate rate-based scoring with weighted interactions
+    let weightedRoutine = 0
+    let weightedSave = 0
+    let weightedLike = 0
+    let weightedDislike = 0
+    let weightedReroll = 0
+    let weightedViews = 0
     let interactionCount = 0
 
     const similarityBuckets = {
@@ -87,28 +89,46 @@ export async function scoreByEngagement(
         similarityBuckets.medium++
       }
 
-      // Get weight for this interaction type
-      const interactionWeight = ENGAGEMENT_WEIGHTS[interaction.type] || 0
-      // Weight by both interaction type AND user similarity
-      const weightedValue = interactionWeight * similarity
+      // Weight interactions by similarity
+      if (interaction.type === 'routine') {
+        weightedRoutine += similarity
+      } else if (interaction.type === 'save') {
+        weightedSave += similarity
+      } else if (interaction.type === 'like') {
+        weightedLike += similarity
+      } else if (interaction.type === 'dislike') {
+        weightedDislike += similarity
+      } else if (interaction.type === 'reroll') {
+        weightedReroll += similarity
+      } else if (interaction.type === 'view') {
+        weightedViews += similarity
+      }
 
-      totalWeightedScore += weightedValue
-      totalWeight += similarity
       interactionCount++
     })
 
     // Calculate final score
     let finalScore = 0.5 // Default neutral
 
-    if (
-      totalWeight > 0 &&
-      interactionCount >= ENGAGEMENT_NORMALIZATION.minViews
-    ) {
-      // Average weighted score
-      const averageScore = totalWeightedScore / totalWeight
+    if (weightedViews > 0) {
+      
+      // Calculate rates (action / views)
+      const routineRate = weightedRoutine / weightedViews
+      const saveRate = weightedSave / weightedViews
+      const likeRate = weightedLike / weightedViews
+      const dislikeRate = weightedDislike / weightedViews
+      const rerollRate = weightedReroll / weightedViews
 
-      // Normalize to 0-1 range
-      finalScore = Math.max(0, Math.min(1, (averageScore + 0.65) / 1.3))
+      // Apply engagement weights
+      const score =
+        routineRate * ENGAGEMENT_WEIGHTS.routine +
+        saveRate * ENGAGEMENT_WEIGHTS.save +
+        likeRate * ENGAGEMENT_WEIGHTS.like +
+        dislikeRate * ENGAGEMENT_WEIGHTS.dislike +
+        rerollRate * ENGAGEMENT_WEIGHTS.reroll
+
+      // Normalize to 0-1 range (score + 0.5, clamped)
+      finalScore = Math.max(0, Math.min(1, score + 0.5))
     }
 
     // Add reasons if requested

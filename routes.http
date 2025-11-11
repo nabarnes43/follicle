@@ -12,6 +12,12 @@
 @follicleId = PR-M-M-C-N
 @productId = 100_pure_burdock_and_neem_healthy_scalp_conditioner
 
+### IMPORTANT: Get your auth token first
+### 1. Open browser console on your app
+### 2. Run: firebase.auth().currentUser.getIdToken().then(console.log)
+### 3. Copy the token and paste it below
+@authToken = eyJhbGciOiJSUzI1NiIsImtpZCI6IjU0NTEzMjA5OWFkNmJmNjEzODJiNmI0Y2RlOWEyZGZlZDhjYjMwZjAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vZm9sbGljbGUtOTBlYTgiLCJhdWQiOiJmb2xsaWNsZS05MGVhOCIsImF1dGhfdGltZSI6MTc2MDk5NzU1MiwidXNlcl9pZCI6Ik16Q1RpaGxkZGNoekRzaVZvQWpjSGJ4R2FSdDEiLCJzdWIiOiJNekNUaWhsZGRjaHpEc2lWb0FqY0hieEdhUnQxIiwiaWF0IjoxNzYyNTY3NjgwLCJleHAiOjE3NjI1NzEyODAsImVtYWlsIjoibmFiYXJuZXM0M0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJnb29nbGUuY29tIjpbIjEwNDk3OTM0NzE5MjYxNjgyOTA0NSJdLCJlbWFpbCI6WyJuYWJhcm5lczQzQGdtYWlsLmNvbSJdfSwic2lnbl9pbl9wcm92aWRlciI6Imdvb2dsZS5jb20ifX0.KaTPk02BkNHqE9OrPz3aPOi_n3FXMQyvdWD8YlrYuwWP-Vg9qkwSP3YnUBmWTtrYj0eGwfbXXpzVv2LSglmHlBTKDWlpySMlZhwCLvm0uMNy9qh8mWeNRx7gZqmdfbZwEIaHRf6WPYDSbq12LUIV1bmZvuZ86pIN_ul3LMU_JtswAp2mXiLV7U5Z1q4bCT675zTwB62J49nT_1lGjz_wQtMPSKrL4PpOSCmZ90BVef0Ck5sRBHxbW4NxK3Or9YHBSPx1AAhB5GAJzWBbIxBY8BtrUszFFmOS8EF-YRL2UThfapwR5imb9CxxGegj-orXCWJPyZWhxIJ-Ocu4pklMbg
+
 ### ==============================================
 ### PRODUCTS API
 ### ==============================================
@@ -20,81 +26,126 @@
 GET {{baseUrl}}/api/products
 
 ### ==============================================
-### INTERACTIONS API
+### PRODUCT INTERACTIONS API
 ### ==============================================
 
 ### Create LIKE interaction
-POST {{baseUrl}}/api/interactions
+POST {{baseUrl}}/api/interactions/products
 Content-Type: application/json
+Authorization: Bearer {{authToken}}
 
 {
-  "userId": "{{userId}}",
   "productId": "{{productId}}",
   "follicleId": "{{follicleId}}",
   "type": "like"
 }
 
 ### Create DISLIKE interaction (removes like)
-POST {{baseUrl}}/api/interactions
+POST {{baseUrl}}/api/interactions/products
 Content-Type: application/json
+Authorization: Bearer {{authToken}}
 
 {
-  "userId": "{{userId}}",
   "productId": "{{productId}}",
   "follicleId": "{{follicleId}}",
   "type": "dislike"
 }
 
 ### Create SAVE interaction
-POST {{baseUrl}}/api/interactions
+POST {{baseUrl}}/api/interactions/products
 Content-Type: application/json
+Authorization: Bearer {{authToken}}
 
 {
-  "userId": "{{userId}}",
   "productId": "{{productId}}",
   "follicleId": "{{follicleId}}",
   "type": "save"
 }
 
-### Create VIEW interaction (allows multiple)
-POST {{baseUrl}}/api/interactions
+### Create ROUTINE interaction
+POST {{baseUrl}}/api/interactions/products
 Content-Type: application/json
+Authorization: Bearer {{authToken}}
 
 {
-  "userId": "{{userId}}",
+  "productId": "{{productId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "routine"
+}
+
+### Create REROLL interaction
+POST {{baseUrl}}/api/interactions/products
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "productId": "{{productId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "reroll"
+}
+
+### Create VIEW interaction (allows multiple)
+POST {{baseUrl}}/api/interactions/products
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
   "productId": "{{productId}}",
   "follicleId": "{{follicleId}}",
   "type": "view"
 }
 
 ### Delete LIKE interaction
-DELETE {{baseUrl}}/api/interactions?userId={{userId}}&productId={{productId}}&type=like
+DELETE {{baseUrl}}/api/interactions/products/{{productId}}/like
+Authorization: Bearer {{authToken}}
 
 ### Delete DISLIKE interaction
-DELETE {{baseUrl}}/api/interactions?userId={{userId}}&productId={{productId}}&type=dislike
+DELETE {{baseUrl}}/api/interactions/products/{{productId}}/dislike
+Authorization: Bearer {{authToken}}
 
 ### Delete SAVE interaction
-DELETE {{baseUrl}}/api/interactions?userId={{userId}}&productId={{productId}}&type=save
+DELETE {{baseUrl}}/api/interactions/products/{{productId}}/save
+Authorization: Bearer {{authToken}}
+
+### Delete ROUTINE interaction
+DELETE {{baseUrl}}/api/interactions/products/{{productId}}/routine
+Authorization: Bearer {{authToken}}
+
+### Delete REROLL interaction
+DELETE {{baseUrl}}/api/interactions/products/{{productId}}/reroll
+Authorization: Bearer {{authToken}}
 
 ### Test missing field (should return 400)
-POST {{baseUrl}}/api/interactions
+POST {{baseUrl}}/api/interactions/products
 Content-Type: application/json
+Authorization: Bearer {{authToken}}
 
 {
-  "userId": "{{userId}}",
   "productId": "{{productId}}",
   "type": "like"
 }
 
 ### Test invalid type (should return 400)
-POST {{baseUrl}}/api/interactions
+POST {{baseUrl}}/api/interactions/products
 Content-Type: application/json
+Authorization: Bearer {{authToken}}
 
 {
-  "userId": "{{userId}}",
   "productId": "{{productId}}",
   "follicleId": "{{follicleId}}",
   "type": "invalid"
+}
+
+### Test duplicate interaction (should return 409)
+### First run "Create LIKE" above, then run this
+POST {{baseUrl}}/api/interactions/products
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "productId": "{{productId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "like"
 }
 
 ### ==============================================
@@ -181,6 +232,114 @@ Content-Type: application/json
 GET {{baseUrl}}/api/routines/private_routine_id
 
 ### ==============================================
+### ROUTINE INTERACTIONS API
+### ==============================================
+
+### Create LIKE interaction for routine
+POST {{baseUrl}}/api/interactions/routines
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "routineId": "{{routineId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "like"
+}
+
+### Create DISLIKE interaction for routine (removes like)
+POST {{baseUrl}}/api/interactions/routines
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "routineId": "{{routineId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "dislike"
+}
+
+### Create SAVE interaction for routine
+POST {{baseUrl}}/api/interactions/routines
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "routineId": "{{routineId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "save"
+}
+
+### Create ADAPT interaction for routine (strongest signal)
+POST {{baseUrl}}/api/interactions/routines
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "routineId": "{{routineId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "adapt"
+}
+
+### Create VIEW interaction for routine (allows multiple)
+POST {{baseUrl}}/api/interactions/routines
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "routineId": "{{routineId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "view"
+}
+
+### Delete LIKE interaction from routine
+DELETE {{baseUrl}}/api/interactions/routines/{{routineId}}/like
+Authorization: Bearer {{authToken}}
+
+### Delete DISLIKE interaction from routine
+DELETE {{baseUrl}}/api/interactions/routines/{{routineId}}/dislike
+Authorization: Bearer {{authToken}}
+
+### Delete SAVE interaction from routine
+DELETE {{baseUrl}}/api/interactions/routines/{{routineId}}/save
+Authorization: Bearer {{authToken}}
+
+### Delete ADAPT interaction from routine
+DELETE {{baseUrl}}/api/interactions/routines/{{routineId}}/adapt
+Authorization: Bearer {{authToken}}
+
+### Test missing field (should return 400)
+POST {{baseUrl}}/api/interactions/routines
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "routineId": "{{routineId}}",
+  "type": "like"
+}
+
+### Test invalid type (should return 400)
+POST {{baseUrl}}/api/interactions/routines
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "routineId": "{{routineId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "invalid"
+}
+
+### Test duplicate interaction (should return 409)
+### First run "Create LIKE" above, then run this
+POST {{baseUrl}}/api/interactions/routines
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "routineId": "{{routineId}}",
+  "follicleId": "{{follicleId}}",
+  "type": "like"
+}
+
+### ==============================================
 ### NOTES
 ### ==============================================
 ###
@@ -193,7 +352,7 @@ GET {{baseUrl}}/api/routines/private_routine_id
 ### - 500: Server error
 ###
 ### After each test, check Firestore console:
-### - interactions/ collection
+### - product_interactions/ collection
 ### - users/{userId}/likedProducts, dislikedProducts, savedProducts
 ###
 ### ==============================================

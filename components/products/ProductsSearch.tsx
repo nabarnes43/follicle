@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, X, Star } from 'lucide-react'
 import { Product } from '@/types/product'
-import { productsCache } from '@/lib/matching/productsCache'
+import { productsCache } from '@/lib/matching/products/productsCache'
 import Fuse from 'fuse.js'
 
 interface ProductSearchProps {

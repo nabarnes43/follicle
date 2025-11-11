@@ -16,7 +16,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { productsCache } from '@/lib/matching/productsCache'
+import { productsCache } from '@/lib/matching/products/productsCache'
 import { Globe, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth'

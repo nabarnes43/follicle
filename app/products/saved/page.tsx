@@ -7,7 +7,7 @@ import { User } from '@/types/user'
 import { collection, query, where, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { Product } from '@/types/product'
-import { MatchScore } from '@/types/matching'
+import { ProductMatchScore } from '@/types/productMatching'
 import { ProductCard } from '@/components/products/ProductCard'
 import { ProductDetailDialog } from '@/components/products/ProductDetailDialog'
 import { Spinner } from '@/components/ui/spinner'
@@ -20,11 +20,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { matchProductsForUser } from '@/lib/matching/productMatcher'
+import { matchProductsForUser } from '@/lib/matching/products/productMatcher'
 import { generateFollicleId } from '@/lib/analysis/follicleId'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Heart, Bookmark, ThumbsDown, Search, X } from 'lucide-react'
-import { productsCache } from '@/lib/matching/productsCache'
+import { productsCache } from '@/lib/matching/products/productsCache'
 
 const PRODUCTS_PER_PAGE = 24
 const INITIAL_DISPLAY_LIMIT = 24
@@ -39,9 +39,9 @@ function SavedContent({ userData }: { userData: User }) {
     saved: [],
     disliked: [],
   } as {
-    liked: MatchScore[]
-    saved: MatchScore[]
-    disliked: MatchScore[]
+    liked: ProductMatchScore[]
+    saved: ProductMatchScore[]
+    disliked: ProductMatchScore[]
   })
 
   // Displayed matches (paginated)
@@ -50,9 +50,9 @@ function SavedContent({ userData }: { userData: User }) {
     saved: [],
     disliked: [],
   } as {
-    liked: MatchScore[]
-    saved: MatchScore[]
-    disliked: MatchScore[]
+    liked: ProductMatchScore[]
+    saved: ProductMatchScore[]
+    disliked: ProductMatchScore[]
   })
 
   // Pagination state
@@ -62,7 +62,9 @@ function SavedContent({ userData }: { userData: User }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   // UI state
-  const [selectedMatch, setSelectedMatch] = useState<MatchScore | null>(null)
+  const [selectedMatch, setSelectedMatch] = useState<ProductMatchScore | null>(
+    null
+  )
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
 
@@ -79,7 +81,7 @@ function SavedContent({ userData }: { userData: User }) {
 
   // Update displayed items when page changes or search query changes
   useEffect(() => {
-    const filterBySearch = (matches: MatchScore[]) => {
+    const filterBySearch = (matches: ProductMatchScore[]) => {
       if (!searchQuery.trim()) return matches
 
       const query = searchQuery.toLowerCase()

@@ -17,7 +17,7 @@ import { getFollicleIdDescription } from '@/lib/analysis/follicleId'
 import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { User } from '@/types/user'
-import { productsCache } from '@/lib/matching/productsCache'
+import { productsCache } from '@/lib/matching/products/productsCache'
 
 export default function AnalysisResultsPage() {
   const searchParams = useSearchParams()

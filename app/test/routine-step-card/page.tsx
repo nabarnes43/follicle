@@ -6,7 +6,7 @@ import { ArrowLeft } from 'lucide-react'
 import { RoutineStepCard } from '@/components/routines/RoutineStepCard'
 import { RoutineStep } from '@/types/routine'
 import { Product } from '@/types/product'
-import { productsCache } from '@/lib/matching/productsCache'
+import { productsCache } from '@/lib/matching/products/productsCache'
 
 export default function RoutineStepCardTest() {
   const [step, setStep] = useState<RoutineStep>({
