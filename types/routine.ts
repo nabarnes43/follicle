@@ -1,5 +1,4 @@
 import { Timestamp } from 'firebase/firestore'
-import { Product } from './product'
 import { ProductCategory } from '@/lib/matching/products/config/categories'
 
 // Main routine interface
@@ -24,33 +23,14 @@ export interface Frequency {
   days_of_week?: string[] // For weekly: ['Mo', 'Tu']
   day_of_month?: number // For monthly: 1-31
 }
-// Product within a routine step (with amount)
-export interface StepProduct {
-  product_id: string
-  amount?: string // Free text: "Dime-sized", "2 pumps", etc.
-}
 
 // Individual step in a routine
 export interface RoutineStep {
   order: number
   step_name: ProductCategory // Must be one of the valid product categories
-  products: StepProduct[] // Multiple products per step
+  product_id: string // Single product ID instead of array
+  amount?: string // Optional amount for this product
   frequency: Frequency
   notes?: string
   technique?: string
 }
-
-// Suggested step categories for the dropdown
-export const SUGGESTED_STEP_NAMES = [
-  'Shampoo',
-  'Condition',
-  'Deep Condition',
-  'Detangle',
-  'Scalp Treatment',
-  'Hair Mask',
-  'Diffuse',
-  'Air Dry',
-  'Plop',
-  'Refresh',
-  'Other',
-] as const

@@ -100,7 +100,7 @@ export function useRoutineInteraction(routineId: string) {
             }
           )
         } else {
-          response = await fetch('/api/routine-interactions', {
+          response = await fetch('/api/interactions/routines', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

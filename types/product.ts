@@ -1,8 +1,10 @@
+import { ProductCategory } from '@/lib/matching/products/config/categories'
+
 export interface Product {
   id: string
   brand: string
   name: string
-  category: string
+  category: ProductCategory
   price: number
   image_url: string
 

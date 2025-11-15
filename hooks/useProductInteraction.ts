@@ -171,6 +171,13 @@ export function useProductInteraction(productId: string) {
   }, [interactions.save, interact])
 
   /**
+   * Toggle routine (product added to/removed from routine)
+   */
+  const toggleRoutine = useCallback(async () => {
+    return interact('routine', interactions.routine)
+  }, [interactions.routine, interact])
+
+  /**
    * Track view (allow multiple views)
    */
   const trackView = useCallback(async () => {
@@ -187,6 +194,7 @@ export function useProductInteraction(productId: string) {
     toggleLike,
     toggleDislike,
     toggleSave,
+    toggleRoutine,
     trackView,
   }
 }

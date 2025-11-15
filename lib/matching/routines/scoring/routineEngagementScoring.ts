@@ -41,7 +41,7 @@ export async function scoreRoutineByEngagement(
     const interactionsRef = collection(db, 'routine_interactions')
     const routineInteractionsQuery = query(
       interactionsRef,
-      where('routineId', '==', routine.id),
+      where('routineId', '==', routine.id)
     )
 
     const snapshot = await getDocs(routineInteractionsQuery)
@@ -130,26 +130,52 @@ export async function scoreRoutineByEngagement(
 
     // Add reasons if requested
     if (includeReasons) {
-      const totalSimilar = interactionCount
+      // Map interaction types to their weighted counts and labels
+      const interactionReasons = [
+        {
+          type: 'adapted',
+          count: Math.round(weightedAdapt),
+          weight: weightedAdapt,
+        },
+        {
+          type: 'saved',
+          count: Math.round(weightedSave),
+          weight: weightedSave,
+        },
+        {
+          type: 'liked',
+          count: Math.round(weightedLike),
+          weight: weightedLike,
+        },
+      ]
 
-      if (similarityBuckets.exact > 0) {
-        reasons.push(
-          `${similarityBuckets.exact} ${similarityBuckets.exact === 1 ? 'person' : 'people'} with identical hair loved this routine`
-        )
-      } else if (similarityBuckets.veryHigh + similarityBuckets.high > 5) {
-        reasons.push(`Loved by ${totalSimilar} people with very similar hair`)
-      } else if (totalSimilar > 2) {
-        reasons.push(`Liked by ${totalSimilar} people with similar hair`)
-      }
+      // Generate reasons for each positive interaction type
+      interactionReasons.forEach(({ type, count }) => {
+        if (count > 0) {
+          reasons.push(
+            `${count} ${count === 1 ? 'person' : 'people'} with identical hair ${type} this routine`
+          )
+        }
+      })
 
-      // Add adapt-specific reason (strongest signal)
+      // Add adapt rate if significant
       if (weightedAdapt > 0 && weightedViews > 0) {
         const adaptRate = weightedAdapt / weightedViews
         if (adaptRate > 0.2) {
-          // 20%+ adapt rate
           reasons.push(
             `${Math.round(adaptRate * 100)}% of similar users adapted this routine`
           )
+        }
+      }
+
+      // Fallback for high/medium similarity if no exact matches
+      const hasExactMatches = interactionReasons.some(({ count }) => count > 0)
+      if (!hasExactMatches) {
+        const totalSimilar = interactionCount
+        if (similarityBuckets.veryHigh + similarityBuckets.high > 5) {
+          reasons.push(`Loved by ${totalSimilar} people with very similar hair`)
+        } else if (totalSimilar > 2) {
+          reasons.push(`Liked by ${totalSimilar} people with similar hair`)
         }
       }
     }

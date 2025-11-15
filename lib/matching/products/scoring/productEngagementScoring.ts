@@ -38,7 +38,7 @@ export async function scoreByEngagement(
     const interactionsRef = collection(db, 'product_interactions')
     const productInteractionsQuery = query(
       interactionsRef,
-      where('productId', '==', product.id),
+      where('productId', '==', product.id)
     )
 
     const snapshot = await getDocs(productInteractionsQuery)
@@ -111,7 +111,6 @@ export async function scoreByEngagement(
     let finalScore = 0.5 // Default neutral
 
     if (weightedViews > 0) {
-      
       // Calculate rates (action / views)
       const routineRate = weightedRoutine / weightedViews
       const saveRate = weightedSave / weightedViews
@@ -133,16 +132,43 @@ export async function scoreByEngagement(
 
     // Add reasons if requested
     if (includeReasons) {
-      const totalSimilar = interactionCount
+      // Map interaction types to their weighted counts and labels
+      const interactionReasons = [
+        {
+          type: 'routine',
+          count: Math.round(weightedRoutine),
+          weight: weightedRoutine,
+        },
+        {
+          type: 'saved',
+          count: Math.round(weightedSave),
+          weight: weightedSave,
+        },
+        {
+          type: 'liked',
+          count: Math.round(weightedLike),
+          weight: weightedLike,
+        },
+      ]
 
-      if (similarityBuckets.exact > 0) {
-        reasons.push(
-          `${similarityBuckets.exact} ${similarityBuckets.exact === 1 ? 'person' : 'people'} with identical hair loved this`
-        )
-      } else if (similarityBuckets.veryHigh + similarityBuckets.high > 5) {
-        reasons.push(`Loved by ${totalSimilar} people with very similar hair`)
-      } else if (totalSimilar > 2) {
-        reasons.push(`Liked by ${totalSimilar} people with similar hair`)
+      // Generate reasons for each positive interaction type
+      interactionReasons.forEach(({ type, count }) => {
+        if (count > 0) {
+          reasons.push(
+            `${count} ${count === 1 ? 'person' : 'people'} with identical hair ${type} this`
+          )
+        }
+      })
+
+      // Fallback for high/medium similarity if no exact matches
+      const hasExactMatches = interactionReasons.some(({ count }) => count > 0)
+      if (!hasExactMatches) {
+        const totalSimilar = interactionCount
+        if (similarityBuckets.veryHigh + similarityBuckets.high > 5) {
+          reasons.push(`Loved by ${totalSimilar} people with very similar hair`)
+        } else if (totalSimilar > 2) {
+          reasons.push(`Liked by ${totalSimilar} people with similar hair`)
+        }
       }
     }
 

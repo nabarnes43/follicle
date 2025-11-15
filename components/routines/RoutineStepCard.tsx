@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { FrequencySelector } from './FrequencySelector'
-import { SUGGESTED_STEP_NAMES, RoutineStep } from '@/types/routine'
+import { RoutineStep } from '@/types/routine'
 import { Product } from '@/types/product'
 import { Trash2, X, ChevronUp, ChevronDown } from 'lucide-react'
 import { ProductSearch } from '../products/ProductsSearch'
@@ -38,34 +38,29 @@ export function RoutineStepCard({
   savedProductIds = [],
   likedProductIds = [],
 }: RoutineStepCardProps) {
-  // Find full product details from IDs
-  const stepProducts = step.products
-    .map((sp) => {
-      const product = allProducts.find((p) => p.id === sp.product_id)
-      return { ...sp, product }
-    })
-    .filter((sp) => sp.product)
+  // Find the product
+  const product = allProducts.find((p) => p.id === step.product_id)
 
-  const handleAddProduct = (product: Product) => {
+  const handleAddProduct = (selectedProduct: Product) => {
     onUpdate({
       ...step,
-      products: [...step.products, { product_id: product.id, amount: '' }],
+      step_name: selectedProduct.category,
+      product_id: selectedProduct.id,
     })
   }
 
-  const handleRemoveProduct = (productId: string) => {
+  const handleRemoveProduct = () => {
     onUpdate({
       ...step,
-      products: step.products.filter((p) => p.product_id !== productId),
+      product_id: '',
+      step_name: 'Shampoos', // Reset to default
     })
   }
 
-  const handleUpdateAmount = (productId: string, amount: string) => {
+  const handleUpdateAmount = (amount: string) => {
     onUpdate({
       ...step,
-      products: step.products.map((p) =>
-        p.product_id === productId ? { ...p, amount } : p
-      ),
+      amount,
     })
   }
 
@@ -111,80 +106,52 @@ export function RoutineStepCard({
         </Button>
       </div>
 
-      {/* Step Name with native datalist */}
+      {/* Product */}
       <div className="mb-4">
-        <Label htmlFor={`step-name-${step.order}`}>Step Name *</Label>
-        <Input
-          id={`step-name-${step.order}`}
-          list={`step-suggestions-${step.order}`}
-          value={step.step_name}
-          onChange={(e) => onUpdate({ ...step, step_name: e.target.value })}
-          placeholder="e.g., Shampoo, Deep Condition..."
-          className="mt-1 w-full"
-        />
-        <datalist id={`step-suggestions-${step.order}`}>
-          {SUGGESTED_STEP_NAMES.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
-      </div>
+        <Label>Product *</Label>
 
-      {/* Products List */}
-      <div className="mb-4">
-        <Label>Products</Label>
-        <div className="mb-3 space-y-2">
-          {stepProducts.map((sp) => (
-            <div
-              key={sp.product_id}
-              className="bg-muted/30 flex items-center gap-2 rounded border p-2"
-            >
-              {sp.product?.image_url ? (
-                <img
-                  src={sp.product.image_url}
-                  alt={sp.product.name}
-                  className="h-10 w-10 rounded bg-white object-contain"
-                />
-              ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-100">
-                  <span className="text-xs text-gray-400">No img</span>
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-muted-foreground text-xs">
-                  {sp.product?.brand}
-                </p>
-                <p className="truncate text-sm font-medium">
-                  {sp.product?.name}
-                </p>
-              </div>
-              <Input
-                placeholder="Amount"
-                value={sp.amount || ''}
-                onChange={(e) =>
-                  handleUpdateAmount(sp.product_id, e.target.value)
-                }
-                className="w-32"
+        {product ? (
+          <div className="bg-muted/30 flex items-center gap-2 rounded border p-2">
+            {product.image_url ? (
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="h-10 w-10 rounded bg-white object-contain"
               />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveProduct(sp.product_id)}
-                className="flex-shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-100">
+                <span className="text-xs text-gray-400">No img</span>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-muted-foreground text-xs">{product.brand}</p>
+              <p className="truncate text-sm font-medium">{product.name}</p>
             </div>
-          ))}
-        </div>
-
-        <ProductSearch
-          onSelect={handleAddProduct}
-          excludeIds={step.products.map((p) => p.product_id)}
-          placeholder="Add product to this step..."
-          savedProductIds={savedProductIds}
-          likedProductIds={likedProductIds}
-        />
+            <Input
+              placeholder="Amount"
+              value={step.amount || ''}
+              onChange={(e) => handleUpdateAmount(e.target.value)}
+              className="w-32"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleRemoveProduct}
+              className="flex-shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <ProductSearch
+            onSelect={handleAddProduct}
+            excludeIds={[]}
+            placeholder="Select a product for this step..."
+            savedProductIds={savedProductIds}
+            likedProductIds={likedProductIds}
+          />
+        )}
       </div>
 
       {/* Frequency */}

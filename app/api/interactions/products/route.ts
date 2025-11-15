@@ -33,11 +33,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!['like', 'dislike', 'save', 'view'].includes(type)) {
+    if (
+      !['like', 'dislike', 'save', 'view', 'routine', 'reroll'].includes(type)
+    ) {
       return NextResponse.json(
         {
           error:
-            'Invalid interaction type. Must be: like, dislike, save, or view',
+            'Invalid interaction type. Must be: like, dislike, save, view, routine, or reroll',
         },
         { status: 400 }
       )
@@ -114,7 +116,6 @@ export async function POST(request: NextRequest) {
 
     batch.set(newInteractionRef, interactionData)
 
-    // Update user cache
     const userRef = adminDb.collection('users').doc(userId)
     if (type === 'like') {
       batch.update(userRef, {
@@ -127,6 +128,10 @@ export async function POST(request: NextRequest) {
     } else if (type === 'save') {
       batch.update(userRef, {
         savedProducts: FieldValue.arrayUnion(productId),
+      })
+    } else if (type === 'routine') {
+      batch.update(userRef, {
+        routineProducts: FieldValue.arrayUnion(productId),
       })
     }
 

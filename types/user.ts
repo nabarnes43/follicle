@@ -14,7 +14,8 @@ export interface User {
   lastLoginAt: Timestamp | FieldValue
   likedProducts?: string[] // Cache for fast UI checks
   dislikedProducts?: string[] // Cache for fast UI checks
-  savedProducts?: string[] // Cache for fast UI checks
+  routineProducts?: string[]
+  savedProducts?: string[]
   savedRoutines?: string[]
   likedRoutines?: string[]
   dislikedRoutines?: string[]

@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch'
 import { productsCache } from '@/lib/matching/products/productsCache'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/auth'
+import { useProductInteraction } from '@/hooks/useProductInteraction'
 
 function CreateRoutineContent({ userData }: { userData: User }) {
   const { user } = useAuth()
@@ -46,8 +47,9 @@ function CreateRoutineContent({ userData }: { userData: User }) {
   const handleAddStep = () => {
     const newStep: RoutineStep = {
       order: routine.steps.length + 1,
-      step_name: '',
-      products: [],
+      step_name: 'Shampoos',
+      product_id: '', // Single product ID
+      amount: '',
       frequency: { interval: 1, unit: 'day' },
       notes: '',
       technique: '',
@@ -87,9 +89,9 @@ function CreateRoutineContent({ userData }: { userData: User }) {
       return 'Please add at least one step to your routine.'
     }
 
-    const invalidSteps = routine.steps.filter((step) => !step.step_name.trim())
+    const invalidSteps = routine.steps.filter((step) => !step.product_id)
     if (invalidSteps.length > 0) {
-      return 'All steps must have a name.'
+      return 'All steps must have a product.'
     }
 
     if (!routine.name.trim()) {
@@ -127,6 +129,47 @@ function CreateRoutineContent({ userData }: { userData: User }) {
         throw new Error(data.error || 'Failed to save routine')
       }
 
+      // Track routine interactions for all products in the routine
+      const allProductIds = routine.steps
+        .map((step) => step.product_id)
+        .filter((id) => id) // Remove empty strings
+
+      // Get unique product IDs
+      const uniqueProductIds = [...new Set(allProductIds)]
+
+      // Track in parallel (don't wait for all to complete)
+      Promise.all(
+        uniqueProductIds.map(async (productId) => {
+          try {
+            const response = await fetch('/api/interactions/products', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                productId,
+                follicleId: userData.follicleId,
+                type: 'routine',
+              }),
+            })
+            if (!response.ok) {
+              console.error(
+                `Failed to track routine interaction for product ${productId}`
+              )
+            }
+          } catch (error) {
+            console.error(
+              `Error tracking routine interaction for product ${productId}:`,
+              error
+            )
+          }
+        })
+      ).catch((err) => {
+        console.error('Some routine interactions failed to track:', err)
+        // Don't block navigation if tracking fails
+      })
+
       console.log('✅ Routine saved:', data.routineId)
       router.push('/profile')
     } catch (error) {
@@ -140,7 +183,6 @@ function CreateRoutineContent({ userData }: { userData: User }) {
       setIsSaving(false)
     }
   }
-
   return (
     <div className="container mx-auto max-w-4xl p-6">
       <h1 className="mb-8 text-3xl font-bold">Create Routine</h1>

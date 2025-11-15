@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth'
 import { Button } from '@/components/ui/button'
@@ -21,6 +21,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { use } from 'react'
+import { Heart, ThumbsDown, Bookmark, Copy } from 'lucide-react'
+import { useRoutineInteraction } from '@/hooks/useRoutineInteraction'
+import { matchRoutinesForUser } from '@/lib/matching/routines/routineMatcher'
+import { RoutineMatchScore } from '@/types/routineMatching'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase/client'
 
 export default function RoutineDetailPage({
   params,
@@ -38,6 +44,18 @@ export default function RoutineDetailPage({
     useState<ProductMatchScore | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [matchScore, setMatchScore] = useState<RoutineMatchScore | null>(null)
+  const {
+    interactions,
+    toggleLike,
+    toggleDislike,
+    toggleSave,
+    toggleAdapt,
+    trackView,
+    isLoading: interactionLoading,
+  } = useRoutineInteraction(id)
+
+  const hasTrackedView = useRef(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,6 +89,36 @@ export default function RoutineDetailPage({
 
         const products = await productsCache.getProducts()
         setAllProducts(products)
+
+        // Run matching if user has completed hair analysis
+        if (user) {
+          try {
+            // Fetch user's Firestore document to get hairAnalysis
+            const userDocRef = doc(db, 'users', user.uid)
+            const userDoc = await getDoc(userDocRef)
+
+            if (userDoc.exists()) {
+              const userData = userDoc.data()
+
+              // Only run matching if user has hairAnalysis and follicleId
+              if (userData.hairAnalysis && userData.follicleId) {
+                const scored = await matchRoutinesForUser(
+                  { hairAnalysis: userData.hairAnalysis },
+                  [routineData], // Score just this one routine
+                  userData.follicleId,
+                  products
+                )
+
+                if (scored.length > 0) {
+                  setMatchScore(scored[0])
+                }
+              }
+            }
+          } catch (matchError) {
+            console.error('Failed to calculate match score:', matchError)
+            // Don't block page load if matching fails
+          }
+        }
       } catch (err) {
         console.error('Error fetching routine:', err)
         setError('Failed to load routine')
@@ -81,6 +129,13 @@ export default function RoutineDetailPage({
 
     fetchData()
   }, [id, user, router])
+
+  useEffect(() => {
+    if (routine && !hasTrackedView.current) {
+      hasTrackedView.current = true
+      trackView()
+    }
+  }, [routine?.id, trackView])
 
   const createMatchScore = (product: Product): ProductMatchScore => ({
     product,
@@ -167,24 +222,102 @@ export default function RoutineDetailPage({
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {routine.name}
-              </h1>
-              {routine.is_public ? (
-                <Globe className="h-5 w-5 text-gray-400" />
-              ) : (
-                <Lock className="h-5 w-5 text-gray-400" />
-              )}
+          {/* Title Row with Back Button */}
+          <div className="mb-4 flex items-center gap-3">
+            <Button onClick={() => router.back()} variant="ghost" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              {routine.name}
+            </h1>
+            {routine.is_public ? (
+              <Globe className="h-5 w-5 text-gray-400" />
+            ) : (
+              <Lock className="h-5 w-5 text-gray-400" />
+            )}
+
+            {/* Match Score Badge - Inline with title */}
+            {matchScore && (
+              <div className="bg-primary/10 flex items-center gap-1.5 rounded-full px-3 py-1">
+                <span className="text-primary text-sm font-semibold">
+                  {Math.round(matchScore.totalScore * 100)}%
+                </span>
+                <span className="text-muted-foreground text-xs">Match</span>
+              </div>
+            )}
+          </div>
+
+          {/* Match Reasons as Chips - Only if exists */}
+          {matchScore && matchScore.matchReasons.length > 0 && (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {matchScore.matchReasons.slice(0, 3).map((reason, idx) => (
+                <div
+                  key={idx}
+                  className="bg-muted text-muted-foreground rounded-md px-3 py-1.5 text-xs"
+                >
+                  {reason}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Interaction Buttons Row */}
+          <div className="mb-4 flex items-center justify-between gap-4">
+            {/* Left: Like, Dislike, Save, Adapt */}
+            <div className="flex gap-2">
+              <Button
+                onClick={toggleLike}
+                disabled={interactionLoading}
+                variant={interactions.like ? 'default' : 'outline'}
+                size="sm"
+              >
+                <Heart
+                  className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
+                />
+                {interactions.like ? 'Liked' : 'Like'}
+              </Button>
+
+              <Button
+                onClick={toggleDislike}
+                disabled={interactionLoading}
+                variant={interactions.dislike ? 'destructive' : 'outline'}
+                size="sm"
+              >
+                <ThumbsDown
+                  className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
+                />
+                {interactions.dislike ? 'Disliked' : 'Dislike'}
+              </Button>
+
+              <Button
+                onClick={toggleSave}
+                disabled={interactionLoading}
+                variant={interactions.save ? 'default' : 'outline'}
+                size="sm"
+              >
+                <Bookmark
+                  className={`mr-2 h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
+                />
+                {interactions.save ? 'Saved' : 'Save'}
+              </Button>
+
+              <Button
+                onClick={toggleAdapt}
+                disabled={interactionLoading}
+                variant={interactions.adapt ? 'default' : 'outline'}
+                size="sm"
+              >
+                <Copy
+                  className={`mr-2 h-4 w-4 ${interactions.adapt ? 'fill-current' : ''}`}
+                />
+                {interactions.adapt ? 'Adapted' : 'Adapt'}
+              </Button>
             </div>
 
+            {/* Right: Share & Delete (only if owner) */}
             {isOwner && (
               <div className="flex gap-2">
-                <Button onClick={() => router.back()} variant="ghost" size="sm">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Back
-                </Button>
                 {routine.is_public && (
                   <Button onClick={handleShare} variant="outline" size="sm">
                     <Share2 className="mr-2 h-4 w-4" />
@@ -203,131 +336,110 @@ export default function RoutineDetailPage({
             )}
           </div>
 
+          {/* Metadata */}
           <p className="text-sm text-gray-600">
             {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''}
           </p>
         </div>
-
         {/* Product Grid */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {routine.steps.map((step, stepIndex) =>
-            step.products.map((stepProduct) => {
-              const product = allProducts.find(
-                (p) => p.id === stepProduct.product_id
-              )
-              if (!product) return null
+          {routine.steps.map((step, stepIndex) => {
+            // Skip steps without a product
+            if (!step.product_id) return null
 
-              return (
-                <Card
-                  key={`${stepIndex}-${product.id}`}
-                  className="cursor-pointer overflow-hidden border-t-4 transition-shadow hover:shadow-lg"
-                  onClick={() => setSelectedProduct(createMatchScore(product))}
-                  style={{
-                    borderTopColor: step.step_name
-                      .toLowerCase()
-                      .includes('essence')
-                      ? '#d4edda'
-                      : step.step_name.toLowerCase().includes('toner')
-                        ? '#cce5ff'
-                        : step.step_name.toLowerCase().includes('serum')
-                          ? '#d4edda'
-                          : step.step_name.toLowerCase().includes('moisturizer')
-                            ? '#e2d5f0'
-                            : '#e8e8e8',
-                  }}
-                >
-                  <CardContent className="p-4">
-                    {/* Product Image */}
-                    <div className="mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-white">
-                      {' '}
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="h-full w-full object-contain"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gray-100">
-                          <span className="text-sm text-gray-400">
-                            No image
-                          </span>
-                        </div>
-                      )}
-                    </div>
+            const product = allProducts.find((p) => p.id === step.product_id)
+            if (!product) return null
 
-                    {/* Step Badge */}
-                    <div className="mb-2 flex items-center justify-between">
-                      <span
-                        className="rounded px-2 py-1 text-xs font-medium"
-                        style={{ color: '#000' }}
-                      >
-                        {step.step_name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        Step {stepIndex + 1}
-                      </span>
-                    </div>
+            return (
+              <Card
+                key={`${stepIndex}-${product.id}`}
+                className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
+                onClick={() => setSelectedProduct(createMatchScore(product))}
+              >
+                <CardContent className="p-4">
+                  {/* Product Image */}
+                  <div className="mb-4 flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-white">
+                    {product.image_url ? (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                        <span className="text-sm text-gray-400">No image</span>
+                      </div>
+                    )}
+                  </div>
 
-                    {/* Brand */}
-                    <p className="mb-1 text-xs text-gray-600">
-                      {product.brand}
-                    </p>
+                  {/* Step Badge */}
+                  <div className="mb-2 flex items-center justify-between">
+                    <span
+                      className="rounded px-2 py-1 text-xs font-medium"
+                      style={{ color: '#000' }}
+                    >
+                      {step.step_name}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Step {stepIndex + 1}
+                    </span>
+                  </div>
 
-                    {/* Product Name */}
-                    <h4 className="mb-3 line-clamp-2 text-sm font-semibold">
-                      {product.name}
-                    </h4>
+                  {/* Brand */}
+                  <p className="mb-1 text-xs text-gray-600">{product.brand}</p>
 
-                    {/* Frequency */}
-                    <p className="mb-3 text-xs text-gray-600">
-                      {getFrequencyText(step.frequency)}
-                    </p>
+                  {/* Product Name */}
+                  <h4 className="mb-3 line-clamp-2 text-sm font-semibold">
+                    {product.name}
+                  </h4>
 
-                    {/* Technique & Notes Section - Always show with border */}
-                    <div className="border-t pt-3">
-                      {stepProduct.amount && (
-                        <div>
-                          <p className="mb-1 text-xs font-semibold text-gray-700">
-                            Amount:
-                          </p>
-                          <p className="text-xs leading-relaxed text-gray-600">
-                            {stepProduct.amount}
-                          </p>
-                        </div>
-                      )}
-                      {step.technique && (
-                        <div className="mb-2">
-                          <p className="mb-1 text-xs font-semibold text-gray-700">
-                            Technique:
-                          </p>
-                          <p className="text-xs leading-relaxed text-gray-600">
-                            {step.technique}
-                          </p>
-                        </div>
-                      )}
-                      {step.notes && (
-                        <div className="mb-2">
-                          <p className="mb-1 text-xs font-semibold text-gray-700">
-                            Notes:
-                          </p>
-                          <p className="text-xs leading-relaxed text-gray-600">
-                            {step.notes}
-                          </p>
-                        </div>
-                      )}
-                      {!step.technique &&
-                        !step.notes &&
-                        !stepProduct.amount && (
-                          <p className="text-xs text-gray-400">
-                            No additional details
-                          </p>
-                        )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })
-          )}
+                  {/* Frequency */}
+                  <p className="mb-3 text-xs text-gray-600">
+                    {getFrequencyText(step.frequency)}
+                  </p>
+
+                  {/* Technique & Notes Section - Always show with border */}
+                  <div className="border-t pt-3">
+                    {step.amount && (
+                      <div>
+                        <p className="mb-1 text-xs font-semibold text-gray-700">
+                          Amount:
+                        </p>
+                        <p className="text-xs leading-relaxed text-gray-600">
+                          {step.amount}
+                        </p>
+                      </div>
+                    )}
+                    {step.technique && (
+                      <div className="mb-2">
+                        <p className="mb-1 text-xs font-semibold text-gray-700">
+                          Technique:
+                        </p>
+                        <p className="text-xs leading-relaxed text-gray-600">
+                          {step.technique}
+                        </p>
+                      </div>
+                    )}
+                    {step.notes && (
+                      <div className="mb-2">
+                        <p className="mb-1 text-xs font-semibold text-gray-700">
+                          Notes:
+                        </p>
+                        <p className="text-xs leading-relaxed text-gray-600">
+                          {step.notes}
+                        </p>
+                      </div>
+                    )}
+                    {!step.technique && !step.notes && !step.amount && (
+                      <p className="text-xs text-gray-400">
+                        No additional details
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
       </div>
 

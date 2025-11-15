@@ -21,8 +21,24 @@ service cloud.firestore {
       allow write: if false;
     }
     
-    // Interactions collection
+    // Interactions collections
     match /product_interactions/{interactionId} {
+      allow read: if true;
+      
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.follicleId is string
+                    && request.resource.data.productId is string
+                    && request.resource.data.type in ['like', 'dislike', 'save', 'view'];
+      
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+      
+      allow update: if false;
+    }
+
+    // Interactions collection
+    match /routine_interactions/{interactionId} {
       allow read: if true;
       
       allow create: if request.auth != null

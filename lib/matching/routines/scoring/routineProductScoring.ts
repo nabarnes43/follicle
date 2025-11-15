@@ -29,45 +29,45 @@ export async function scoreRoutineProducts(
 
   // Iterate through each step in the routine
   for (const step of routine.steps) {
+    // Skip steps without a product
+    if (!step.product_id) continue
+
     // Get step category weight (e.g., Shampoo = 1.0, Gel = 0.6)
     const stepWeight = getStepCategoryWeight(step.step_name)
 
     // Get frequency weight (daily = 1.0, monthly = 0.1)
     const frequencyWeight = getFrequencyWeight(step.frequency)
 
-    // Score each product in this step
-    for (const stepProduct of step.products) {
-      // Find the product in our database
-      const product = allProducts.find((p) => p.id === stepProduct.product_id)
+    // Find the product in our database
+    const product = allProducts.find((p) => p.id === step.product_id)
 
-      if (!product) {
-        console.warn(`Product not found: ${stepProduct.product_id}`)
-        continue
-      }
-
-      // Score this product using existing product matcher
-      // This gives us ingredient + engagement scores
-      const scoredProducts = await matchProductsForUser(
-        { hairAnalysis: userHairAnalysis },
-        [product],
-        userFollicleId,
-        { limit: 1 }
-      )
-
-      if (scoredProducts.length === 0) {
-        // If scoring failed, skip this product
-        continue
-      }
-
-      const productScore = scoredProducts[0].totalScore
-
-      // Combine weights: step importance × frequency
-      const combinedWeight = stepWeight * frequencyWeight
-
-      // Add to totals
-      totalWeightedScore += productScore * combinedWeight
-      totalWeight += combinedWeight
+    if (!product) {
+      console.warn(`Product not found: ${step.product_id}`)
+      continue
     }
+
+    // Score this product using existing product matcher
+    // This gives us ingredient + engagement scores
+    const scoredProducts = await matchProductsForUser(
+      { hairAnalysis: userHairAnalysis },
+      [product],
+      userFollicleId,
+      { limit: 1 }
+    )
+
+    if (scoredProducts.length === 0) {
+      // If scoring failed, skip this product
+      continue
+    }
+
+    const productScore = scoredProducts[0].totalScore
+
+    // Combine weights: step importance × frequency
+    const combinedWeight = stepWeight * frequencyWeight
+
+    // Add to totals
+    totalWeightedScore += productScore * combinedWeight
+    totalWeight += combinedWeight
   }
 
   // Return weighted average, or neutral if no products scored

@@ -3,11 +3,11 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bookmark } from 'lucide-react'
-import { MatchScore } from '@/types/productMatching'
+import { ProductMatchScore } from '@/types/productMatching'
 import { useProductInteraction } from '@/hooks/useProductInteraction'
 
 interface ProductCardProps {
-  match: MatchScore
+  match: ProductMatchScore
   onClick?: () => void
   showMatchScore?: boolean
 }
@@ -44,10 +44,34 @@ export function ProductCard({
       className="flex h-full cursor-pointer flex-col overflow-hidden transition-shadow hover:shadow-lg"
       onClick={onClick}
     >
-      {/* Product Image with Save Button Overlay */}
-      <div className="relative">
+      <CardContent className="flex flex-1 flex-col p-4">
+        {/* Header with Save Button */}
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <div className="flex-1">
+            {/* Brand */}
+            <p className="text-muted-foreground text-sm">{product.brand}</p>
+            {/* Product Name - Fixed height to prevent layout shift */}
+            <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold">
+              {product.name}
+            </h3>
+          </div>
+          {/* Save Button */}
+          <Button
+            onClick={handleSaveClick}
+            variant={interactions.save ? 'default' : 'outline'}
+            size="sm"
+            disabled={isLoading}
+            className="flex-shrink-0"
+          >
+            <Bookmark
+              className={`h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
+            />
+          </Button>
+        </div>
+
+        {/* Product Image */}
         {product.image_url ? (
-          <div className="flex aspect-square items-center justify-center overflow-hidden bg-white">
+          <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-white">
             <img
               src={product.image_url}
               alt={product.name}
@@ -55,35 +79,10 @@ export function ProductCard({
             />
           </div>
         ) : (
-          <div className="flex aspect-square items-center justify-center bg-gray-100">
+          <div className="mb-3 flex aspect-square items-center justify-center rounded-lg bg-gray-100">
             <span className="text-muted-foreground text-sm">No image</span>
           </div>
         )}
-
-        {/* Floating Save Button */}
-        <Button
-          size="icon"
-          variant="secondary"
-          className="absolute top-2 right-2 h-9 w-9 rounded-full bg-white/90 shadow-md backdrop-blur-sm transition-all hover:scale-110 hover:bg-white"
-          onClick={handleSaveClick}
-          disabled={isLoading}
-        >
-          <Bookmark
-            className={`h-4 w-4 ${
-              interactions.save ? 'text-primary fill-current' : 'text-gray-600'
-            }`}
-          />
-        </Button>
-      </div>
-
-      <CardContent className="flex flex-1 flex-col p-4">
-        {/* Brand */}
-        <p className="text-muted-foreground text-sm">{product.brand}</p>
-
-        {/* Product Name - Fixed height to prevent layout shift */}
-        <h3 className="mb-2 line-clamp-2 min-h-[2.5rem] font-semibold">
-          {product.name}
-        </h3>
 
         {/* Spacer to push price/match to bottom */}
         <div className="flex-1" />

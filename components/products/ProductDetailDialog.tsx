@@ -94,13 +94,13 @@ export function ProductDetailDialog({
 
         {/* Match Reasons - Only show if showMatchScore is true */}
         {showMatchScore && matchReasons.length > 0 && (
-          <div className="space-y-1">
+          <ul className="list-disc space-y-1 pl-5">
             {matchReasons.map((reason, idx) => (
-              <p key={idx} className="text-muted-foreground text-sm">
-                • {reason}
-              </p>
+              <li key={idx} className="text-muted-foreground text-sm">
+                {reason}
+              </li>
             ))}
-          </div>
+          </ul>
         )}
 
         {/* Interaction Buttons */}

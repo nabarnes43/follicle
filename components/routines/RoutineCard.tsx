@@ -2,13 +2,18 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Bookmark } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Routine } from '@/types/routine'
 import { Product } from '@/types/product'
 import { Share2, Trash2, Lock, Globe } from 'lucide-react'
+import { useRoutineInteraction } from '@/hooks/useRoutineInteraction'
 
 interface RoutineCardProps {
   routine: Routine
+  matchScore?: number // Optional match score (0-1)
+  matchReasons?: string[] // Why this routine matches
+  showMatchScore?: boolean // Whether to display score
   allProducts: Product[]
   onView: () => void
   onShare: () => void
@@ -17,11 +22,22 @@ interface RoutineCardProps {
 
 export function RoutineCard({
   routine,
+  matchScore,
+  matchReasons,
+  showMatchScore = false,
   allProducts,
   onView,
   onShare,
   onDelete,
 }: RoutineCardProps) {
+  const { interactions, toggleSave, isLoading } = useRoutineInteraction(
+    routine.id
+  )
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleSave()
+  }
   const formatDate = (ts: any) => {
     if (!ts?._seconds) return 'Unknown'
     const date = new Date(ts._seconds * 1000)
@@ -48,7 +64,7 @@ export function RoutineCard({
 
   return (
     <Card
-      className="cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
+      className="relative cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
       onClick={onView}
     >
       <CardContent className="p-4">
@@ -65,22 +81,31 @@ export function RoutineCard({
               {routine.name}
             </h3>
           </div>
-          <div className="flex flex-shrink-0 gap-1">
-            {routine.is_public && (
-              <Button onClick={handleShareClick} variant="outline" size="sm">
-                <Share2 className="h-4 w-4" />
-              </Button>
+          {/* Match Score & Save Button */}
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {/* Match Score - Only show if enabled */}
+            {showMatchScore && matchScore !== undefined && (
+              <div className="text-center">
+                <p className="text-primary text-md leading-none font-semibold">
+                  {Math.round(matchScore * 100)}%
+                </p>
+                <p className="text-muted-foreground text-[9px] leading-tight">
+                  Match
+                </p>
+              </div>
             )}
-            {onDelete && (
-              <Button
-                onClick={handleDeleteClick}
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
+            {/* Save Button */}
+            <Button
+              onClick={handleSaveClick}
+              variant={interactions.save ? 'default' : 'outline'}
+              size="sm"
+              disabled={isLoading}
+              className="flex-shrink-0"
+            >
+              <Bookmark
+                className={`h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
+              />
+            </Button>
           </div>
         </div>
 
@@ -141,7 +166,7 @@ export function RoutineCard({
 
               // Real step - fetch product data and display
               const product = allProducts.find(
-                (p) => p.id === step.products[0]?.product_id
+                (p) => p.id === step.product_id
               )
 
               return (

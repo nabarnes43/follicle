@@ -20,15 +20,20 @@ import { productsCache } from '@/lib/matching/products/productsCache'
 import { Globe, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/auth'
+import { matchRoutinesForUser } from '@/lib/matching/routines/routineMatcher'
+import { RoutineMatchScore } from '@/types/routineMatching'
 
 function PublicRoutinesContent({ userData }: { userData: User }) {
   const router = useRouter()
   const { user } = useAuth()
 
   // Data
-  const [allRoutines, setAllRoutines] = useState<Routine[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [matchedRoutines, setMatchedRoutines] = useState<RoutineMatchScore[]>(
+    []
+  )
+  const [unmatchedRoutines, setUnmatchedRoutines] = useState<Routine[]>([])
 
   // UI
   const [loading, setLoading] = useState(true)
@@ -58,8 +63,21 @@ function PublicRoutinesContent({ userData }: { userData: User }) {
 
       const data = await response.json()
 
-      if (data.routines) {
-        setAllRoutines(data.routines)
+      if (data.routines && data.routines.length > 0) {
+        // Check if user has completed hair analysis
+        if (userData.hairAnalysis) {
+          // Run matching algorithm
+          const scored = await matchRoutinesForUser(
+            { hairAnalysis: userData.hairAnalysis },
+            data.routines,
+            userData.follicleId,
+            products
+          )
+          setMatchedRoutines(scored)
+        } else {
+          // No hair analysis - just show routines without scores
+          setUnmatchedRoutines(data.routines)
+        }
       }
     } catch (error) {
       console.error('Error fetching routines:', error)
@@ -79,10 +97,20 @@ function PublicRoutinesContent({ userData }: { userData: User }) {
     toast.success('Link copied to clipboard!')
   }
 
-  // Client-side search filter
-  const filteredRoutines = allRoutines.filter((routine) =>
+  // Filter matched routines (with scores)
+  const filteredMatchedRoutines = matchedRoutines.filter((match) =>
+    match.routine.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Filter unmatched routines (without scores)
+  const filteredUnmatchedRoutines = unmatchedRoutines.filter((routine) =>
     routine.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  // Get count for display
+  const filteredCount = userData.hairAnalysis
+    ? filteredMatchedRoutines.length
+    : filteredUnmatchedRoutines.length
 
   if (loading) {
     return (
@@ -117,13 +145,13 @@ function PublicRoutinesContent({ userData }: { userData: User }) {
       {/* Results Count */}
       {searchQuery && (
         <p className="text-muted-foreground mb-4 text-sm">
-          Found {filteredRoutines.length} routine
-          {filteredRoutines.length !== 1 ? 's' : ''}
+          Found {filteredCount} routine
+          {filteredCount !== 1 ? 's' : ''}
         </p>
       )}
 
       {/* Routines Grid */}
-      {filteredRoutines.length === 0 ? (
+      {filteredCount === 0 ? (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -141,16 +169,33 @@ function PublicRoutinesContent({ userData }: { userData: User }) {
         </Empty>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {filteredRoutines.map((routine) => (
-            <RoutineCard
-              key={routine.id}
-              routine={routine}
-              allProducts={allProducts}
-              onView={() => handleView(routine.id)}
-              onShare={() => handleShare(routine.id)}
-              onDelete={undefined} // No delete button for public browse
-            />
-          ))}
+          {userData.hairAnalysis
+            ? // Matched routines with scores
+              filteredMatchedRoutines.map((match) => (
+                <RoutineCard
+                  key={match.routine.id}
+                  routine={match.routine}
+                  matchScore={match.totalScore}
+                  matchReasons={match.matchReasons}
+                  showMatchScore={true}
+                  allProducts={allProducts}
+                  onView={() => handleView(match.routine.id)}
+                  onShare={() => handleShare(match.routine.id)}
+                  onDelete={undefined}
+                />
+              ))
+            : // Unmatched routines without scores
+              filteredUnmatchedRoutines.map((routine) => (
+                <RoutineCard
+                  key={routine.id}
+                  routine={routine}
+                  showMatchScore={false}
+                  allProducts={allProducts}
+                  onView={() => handleView(routine.id)}
+                  onShare={() => handleShare(routine.id)}
+                  onDelete={undefined}
+                />
+              ))}
         </div>
       )}
     </div>
