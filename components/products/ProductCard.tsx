@@ -10,6 +10,7 @@ interface ProductCardProps {
   match: ProductMatchScore
   onClick?: () => void
   showMatchScore?: boolean
+  hideSaveButton?: boolean
 }
 
 /**
@@ -27,6 +28,7 @@ interface ProductCardProps {
 export function ProductCard({
   match,
   onClick,
+  hideSaveButton = false,
   showMatchScore = true, // Default to true for backward compatibility
 }: ProductCardProps) {
   const { product } = match
@@ -55,18 +57,20 @@ export function ProductCard({
               {product.name}
             </h3>
           </div>
-          {/* Save Button */}
-          <Button
-            onClick={handleSaveClick}
-            variant={interactions.save ? 'default' : 'outline'}
-            size="sm"
-            disabled={isLoading}
-            className="flex-shrink-0"
-          >
-            <Bookmark
-              className={`h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
-            />
-          </Button>
+          {/* Save Button - Only show if not hidden */}
+          {!hideSaveButton && (
+            <Button
+              onClick={handleSaveClick}
+              variant={interactions.save ? 'default' : 'outline'}
+              size="sm"
+              disabled={isLoading}
+              className="flex-shrink-0"
+            >
+              <Bookmark
+                className={`h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
+              />
+            </Button>
+          )}
         </div>
 
         {/* Product Image */}

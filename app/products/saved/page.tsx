@@ -290,6 +290,7 @@ function SavedContent({ userData }: { userData: User }) {
               key={match.product.id}
               match={match}
               onClick={() => setSelectedMatch(match)}
+              hideSaveButton={true}
             />
           ))}
         </div>

@@ -1,9 +1,9 @@
 // app/api/routines/[id]/route.ts
 
-import { NextRequest } from 'next/server'
-import { Timestamp } from 'firebase-admin/firestore'
+import { NextRequest, NextResponse } from 'next/server'
+import { Timestamp, FieldValue } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase/admin'
-import { verifyAuthToken } from '@/lib/firebase/auth' // ✅ Add this
+import { verifyAuthToken } from '@/lib/firebase/auth'
 import { Routine } from '@/types/routine'
 
 /**
@@ -54,6 +54,135 @@ export async function GET(
         error: 'Failed to fetch routine',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PATCH /api/routines/[routineId]
+ * Update an existing routine
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ routineId: string }> }
+) {
+  try {
+    // Verify auth
+    const userId = await verifyAuthToken(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { routineId } = await params
+    const updates = await request.json()
+
+    // Get existing routine
+    const routineRef = adminDb.collection('routines').doc(routineId)
+    const routineDoc = await routineRef.get()
+
+    if (!routineDoc.exists) {
+      return NextResponse.json({ error: 'Routine not found' }, { status: 404 })
+    }
+
+    const routine = routineDoc.data()
+
+    // Verify ownership
+    if (routine?.user_id !== userId) {
+      return NextResponse.json(
+        { error: 'You can only edit your own routines' },
+        { status: 403 }
+      )
+    }
+
+    // Handle product interaction cleanup
+    const oldSteps = routine.steps || []
+    const newSteps = updates.steps || oldSteps
+
+    const oldProductIds = new Set(
+      oldSteps.map((s: any) => s.product_id).filter(Boolean)
+    )
+    const newProductIds = new Set(
+      newSteps.map((s: any) => s.product_id).filter(Boolean)
+    )
+
+    // Find products that were removed
+    const removedProductIds = [...oldProductIds].filter(
+      (id) => !newProductIds.has(id)
+    )
+
+    const batch = adminDb.batch()
+
+    // Delete 'routine' interactions for removed products (filtered by routineId)
+    for (const productId of removedProductIds) {
+      const interactionQuery = await adminDb
+        .collection('product_interactions')
+        .where('userId', '==', userId)
+        .where('productId', '==', productId)
+        .where('type', '==', 'routine')
+        .where('routineId', '==', routineId) // NEW - only delete THIS routine's interaction
+        .limit(1)
+        .get()
+
+      if (!interactionQuery.empty) {
+        batch.delete(interactionQuery.docs[0].ref)
+      }
+    }
+
+    // Add 'routine' interactions for newly added products
+    const addedProductIds = [...newProductIds].filter(
+      (id) => !oldProductIds.has(id)
+    )
+
+    for (const productId of addedProductIds) {
+      // Check if interaction already exists
+      const existingInteraction = await adminDb
+        .collection('product_interactions')
+        .where('userId', '==', userId)
+        .where('productId', '==', productId)
+        .where('type', '==', 'routine')
+        .where('routineId', '==', routineId)
+        .limit(1)
+        .get()
+
+      if (existingInteraction.empty) {
+        // Create new interaction
+        const newInteractionRef = adminDb
+          .collection('product_interactions')
+          .doc()
+        batch.set(newInteractionRef, {
+          userId,
+          productId,
+          follicleId: routine.follicle_id,
+          type: 'routine',
+          routineId,
+          timestamp: FieldValue.serverTimestamp(),
+        })
+
+        // Update user cache
+        const userRef = adminDb.collection('users').doc(userId)
+        batch.update(userRef, {
+          routineProducts: FieldValue.arrayUnion(productId),
+        })
+      }
+    }
+
+    // Update routine
+    batch.update(routineRef, {
+      ...updates,
+      updated_at: FieldValue.serverTimestamp(),
+    })
+
+    await batch.commit()
+
+    return NextResponse.json({
+      success: true,
+      message: 'Routine updated successfully',
+    })
+  } catch (error) {
+    console.error('Error updating routine:', error)
+    return NextResponse.json(
+      { error: 'Failed to update routine' },
       { status: 500 }
     )
   }
@@ -134,44 +263,86 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/routines/[id]
- * Soft deletes a routine (sets deleted_at timestamp)
+ * DELETE /api/routines/[routineId]
+ * Soft delete a routine
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ routineId: string }> }
 ) {
   try {
-    // Await params in Next.js 15+
+    // Verify auth
+    const userId = await verifyAuthToken(request)
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { routineId } = await params
 
-    if (!routineId) {
-      return Response.json(
-        { error: 'Missing routineId parameter' },
-        { status: 400 }
+    // Get existing routine
+    const routineRef = adminDb.collection('routines').doc(routineId)
+    const routineDoc = await routineRef.get()
+
+    if (!routineDoc.exists) {
+      return NextResponse.json({ error: 'Routine not found' }, { status: 404 })
+    }
+
+    const routine = routineDoc.data()
+
+    // Verify ownership
+    if (routine?.user_id !== userId) {
+      return NextResponse.json(
+        { error: 'You can only delete your own routines' },
+        { status: 403 }
       )
     }
 
-    console.log(`🗑️ Soft deleting routine: ${routineId}`)
+    const batch = adminDb.batch()
 
-    // Soft delete by setting deleted_at timestamp
-    await adminDb.collection('routines').doc(routineId).update({
-      deleted_at: Timestamp.now(),
+    // Soft delete routine
+    batch.update(routineRef, {
+      deleted_at: FieldValue.serverTimestamp(),
     })
 
-    console.log(`✅ Routine soft deleted: ${routineId}`)
+    // Remove 'routine' interactions for products in THIS routine only
+    const productIds = (routine.steps || [])
+      .map((s: any) => s.product_id)
+      .filter(Boolean)
 
-    return Response.json({
+    for (const productId of productIds) {
+      const interactionQuery = await adminDb
+        .collection('product_interactions')
+        .where('userId', '==', userId)
+        .where('productId', '==', productId)
+        .where('type', '==', 'routine')
+        .where('routineId', '==', routineId) // NEW - only delete THIS routine's interaction
+        .get()
+
+      // Delete all matching interactions (there should only be one)
+      interactionQuery.forEach((doc) => {
+        batch.delete(doc.ref)
+      })
+    }
+
+    // Remove from user's cache arrays
+    const userRef = adminDb.collection('users').doc(userId)
+    batch.update(userRef, {
+      savedRoutines: FieldValue.arrayRemove(routineId),
+      likedRoutines: FieldValue.arrayRemove(routineId),
+      dislikedRoutines: FieldValue.arrayRemove(routineId),
+      adaptedRoutines: FieldValue.arrayRemove(routineId),
+    })
+
+    await batch.commit()
+
+    return NextResponse.json({
       success: true,
       message: 'Routine deleted successfully',
     })
   } catch (error) {
     console.error('Error deleting routine:', error)
-    return Response.json(
-      {
-        error: 'Failed to delete routine',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+    return NextResponse.json(
+      { error: 'Failed to delete routine' },
       { status: 500 }
     )
   }

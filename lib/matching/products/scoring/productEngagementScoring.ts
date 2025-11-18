@@ -7,6 +7,8 @@ import {
   ENGAGEMENT_WEIGHTS,
   MIN_SIMILARITY_THRESHOLD,
   MATCH_REASONS_CONFIG,
+  ENGAGEMENT_SCORE_DEFAULTS,
+  SIMILARITY_THRESHOLDS,
 } from '../config/productWeights'
 
 /**
@@ -45,7 +47,7 @@ export async function scoreByEngagement(
 
     // If no interactions yet, return neutral score
     if (snapshot.empty) {
-      return { score: 0.5, reasons }
+      return { score: ENGAGEMENT_SCORE_DEFAULTS.NEUTRAL_SCORE, reasons }
     }
 
     // Calculate rate-based scoring with weighted interactions
@@ -64,6 +66,14 @@ export async function scoreByEngagement(
       medium: 0,
     }
 
+    // Track interactions per similarity tier
+    const interactionsByTier = {
+      exact: { routine: 0, save: 0, like: 0 },
+      veryHigh: { routine: 0, save: 0, like: 0 },
+      high: { routine: 0, save: 0, like: 0 },
+      medium: { routine: 0, save: 0, like: 0 },
+    }
+
     snapshot.forEach((doc) => {
       const interaction = doc.data() as ProductInteraction
 
@@ -73,29 +83,46 @@ export async function scoreByEngagement(
         interaction.follicleId
       )
 
+      // 🔍 ADD DEBUG LOGGING HERE
+      console.log('Debug similarity:', {
+        userFollicleId,
+        interactionFollicleId: interaction.follicleId,
+        areEqual: userFollicleId === interaction.follicleId,
+        similarity,
+        interactionType: interaction.type,
+      })
+
       // Skip users below similarity threshold
       if (similarity < MIN_SIMILARITY_THRESHOLD) {
         return
       }
 
-      // Track similarity distribution
-      if (similarity === 1.0) {
+      // Determine tier
+      let tier: 'exact' | 'veryHigh' | 'high' | 'medium'
+      if (similarity === SIMILARITY_THRESHOLDS.exact) {
+        tier = 'exact'
         similarityBuckets.exact++
-      } else if (similarity > 0.8) {
+      } else if (similarity > SIMILARITY_THRESHOLDS.veryHigh) {
+        tier = 'veryHigh'
         similarityBuckets.veryHigh++
-      } else if (similarity > 0.6) {
+      } else if (similarity > SIMILARITY_THRESHOLDS.high) {
+        tier = 'high'
         similarityBuckets.high++
       } else {
+        tier = 'medium'
         similarityBuckets.medium++
       }
 
-      // Weight interactions by similarity
+      // Weight interactions by similarity for scoring
       if (interaction.type === 'routine') {
         weightedRoutine += similarity
+        interactionsByTier[tier].routine++
       } else if (interaction.type === 'save') {
         weightedSave += similarity
+        interactionsByTier[tier].save++
       } else if (interaction.type === 'like') {
         weightedLike += similarity
+        interactionsByTier[tier].like++
       } else if (interaction.type === 'dislike') {
         weightedDislike += similarity
       } else if (interaction.type === 'reroll') {
@@ -108,7 +135,7 @@ export async function scoreByEngagement(
     })
 
     // Calculate final score
-    let finalScore = 0.5 // Default neutral
+    let finalScore = ENGAGEMENT_SCORE_DEFAULTS.NEUTRAL_SCORE // Default neutral
 
     if (weightedViews > 0) {
       // Calculate rates (action / views)
@@ -127,47 +154,38 @@ export async function scoreByEngagement(
         rerollRate * ENGAGEMENT_WEIGHTS.reroll
 
       // Normalize to 0-1 range (score + 0.5, clamped)
-      finalScore = Math.max(0, Math.min(1, score + 0.5))
+      finalScore = Math.max(
+        ENGAGEMENT_SCORE_DEFAULTS.MIN_SCORE,
+        Math.min(ENGAGEMENT_SCORE_DEFAULTS.MAX_SCORE, score + 0.5)
+      )
     }
 
     // Add reasons if requested
     if (includeReasons) {
-      // Map interaction types to their weighted counts and labels
-      const interactionReasons = [
-        {
-          type: 'routine',
-          count: Math.round(weightedRoutine),
-          weight: weightedRoutine,
-        },
-        {
-          type: 'saved',
-          count: Math.round(weightedSave),
-          weight: weightedSave,
-        },
-        {
-          type: 'liked',
-          count: Math.round(weightedLike),
-          weight: weightedLike,
-        },
+      const tiers = [
+        { label: 'identical', key: 'exact' as const },
+        { label: 'nearly identical', key: 'veryHigh' as const },
+        { label: 'very similar', key: 'high' as const },
+        { label: 'similar', key: 'medium' as const },
       ]
 
-      // Generate reasons for each positive interaction type
-      interactionReasons.forEach(({ type, count }) => {
-        if (count > 0) {
+      for (const tier of tiers) {
+        const interactions = interactionsByTier[tier.key]
+
+        if (interactions.routine > 0) {
           reasons.push(
-            `${count} ${count === 1 ? 'person' : 'people'} with identical hair ${type} this`
+            `${interactions.routine} ${interactions.routine === 1 ? 'person' : 'people'} with ${tier.label} hair added to routine`
           )
         }
-      })
-
-      // Fallback for high/medium similarity if no exact matches
-      const hasExactMatches = interactionReasons.some(({ count }) => count > 0)
-      if (!hasExactMatches) {
-        const totalSimilar = interactionCount
-        if (similarityBuckets.veryHigh + similarityBuckets.high > 5) {
-          reasons.push(`Loved by ${totalSimilar} people with very similar hair`)
-        } else if (totalSimilar > 2) {
-          reasons.push(`Liked by ${totalSimilar} people with similar hair`)
+        if (interactions.save > 0) {
+          reasons.push(
+            `${interactions.save} ${interactions.save === 1 ? 'person' : 'people'} with ${tier.label} hair saved this`
+          )
+        }
+        if (interactions.like > 0) {
+          reasons.push(
+            `${interactions.like} ${interactions.like === 1 ? 'person' : 'people'} with ${tier.label} hair liked this`
+          )
         }
       }
     }
@@ -192,6 +210,6 @@ export async function scoreByEngagement(
   } catch (error) {
     console.error('Error calculating engagement score:', error)
     // Return neutral score on error
-    return { score: 0.5, reasons: [] }
+    return { score: ENGAGEMENT_SCORE_DEFAULTS.NEUTRAL_SCORE, reasons: [] }
   }
 }

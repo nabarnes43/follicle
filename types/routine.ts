@@ -13,6 +13,7 @@ export interface Routine {
   is_public: boolean
   created_at: Date
   updated_at: Date
+  adaptedFrom?: string // ID of routine this was copied from (immediate parent only)
   deleted_at?: Timestamp | null
 }
 //TODO Make sure type matches functionality after the changes I made.

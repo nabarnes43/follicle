@@ -5,6 +5,20 @@
  */
 
 // ============================================================================
+// DISPLAY SETTINGS
+// ============================================================================
+
+/**
+ * Match reasons display limits
+ * Controls how many reasons are shown to users
+ */
+export const MATCH_REASONS_CONFIG = {
+  maxReasonsTotal: 100, // Maximum total reasons to show
+  maxBeneficialPerCharacteristic: 10, // Max beneficial ingredients per characteristic
+  maxAvoidedPerCharacteristic: 10, // Max avoided ingredients per characteristic
+} as const
+
+// ============================================================================
 // FOLLICLE ID WEIGHTS
 // ============================================================================
 
@@ -51,6 +65,12 @@ export const SIMILARITY_THRESHOLDS = {
  * Users below this won't count toward engagement scores
  */
 export const MIN_SIMILARITY_THRESHOLD = SIMILARITY_THRESHOLDS.medium
+
+export const ENGAGEMENT_SCORE_DEFAULTS = {
+  NEUTRAL_SCORE: 0.5,
+  MIN_SCORE: 0,
+  MAX_SCORE: 1,
+}
 
 /**
  * Exact match boost

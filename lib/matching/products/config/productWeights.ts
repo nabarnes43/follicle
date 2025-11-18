@@ -17,6 +17,8 @@ import {
   SIMILARITY_THRESHOLDS,
   MIN_SIMILARITY_THRESHOLD,
   EXACT_MATCH_BOOST,
+  ENGAGEMENT_SCORE_DEFAULTS,
+  MATCH_REASONS_CONFIG,
 } from '../../shared/constants'
 
 // Re-export for convenience
@@ -26,21 +28,9 @@ export {
   SIMILARITY_THRESHOLDS,
   MIN_SIMILARITY_THRESHOLD,
   EXACT_MATCH_BOOST,
+  ENGAGEMENT_SCORE_DEFAULTS,
+  MATCH_REASONS_CONFIG,
 }
-
-// ============================================================================
-// DISPLAY SETTINGS
-// ============================================================================
-
-/**
- * Match reasons display limits
- * Controls how many reasons are shown to users
- */
-export const MATCH_REASONS_CONFIG = {
-  maxReasonsTotal: 100, // Maximum total reasons to show
-  maxBeneficialPerCharacteristic: 10, // Max beneficial ingredients per characteristic
-  maxAvoidedPerCharacteristic: 10, // Max avoided ingredients per characteristic
-} as const
 
 // ============================================================================
 // ALGORITHM WEIGHTS

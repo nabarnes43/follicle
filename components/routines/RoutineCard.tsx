@@ -2,22 +2,20 @@
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Bookmark } from 'lucide-react'
+import { Bookmark, Lock, Globe } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Routine } from '@/types/routine'
 import { Product } from '@/types/product'
-import { Share2, Trash2, Lock, Globe } from 'lucide-react'
 import { useRoutineInteraction } from '@/hooks/useRoutineInteraction'
 
 interface RoutineCardProps {
   routine: Routine
-  matchScore?: number // Optional match score (0-1)
-  matchReasons?: string[] // Why this routine matches
-  showMatchScore?: boolean // Whether to display score
+  matchScore?: number
+  matchReasons?: string[]
+  showMatchScore?: boolean
   allProducts: Product[]
-  onView: () => void
-  onShare: () => void
-  onDelete?: () => void
+  onView?: () => void
+  hideSaveButton?: boolean // NEW - hide save button on My Routines page
 }
 
 export function RoutineCard({
@@ -27,8 +25,7 @@ export function RoutineCard({
   showMatchScore = false,
   allProducts,
   onView,
-  onShare,
-  onDelete,
+  hideSaveButton = false, // NEW - default to showing it
 }: RoutineCardProps) {
   const { interactions, toggleSave, isLoading } = useRoutineInteraction(
     routine.id
@@ -38,6 +35,7 @@ export function RoutineCard({
     e.stopPropagation()
     toggleSave()
   }
+
   const formatDate = (ts: any) => {
     if (!ts?._seconds) return 'Unknown'
     const date = new Date(ts._seconds * 1000)
@@ -51,16 +49,6 @@ export function RoutineCard({
   // Always show exactly 3 step slots
   const slots = [0, 1, 2]
   const remainingCount = Math.max(0, routine.steps.length - 3)
-
-  const handleShareClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent card click
-    onShare()
-  }
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent card click
-    onDelete?.()
-  }
 
   return (
     <Card
@@ -94,18 +82,20 @@ export function RoutineCard({
                 </p>
               </div>
             )}
-            {/* Save Button */}
-            <Button
-              onClick={handleSaveClick}
-              variant={interactions.save ? 'default' : 'outline'}
-              size="sm"
-              disabled={isLoading}
-              className="flex-shrink-0"
-            >
-              <Bookmark
-                className={`h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
-              />
-            </Button>
+            {/* Save Button - Only show if not hidden */}
+            {!hideSaveButton && (
+              <Button
+                onClick={handleSaveClick}
+                variant={interactions.save ? 'default' : 'outline'}
+                size="sm"
+                disabled={isLoading}
+                className="flex-shrink-0"
+              >
+                <Bookmark
+                  className={`h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
+                />
+              </Button>
+            )}
           </div>
         </div>
 
@@ -140,8 +130,6 @@ export function RoutineCard({
                 return (
                   <div
                     key={`empty-${index}`}
-                    // Grid: [checkbox | product name | + | ingredient count badge | ingredient list]
-                    // Columns: 24px (checkbox), .5fr (product), 8px (spacer), 32px (badge), 1fr (ingredients)
                     className="grid grid-cols-[24px_.5fr_8px_32px_1fr] items-center gap-3"
                   >
                     {/* Number badge */}
@@ -165,15 +153,11 @@ export function RoutineCard({
               }
 
               // Real step - fetch product data and display
-              const product = allProducts.find(
-                (p) => p.id === step.product_id
-              )
+              const product = allProducts.find((p) => p.id === step.product_id)
 
               return (
                 <div
                   key={index}
-                  // Grid: [checkbox | product name | + | ingredient count badge | ingredient list]
-                  // Columns: 24px (checkbox), .5fr (product), 8px (spacer), 32px (badge), 1fr (ingredients)
                   className="grid grid-cols-[24px_.5fr_8px_32px_1fr] items-center gap-3"
                 >
                   {/* Number badge */}
@@ -203,6 +187,7 @@ export function RoutineCard({
             })}
           </div>
         </div>
+
         {/* Timestamps */}
         <p className="text-muted-foreground text-xs">
           Created {formatDate(routine.created_at)}

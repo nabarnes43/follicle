@@ -14,6 +14,8 @@ import {
   SIMILARITY_THRESHOLDS,
   MIN_SIMILARITY_THRESHOLD,
   EXACT_MATCH_BOOST,
+  ENGAGEMENT_SCORE_DEFAULTS,
+  MATCH_REASONS_CONFIG,
 } from '../../shared/constants'
 
 // Re-export for convenience
@@ -23,6 +25,8 @@ export {
   SIMILARITY_THRESHOLDS,
   MIN_SIMILARITY_THRESHOLD,
   EXACT_MATCH_BOOST,
+  ENGAGEMENT_SCORE_DEFAULTS,
+  MATCH_REASONS_CONFIG,
 }
 
 // ============================================================================

@@ -19,6 +19,7 @@ export interface ProductInteraction {
   follicleId: string
   productId: string
   type: InteractionType // ← Uses the type above
+  routineId?: string // NEW - only for 'routine' type interactions
   timestamp: Timestamp | FieldValue
 }
 

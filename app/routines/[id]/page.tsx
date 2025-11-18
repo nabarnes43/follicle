@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { use } from 'react'
-import { Heart, ThumbsDown, Bookmark, Copy } from 'lucide-react'
+import { Heart, ThumbsDown, Bookmark, Copy, Pencil } from 'lucide-react'
 import { useRoutineInteraction } from '@/hooks/useRoutineInteraction'
 import { matchRoutinesForUser } from '@/lib/matching/routines/routineMatcher'
 import { RoutineMatchScore } from '@/types/routineMatching'
@@ -45,12 +45,15 @@ export default function RoutineDetailPage({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [matchScore, setMatchScore] = useState<RoutineMatchScore | null>(null)
+  const [authorName, setAuthorName] = useState<string>('Anonymous')
+  const [adaptedFromAuthor, setAdaptedFromAuthor] = useState<string | null>(
+    null
+  )
   const {
     interactions,
     toggleLike,
     toggleDislike,
     toggleSave,
-    toggleAdapt,
     trackView,
     isLoading: interactionLoading,
   } = useRoutineInteraction(id)
@@ -86,6 +89,42 @@ export default function RoutineDetailPage({
 
         const { routine: routineData } = await routineRes.json()
         setRoutine(routineData)
+
+        // Fetch author name
+        if (routineData.user_id) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', routineData.user_id))
+            if (userDoc.exists()) {
+              setAuthorName(userDoc.data().displayName || 'Anonymous')
+            }
+          } catch (error) {
+            console.error('Failed to fetch author:', error)
+          }
+        }
+
+        // Fetch adapted-from author if this is an adapted routine
+        if (routineData.adaptedFrom) {
+          try {
+            const sourceDoc = await getDoc(
+              doc(db, 'routines', routineData.adaptedFrom)
+            )
+            if (sourceDoc.exists()) {
+              const sourceRoutine = sourceDoc.data()
+              if (sourceRoutine.user_id) {
+                const sourceUserDoc = await getDoc(
+                  doc(db, 'users', sourceRoutine.user_id)
+                )
+                if (sourceUserDoc.exists()) {
+                  setAdaptedFromAuthor(
+                    sourceUserDoc.data().displayName || 'Anonymous'
+                  )
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Failed to fetch adapted-from author:', error)
+          }
+        }
 
         const products = await productsCache.getProducts()
         setAllProducts(products)
@@ -264,7 +303,7 @@ export default function RoutineDetailPage({
 
           {/* Interaction Buttons Row */}
           <div className="mb-4 flex items-center justify-between gap-4">
-            {/* Left: Like, Dislike, Save, Adapt */}
+            {/* Left: Like, Dislike, Save, Adapt/Edit */}
             <div className="flex gap-2">
               <Button
                 onClick={toggleLike}
@@ -302,17 +341,29 @@ export default function RoutineDetailPage({
                 {interactions.save ? 'Saved' : 'Save'}
               </Button>
 
-              <Button
-                onClick={toggleAdapt}
-                disabled={interactionLoading}
-                variant={interactions.adapt ? 'default' : 'outline'}
-                size="sm"
-              >
-                <Copy
-                  className={`mr-2 h-4 w-4 ${interactions.adapt ? 'fill-current' : ''}`}
-                />
-                {interactions.adapt ? 'Adapted' : 'Adapt'}
-              </Button>
+              {/* NEW: Show Adapt button if NOT owner */}
+              {!isOwner && (
+                <Button
+                  onClick={() => router.push(`/routines/${id}/adapt`)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Adapt
+                </Button>
+              )}
+
+              {/* NEW: Show Edit button if owner */}
+              {isOwner && (
+                <Button
+                  onClick={() => router.push(`/routines/${id}/edit`)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
             </div>
 
             {/* Right: Share & Delete (only if owner) */}
@@ -338,7 +389,11 @@ export default function RoutineDetailPage({
 
           {/* Metadata */}
           <p className="text-sm text-gray-600">
-            {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''}
+            {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''} {' '}
+            • By {authorName}
+            {adaptedFromAuthor && (
+              <span> • Originally by {adaptedFromAuthor}</span>
+            )}
           </p>
         </div>
         {/* Product Grid */}

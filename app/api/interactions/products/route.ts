@@ -5,7 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { ProductInteraction, InteractionType } from '@/types/productInteraction'
 
 /**
- * POST /api/interactions
+ * POST /api/interactions/products
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,13 +17,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { productId, follicleId, type } = body as {
+    const { productId, follicleId, type, routineId } = body as {
       productId: string
       follicleId: string
       type: InteractionType
+      routineId?: string // NEW - optional, only for 'routine' type
     }
 
-    // Validation (removed userId check - we get it from token)
+    // Validation
     if (!productId || !follicleId || !type) {
       return NextResponse.json(
         {
@@ -45,8 +46,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if interaction already exists (except for views - allow multiple)
-    if (type !== 'view') {
+    // Validate routineId for 'routine' type
+    if (type === 'routine' && !routineId) {
+      return NextResponse.json(
+        {
+          error: 'routineId is required for routine interactions',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Check if interaction already exists (except for views and routines - allow multiple)
+    if (type !== 'view' && type !== 'routine') {
       const existingInteraction = await adminDb
         .collection('product_interactions')
         .where('userId', '==', userId)
@@ -59,6 +70,30 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: `You already ${type}d this product` },
           { status: 409 }
+        )
+      }
+    }
+
+    // For routine type, check if this specific product+routine combo exists
+    if (type === 'routine') {
+      const existingRoutineInteraction = await adminDb
+        .collection('product_interactions')
+        .where('userId', '==', userId)
+        .where('productId', '==', productId)
+        .where('type', '==', 'routine')
+        .where('routineId', '==', routineId)
+        .limit(1)
+        .get()
+
+      if (!existingRoutineInteraction.empty) {
+        // Silently succeed - product already tracked for this routine
+        return NextResponse.json(
+          {
+            success: true,
+            message: 'Product already tracked in this routine',
+            interactionId: existingRoutineInteraction.docs[0].id,
+          },
+          { status: 200 }
         )
       }
     }
@@ -112,6 +147,7 @@ export async function POST(request: NextRequest) {
       follicleId,
       type,
       timestamp: FieldValue.serverTimestamp(),
+      ...(routineId && { routineId }), // Add routineId only if provided
     }
 
     batch.set(newInteractionRef, interactionData)
