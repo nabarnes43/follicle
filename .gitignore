@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+#tree clutter
+.next/
+out/
+
 # production
 /build
 

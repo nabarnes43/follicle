@@ -392,7 +392,7 @@ export default function RoutineDetailPage({
             {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''} {' '}
             • By {authorName}
             {adaptedFromAuthor && (
-              <span> • Originally by {adaptedFromAuthor}</span>
+              <span> • Adapted from {adaptedFromAuthor}</span>
             )}
           </p>
         </div>

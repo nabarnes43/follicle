@@ -11,5 +11,7 @@
   "[typescriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true
-  }
+  },
+  "ProjectTree.loadIgnore": true,
+  "ProjectTree.distFileName": "ProjectTree.md"
 }
