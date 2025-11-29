@@ -12,14 +12,21 @@ export interface User {
   isAnonymous: boolean
   providerData: ProviderData[]
   lastLoginAt: Timestamp | FieldValue
+  // Products Cache
   likedProducts?: string[] // Cache for fast UI checks
   dislikedProducts?: string[] // Cache for fast UI checks
   routineProducts?: string[]
   savedProducts?: string[]
+  // Routines Cache
   savedRoutines?: string[]
   likedRoutines?: string[]
   dislikedRoutines?: string[]
   adaptedRoutines?: string[]
+  // Ingredients Cache
+  likedIngredients?: string[]
+  dislikedIngredients?: string[]
+  avoidIngredients?: string[]
+  allergicIngredients?: string[]
 }
 
 export interface ProviderData {

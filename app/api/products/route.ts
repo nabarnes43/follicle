@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { adminDb } from '@/lib/firebase/admin' // ✅ Change this
+import { adminDb } from '@/lib/firebase/admin'
 import { Product } from '@/types/product'
 
 // Server-side in-memory cache

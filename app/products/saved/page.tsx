@@ -288,7 +288,8 @@ function SavedContent({ userData }: { userData: User }) {
           {displayedMatches.map((match) => (
             <ProductCard
               key={match.product.id}
-              match={match}
+              product={match.product}
+              matchScore={match.totalScore}
               onClick={() => setSelectedMatch(match)}
               hideSaveButton={true}
             />

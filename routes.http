@@ -14,9 +14,8 @@
 
 ### IMPORTANT: Get your auth token first
 ### 1. Open browser console on your app
-### 2. Run: firebase.auth().currentUser.getIdToken().then(console.log)
-### 3. Copy the token and paste it below
-@authToken = eyJhbGciOiJSUzI1NiIsImtpZCI6IjU0NTEzMjA5OWFkNmJmNjEzODJiNmI0Y2RlOWEyZGZlZDhjYjMwZjAiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vZm9sbGljbGUtOTBlYTgiLCJhdWQiOiJmb2xsaWNsZS05MGVhOCIsImF1dGhfdGltZSI6MTc2MDk5NzU1MiwidXNlcl9pZCI6Ik16Q1RpaGxkZGNoekRzaVZvQWpjSGJ4R2FSdDEiLCJzdWIiOiJNekNUaWhsZGRjaHpEc2lWb0FqY0hieEdhUnQxIiwiaWF0IjoxNzYyNTY3NjgwLCJleHAiOjE3NjI1NzEyODAsImVtYWlsIjoibmFiYXJuZXM0M0BnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJnb29nbGUuY29tIjpbIjEwNDk3OTM0NzE5MjYxNjgyOTA0NSJdLCJlbWFpbCI6WyJuYWJhcm5lczQzQGdtYWlsLmNvbSJdfSwic2lnbl9pbl9wcm92aWRlciI6Imdvb2dsZS5jb20ifX0.KaTPk02BkNHqE9OrPz3aPOi_n3FXMQyvdWD8YlrYuwWP-Vg9qkwSP3YnUBmWTtrYj0eGwfbXXpzVv2LSglmHlBTKDWlpySMlZhwCLvm0uMNy9qh8mWeNRx7gZqmdfbZwEIaHRf6WPYDSbq12LUIV1bmZvuZ86pIN_ul3LMU_JtswAp2mXiLV7U5Z1q4bCT675zTwB62J49nT_1lGjz_wQtMPSKrL4PpOSCmZ90BVef0Ck5sRBHxbW4NxK3Or9YHBSPx1AAhB5GAJzWBbIxBY8BtrUszFFmOS8EF-YRL2UThfapwR5imb9CxxGegj-orXCWJPyZWhxIJ-Ocu4pklMbg
+### 2. Copy the token and paste it below
+@authToken = eyJhbGciOiJSUzI1NiIsImtpZCI6IjdjNzQ5NTFmNjBhMDE0NzE3ZjFlMzA4ZDZiMjgwZjQ4ZjFlODhmZGEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vZm9sbGljbGUtOTBlYTgiLCJhdWQiOiJmb2xsaWNsZS05MGVhOCIsImF1dGhfdGltZSI6MTc2MzI0MDY4MywidXNlcl9pZCI6IkYyV1hyb2w0V0lPRkVUZUdENmFLME1kYXZINTIiLCJzdWIiOiJGMldYcm9sNFdJT0ZFVGVHRDZhSzBNZGF2SDUyIiwiaWF0IjoxNzY0Mzg0MTg5LCJleHAiOjE3NjQzODc3ODksImVtYWlsIjoibmFzaXIuYmFybmVzQG1vcmVob3VzZS5lZHUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsibmFzaXIuYmFybmVzQG1vcmVob3VzZS5lZHUiXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.KOOWVa4B_pYCjIQpBrjMf2d-fjylXvyZi_gOl_pFOjhTC2pdkkwQs1cjZVG22yaS9wsWzhuLS_Sl7EowJqfqrI1pNnMBZa9BET0b-vUT-5YTOOKpFoSv8fgdHmprVB_qSKPKzLGW35PfHz-21k1nLgm9RCAEqA42kN_m4odKJ-XhLb2HT0aUPCdvHj6XisrknxtNvHFJ_bnPxv8HiskSYrLlCUJRctyGgfreFruACIzBx3PefBN2C8AP60ikRhDfoEQXtW6nVbwb4NvohJQYndxH_OdwpFZgvtDZuc--eDbx3tof9VhHVp9GvGv1t4y344IOlfM5pkfQZZVf1GIASA
 
 ### ==============================================
 ### PRODUCTS API
@@ -338,6 +337,64 @@ Authorization: Bearer {{authToken}}
   "follicleId": "{{follicleId}}",
   "type": "like"
 }
+
+### ==============================================
+### INGREDIENT INTERACTIONS API
+### ==============================================
+
+@ingredientId = glycerin
+
+### Get all ingredients
+GET {{baseUrl}}/api/ingredients
+
+### Create LIKE interaction for ingredient
+POST {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/like
+Authorization: Bearer {{authToken}}
+
+### Create DISLIKE interaction for ingredient (removes like)
+POST {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/dislike
+Authorization: Bearer {{authToken}}
+
+### Create AVOID interaction for ingredient
+POST {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/avoid
+Authorization: Bearer {{authToken}}
+
+### Create ALLERGIC interaction for ingredient
+POST {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/allergic
+Authorization: Bearer {{authToken}}
+
+### Create VIEW interaction for ingredient (allows multiple)
+POST {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/view
+Authorization: Bearer {{authToken}}
+
+### Delete LIKE interaction from ingredient
+DELETE {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/like
+Authorization: Bearer {{authToken}}
+
+### Delete DISLIKE interaction from ingredient
+DELETE {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/dislike
+Authorization: Bearer {{authToken}}
+
+### Delete AVOID interaction from ingredient
+DELETE {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/avoid
+Authorization: Bearer {{authToken}}
+
+### Delete ALLERGIC interaction from ingredient
+DELETE {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/allergic
+Authorization: Bearer {{authToken}}
+
+### Test invalid type (should return 400)
+POST {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/invalid
+Authorization: Bearer {{authToken}}
+
+### Test duplicate interaction (should return 409)
+### First run "Create LIKE" above, then run this again
+POST {{baseUrl}}/api/interactions/ingredients/{{ingredientId}}/like
+Authorization: Bearer {{authToken}}
+
+### Test delete non-existent interaction (should return 404)
+DELETE {{baseUrl}}/api/interactions/ingredients/nonexistent_ingredient/like
+Authorization: Bearer {{authToken}}
 
 ### ==============================================
 ### NOTES

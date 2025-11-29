@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select'
 import { Package, Search, X } from 'lucide-react'
 import type { Product } from '@/types/product'
-import type { MatchScore } from '@/types/productMatching'
+import type { ProductMatchScore } from '@/types/productMatching'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { PRODUCT_CATEGORIES } from '@/lib/matching/products/config/categories'
@@ -37,15 +37,18 @@ const LOAD_MORE_INCREMENT = 48
 function RecommendationsContent({ userData }: { userData: User }) {
   // Data state
   const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [allScoredProducts, setAllScoredProducts] = useState<MatchScore[]>([])
+  const [allScoredProducts, setAllScoredProducts] = useState<
+    ProductMatchScore[]
+  >([])
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [displayLimit, setDisplayLimit] = useState(INITIAL_DISPLAY_LIMIT)
-  const [selectedMatch, setSelectedMatch] = useState<MatchScore | null>(null)
+  const [selectedMatch, setSelectedMatch] = useState<ProductMatchScore | null>(
+    null
+  )
   const [isLoading, setIsLoading] = useState(true)
   const [isScoring, setIsScoring] = useState(false)
   const [hasScored, setHasScored] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // Infinite scroll trigger
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -148,17 +151,21 @@ function RecommendationsContent({ userData }: { userData: User }) {
 
   // Infinite scroll observer
   useEffect(() => {
+    const currentRef = loadMoreRef.current
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && displayLimit < totalCount) {
           setDisplayLimit((prev) => prev + LOAD_MORE_INCREMENT)
         }
       },
-      { rootMargin: '4000px', threshold: 0 } // pre-load distance
+      { rootMargin: '200px', threshold: 0 }
     )
 
-    if (loadMoreRef.current) observer.observe(loadMoreRef.current)
-    return () => observer.disconnect()
+    if (currentRef) observer.observe(currentRef)
+    return () => {
+      if (currentRef) observer.unobserve(currentRef)
+    }
   }, [displayLimit, totalCount])
 
   // Loading state
@@ -274,7 +281,8 @@ function RecommendationsContent({ userData }: { userData: User }) {
             {displayedProducts.map((match) => (
               <ProductCard
                 key={match.product.id}
-                match={match}
+                product={match.product}
+                matchScore={match.totalScore}
                 onClick={() => setSelectedMatch(match)}
               />
             ))}

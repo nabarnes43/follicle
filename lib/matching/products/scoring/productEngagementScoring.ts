@@ -83,15 +83,6 @@ export async function scoreByEngagement(
         interaction.follicleId
       )
 
-      // 🔍 ADD DEBUG LOGGING HERE
-      console.log('Debug similarity:', {
-        userFollicleId,
-        interactionFollicleId: interaction.follicleId,
-        areEqual: userFollicleId === interaction.follicleId,
-        similarity,
-        interactionType: interaction.type,
-      })
-
       // Skip users below similarity threshold
       if (similarity < MIN_SIMILARITY_THRESHOLD) {
         return

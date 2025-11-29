@@ -3,41 +3,39 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bookmark } from 'lucide-react'
-import { ProductMatchScore } from '@/types/productMatching'
+import { Product } from '@/types/product'
 import { useProductInteraction } from '@/hooks/useProductInteraction'
 
 interface ProductCardProps {
-  match: ProductMatchScore
+  product: Product
+  matchScore?: number // Optional - only show if provided
   onClick?: () => void
-  showMatchScore?: boolean
   hideSaveButton?: boolean
 }
 
 /**
- * ProductCard - Displays a single product recommendation
+ * ProductCard - Displays a single product
  *
  * Shows:
  * - Product image, brand, name, and price
- * - Match score (how well it fits the user's hair) - optional via showMatchScore prop
- * - Match reasons (why this product was recommended)
+ * - Match score (optional - only if matchScore prop provided)
  * - Save button (bookmark icon)
  *
  * Click card to view details
  * Click bookmark to save/unsave (doesn't open dialog)
  */
 export function ProductCard({
-  match,
+  product,
+  matchScore,
   onClick,
-  hideSaveButton = false,
-  showMatchScore = true, // Default to true for backward compatibility
+  hideSaveButton,
 }: ProductCardProps) {
-  const { product } = match
   const { interactions, toggleSave, isLoading } = useProductInteraction(
     product.id
   )
 
   const handleSaveClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent card click
+    e.stopPropagation()
     toggleSave()
   }
 
@@ -50,9 +48,7 @@ export function ProductCard({
         {/* Header with Save Button */}
         <div className="mb-3 flex items-start justify-between gap-4">
           <div className="flex-1">
-            {/* Brand */}
             <p className="text-muted-foreground text-sm">{product.brand}</p>
-            {/* Product Name - Fixed height to prevent layout shift */}
             <h3 className="line-clamp-2 min-h-[2.5rem] font-semibold">
               {product.name}
             </h3>
@@ -88,12 +84,11 @@ export function ProductCard({
           </div>
         )}
 
-        {/* Spacer to push price/match to bottom */}
+        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Price & Match Score - Always in same position */}
+        {/* Price & Match Score */}
         <div className="flex items-end justify-between gap-4">
-          {/* Price - Fixed width to prevent match score from shifting */}
           <div className="min-w-[4rem]">
             {product.price ? (
               <p className="font-bold">${product.price.toFixed(2)}</p>
@@ -102,11 +97,10 @@ export function ProductCard({
             )}
           </div>
 
-          {/* Match Score - Conditionally rendered */}
-          {showMatchScore && (
+          {matchScore !== undefined && (
             <div className="text-right">
               <p className="text-primary text-2xl font-bold">
-                {Math.round(match.totalScore * 100)}%
+                {Math.round(matchScore * 100)}%
               </p>
               <p className="text-muted-foreground text-xs">Match</p>
             </div>

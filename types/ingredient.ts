@@ -1,4 +1,6 @@
 export interface Ingredient {
+  id: string // Document ID
+
   // Official ingredient identifiers
   cosingRefNo: string
   inciName: string // International nomenclature (e.g., "Aqua")
@@ -12,24 +14,11 @@ export interface Ingredient {
   restriction: string // e.g., "None", "Max 5%", etc.
   functionType: string // e.g., "Solvent", "Emollient", "Surfactant"
 
-  // User preference data by hair type
-  preferences: IngredientPreferences
+  // Product relationship
+  product_count: number // Number of products containing this ingredient
 
   // Metadata
   updateDate: string // Date from official database
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface IngredientPreferences {
-  straight: HairTypePreference
-  wavy: HairTypePreference
-  curly: HairTypePreference
-  coily: HairTypePreference
-  protective: HairTypePreference
-}
-
-export interface HairTypePreference {
-  likes: number
-  dislikes: number
+  createdAt: string
+  updatedAt: string // Date of last change in local database
 }

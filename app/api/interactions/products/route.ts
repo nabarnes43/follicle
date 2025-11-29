@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       productId: string
       follicleId: string
       type: InteractionType
-      routineId?: string // NEW - optional, only for 'routine' type
+      routineId?: string // optional, only for 'routine' type
     }
 
     // Validation
