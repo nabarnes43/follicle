@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { auth, db } from '@/lib/firebase/client'
-import { signInAnonymously, onAuthStateChanged } from 'firebase/auth'
+import { signInAnonymously, onIdTokenChanged } from 'firebase/auth'
 import { User as FirebaseUser } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { ProviderData } from '@/types/user'
@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log('🔵 Auth listener starting...')
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onIdTokenChanged(auth, async (currentUser) => {
       if (currentUser) {
         console.log('👤 Auth state changed')
         console.log('   User ID:', currentUser.uid)
@@ -72,9 +72,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(currentUser)
         localStorage.setItem('userId', currentUser.uid)
+        // Set session cookie for server-side auth (refreshes automatically with token)
+        const token = await currentUser.getIdToken()
+        const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+        document.cookie = `session=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`
         setLoading(false)
       } else {
         console.log('🔐 No user found, signing in anonymously...')
+        // Clear session cookie
+        document.cookie = 'session=; path=/; max-age=0; path=/'
         signInAnonymously(auth).catch((error) => {
           console.error('❌ Anonymous sign-in error:', error)
           setLoading(false)

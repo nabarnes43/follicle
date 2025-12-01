@@ -1,5 +1,4 @@
-import { collection, query, where, getDocs, limit } from 'firebase/firestore'
-import { db } from '@/lib/firebase/client'
+import { adminDb } from '@/lib/firebase/admin'
 import { Product } from '@/types/product'
 import { ProductInteraction } from '@/types/productInteraction'
 import { calculateFollicleSimilarity } from '../../shared/follicleSimilarity'
@@ -37,13 +36,10 @@ export async function scoreByEngagement(
 
   try {
     // Query interactions for this product
-    const interactionsRef = collection(db, 'product_interactions')
-    const productInteractionsQuery = query(
-      interactionsRef,
-      where('productId', '==', product.id)
-    )
-
-    const snapshot = await getDocs(productInteractionsQuery)
+    const snapshot = await adminDb
+      .collection('product_interactions')
+      .where('productId', '==', product.id)
+      .get()
 
     // If no interactions yet, return neutral score
     if (snapshot.empty) {
