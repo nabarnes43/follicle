@@ -180,8 +180,8 @@ function PublicRoutinesContent({ userData }: { userData: User }) {
                   showMatchScore={true}
                   allProducts={allProducts}
                   onView={() => handleView(match.routine.id)}
-                  onShare={() => handleShare(match.routine.id)}
-                  onDelete={undefined}
+                  //onShare={() => handleShare(match.routine.id)}
+                  //onDelete={undefined}
                 />
               ))
             : // Unmatched routines without scores
@@ -192,8 +192,8 @@ function PublicRoutinesContent({ userData }: { userData: User }) {
                   showMatchScore={false}
                   allProducts={allProducts}
                   onView={() => handleView(routine.id)}
-                  onShare={() => handleShare(routine.id)}
-                  onDelete={undefined}
+                  //onShare={() => handleShare(routine.id)}
+                  //onDelete={undefined}
                 />
               ))}
         </div>

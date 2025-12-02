@@ -1,15 +1,16 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { RequireAuth } from '@/components/auth/RequireAuth'
 import { User } from '@/types/user'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
-import { Product } from '@/types/product'
-import { ProductMatchScore } from '@/types/productMatching'
+import {
+  PreComputedProductMatchScore,
+  ProductCardData,
+} from '@/types/productMatching'
 import { ProductCard } from '@/components/products/ProductCard'
-import { ProductDetailDialog } from '@/components/products/ProductDetailDialog'
 import { Spinner } from '@/components/ui/spinner'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -20,55 +21,42 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { matchProductsForUser } from '@/lib/matching/products/productMatcher'
-import { generateFollicleId } from '@/lib/analysis/follicleId'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Heart, Bookmark, ThumbsDown, Search, X } from 'lucide-react'
-import { productsCache } from '@/lib/matching/products/productsCache'
 
-const PRODUCTS_PER_PAGE = 24
-const INITIAL_DISPLAY_LIMIT = 24
+const PRODUCTS_PER_PAGE = 48
+const INITIAL_DISPLAY_LIMIT = 48
 
 function SavedContent({ userData }: { userData: User }) {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const defaultTab = searchParams.get('tab') || 'saved'
 
-  // All matches (full data)
-  const [allMatches, setAllMatches] = useState({
+  const [allMatches, setAllMatches] = useState<{
+    liked: PreComputedProductMatchScore[]
+    saved: PreComputedProductMatchScore[]
+    disliked: PreComputedProductMatchScore[]
+  }>({
     liked: [],
     saved: [],
     disliked: [],
-  } as {
-    liked: ProductMatchScore[]
-    saved: ProductMatchScore[]
-    disliked: ProductMatchScore[]
   })
 
-  // Displayed matches (paginated)
-  const [displayed, setDisplayed] = useState({
+  const [displayed, setDisplayed] = useState<{
+    liked: PreComputedProductMatchScore[]
+    saved: PreComputedProductMatchScore[]
+    disliked: PreComputedProductMatchScore[]
+  }>({
     liked: [],
     saved: [],
     disliked: [],
-  } as {
-    liked: ProductMatchScore[]
-    saved: ProductMatchScore[]
-    disliked: ProductMatchScore[]
   })
 
-  // Pagination state
   const [pages, setPages] = useState({ liked: 1, saved: 1, disliked: 1 })
-
-  // Search state
   const [searchQuery, setSearchQuery] = useState('')
-
-  // UI state
-  const [selectedMatch, setSelectedMatch] = useState<ProductMatchScore | null>(
-    null
-  )
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
 
-  // Intersection observer refs
   const observerRefs = {
     liked: useRef<HTMLDivElement>(null),
     saved: useRef<HTMLDivElement>(null),
@@ -79,16 +67,15 @@ function SavedContent({ userData }: { userData: User }) {
     fetchUserProducts()
   }, [userData])
 
-  // Update displayed items when page changes or search query changes
   useEffect(() => {
-    const filterBySearch = (matches: ProductMatchScore[]) => {
+    const filterBySearch = (matches: PreComputedProductMatchScore[]) => {
       if (!searchQuery.trim()) return matches
 
-      const query = searchQuery.toLowerCase()
+      const q = searchQuery.toLowerCase()
       return matches.filter(
         (m) =>
-          m.product.name.toLowerCase().includes(query) ||
-          m.product.brand.toLowerCase().includes(query)
+          m.product.name.toLowerCase().includes(q) ||
+          m.product.brand.toLowerCase().includes(q)
       )
     }
 
@@ -108,72 +95,60 @@ function SavedContent({ userData }: { userData: User }) {
     })
   }, [allMatches, pages, searchQuery])
 
-  // Reset pagination when search query changes
   useEffect(() => {
     setPages({ liked: 1, saved: 1, disliked: 1 })
   }, [searchQuery])
 
   const fetchUserProducts = async () => {
     try {
-      const analysis = userData.hairAnalysis
-      if (!analysis) return
-
-      const follicleId = generateFollicleId(analysis)
       const productIds = {
         liked: userData.likedProducts || [],
         saved: userData.savedProducts || [],
         disliked: userData.dislikedProducts || [],
       }
 
-      // Check cache first
-      const cachedScores = productsCache.getAllScoredProducts(userData.userId)
+      // Fetch scores for each category from product_scores subcollection
+      const fetchScores = async (
+        ids: string[]
+      ): Promise<PreComputedProductMatchScore[]> => {
+        if (ids.length === 0) return []
 
-      if (cachedScores) {
-        console.log('✅ Using cached scores for saved page')
-        setAllMatches({
-          liked:
-            productsCache.getScoredProducts(
-              userData.userId,
-              productIds.liked
-            ) || [],
-          saved:
-            productsCache.getScoredProducts(
-              userData.userId,
-              productIds.saved
-            ) || [],
-          disliked:
-            productsCache.getScoredProducts(
-              userData.userId,
-              productIds.disliked
-            ) || [],
-        })
-      } else {
-        // Cache miss - fetch and score products
-        console.log('❌ No cached scores - fetching and scoring')
-        const products = {
-          liked: await fetchProductsInBatches(productIds.liked),
-          saved: await fetchProductsInBatches(productIds.saved),
-          disliked: await fetchProductsInBatches(productIds.disliked),
+        const scores: PreComputedProductMatchScore[] = []
+
+        for (const productId of ids) {
+          const scoreDoc = await getDoc(
+            doc(db, 'users', userData.userId, 'product_scores', productId)
+          )
+
+          if (scoreDoc.exists()) {
+            const data = scoreDoc.data()
+            scores.push({
+              product: {
+                id: scoreDoc.id,
+                name: data.productName,
+                brand: data.productBrand,
+                image_url: data.productImageUrl,
+                price: data.productPrice,
+                category: data.category,
+              },
+              totalScore: data.score,
+              breakdown: data.breakdown,
+              matchReasons: data.matchReasons || [],
+            })
+          }
         }
 
-        setAllMatches({
-          liked: await matchProductsForUser(
-            { hairAnalysis: analysis },
-            products.liked,
-            follicleId
-          ),
-          saved: await matchProductsForUser(
-            { hairAnalysis: analysis },
-            products.saved,
-            follicleId
-          ),
-          disliked: await matchProductsForUser(
-            { hairAnalysis: analysis },
-            products.disliked,
-            follicleId
-          ),
-        })
+        // Sort by score descending
+        return scores.sort((a, b) => b.totalScore - a.totalScore)
       }
+
+      const [liked, saved, disliked] = await Promise.all([
+        fetchScores(productIds.liked),
+        fetchScores(productIds.saved),
+        fetchScores(productIds.disliked),
+      ])
+
+      setAllMatches({ liked, saved, disliked })
     } catch (error) {
       console.error('Error fetching saved products:', error)
     } finally {
@@ -181,47 +156,17 @@ function SavedContent({ userData }: { userData: User }) {
     }
   }
 
-  // Fetch products in batches of 10 (Firestore 'in' query limit)
-  const fetchProductsInBatches = async (
-    productIds: string[]
-  ): Promise<Product[]> => {
-    if (productIds.length === 0) return []
-
-    const batches: string[][] = []
-    for (let i = 0; i < productIds.length; i += 10) {
-      batches.push(productIds.slice(i, i + 10))
-    }
-
-    const allProducts: Product[] = []
-    for (const batch of batches) {
-      const q = query(
-        collection(db, 'products'),
-        where('__name__', 'in', batch)
-      )
-      const snapshot = await getDocs(q)
-      allProducts.push(
-        ...snapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() }) as Product
-        )
-      )
-    }
-
-    return allProducts
-  }
-
-  // Get filtered count for a type
   const getFilteredCount = (type: 'liked' | 'saved' | 'disliked') => {
     if (!searchQuery.trim()) return allMatches[type].length
 
-    const query = searchQuery.toLowerCase()
+    const q = searchQuery.toLowerCase()
     return allMatches[type].filter(
       (m) =>
-        m.product.name.toLowerCase().includes(query) ||
-        m.product.brand.toLowerCase().includes(query)
+        m.product.name.toLowerCase().includes(q) ||
+        m.product.brand.toLowerCase().includes(q)
     ).length
   }
 
-  // Load more function
   const loadMore = useCallback(
     (type: 'liked' | 'saved' | 'disliked') => {
       const filteredCount = getFilteredCount(type)
@@ -234,9 +179,8 @@ function SavedContent({ userData }: { userData: User }) {
     [displayed, searchQuery, allMatches, loadingMore]
   )
 
-  // Intersection Observer setup
   useEffect(() => {
-    const options = { root: null, rootMargin: '4000px' } // Margin for pre-loading
+    const options = { root: null, rootMargin: '4000px' }
 
     const observers = Object.entries(observerRefs).map(([key, ref]) => {
       const observer = new IntersectionObserver((entries) => {
@@ -252,7 +196,6 @@ function SavedContent({ userData }: { userData: User }) {
     return () => observers.forEach((observer) => observer.disconnect())
   }, [loadMore])
 
-  // Render tab content
   const renderTabContent = (
     type: 'liked' | 'saved' | 'disliked',
     icon: any,
@@ -290,13 +233,12 @@ function SavedContent({ userData }: { userData: User }) {
               key={match.product.id}
               product={match.product}
               matchScore={match.totalScore}
-              onClick={() => setSelectedMatch(match)}
+              onClick={() => router.push(`/products/${match.product.id}`)}
               hideSaveButton={true}
             />
           ))}
         </div>
 
-        {/* Load more trigger */}
         {hasMore && (
           <div
             ref={observerRefs[type]}
@@ -306,7 +248,6 @@ function SavedContent({ userData }: { userData: User }) {
           </div>
         )}
 
-        {/* End of list indicator */}
         {!hasMore && displayedMatches.length > INITIAL_DISPLAY_LIMIT && (
           <div className="text-muted-foreground py-8 text-center text-sm">
             You've reached the end of your products
@@ -328,7 +269,6 @@ function SavedContent({ userData }: { userData: User }) {
     <div className="container mx-auto px-4 py-8">
       <h1 className="mb-8 text-3xl font-bold">My Products</h1>
 
-      {/* Search Bar */}
       <div className="mb-6">
         <div className="relative max-w-md">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -392,12 +332,6 @@ function SavedContent({ userData }: { userData: User }) {
           )}
         </TabsContent>
       </Tabs>
-
-      <ProductDetailDialog
-        match={selectedMatch}
-        isOpen={selectedMatch !== null}
-        onClose={() => setSelectedMatch(null)}
-      />
     </div>
   )
 }

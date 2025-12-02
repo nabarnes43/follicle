@@ -1,15 +1,10 @@
 import { redirect, notFound } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
-import { getFilteredProducts } from '@/lib/server/products'
+import { adminDb } from '@/lib/firebase/admin'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { PRODUCT_CATEGORIES } from '@/lib/matching/products/config/categories'
+import { PreComputedProductMatchScore } from '@/types/productMatching'
 
-/**
- * /products/category/[category] - Products filtered by category
- *
- * Much faster than /products because we only fetch and score
- * products in one category (e.g., 500 shampoos vs 8,000 total)
- */
 export default async function CategoryProductsPage({
   params,
 }: {
@@ -22,25 +17,44 @@ export default async function CategoryProductsPage({
     redirect('/analysis')
   }
 
-  // Validate category exists
-  // URL uses encoded format (e.g., "Hair%20Masks"), so we decode it
   const decodedCategory = decodeURIComponent(category)
 
   if (!PRODUCT_CATEGORIES.includes(decodedCategory as any)) {
     notFound()
   }
 
-  const products = await getFilteredProducts(
-    { category: decodedCategory },
-    user.hairAnalysis,
-    user.follicleId
+  const scoresSnapshot = await adminDb
+    .collection('users')
+    .doc(user.userId)
+    .collection('product_scores')
+    .where('category', '==', decodedCategory)
+    .orderBy('rank')
+    .get()
+
+  const products: PreComputedProductMatchScore[] = scoresSnapshot.docs.map(
+    (doc) => {
+      const data = doc.data()
+      return {
+        product: {
+          id: doc.id,
+          name: data.productName,
+          brand: data.productBrand,
+          image_url: data.productImageUrl,
+          price: data.productPrice,
+          category: data.category,
+        },
+        totalScore: data.score,
+        breakdown: data.breakdown,
+        matchReasons: data.matchReasons || [],
+      }
+    }
   )
 
   return (
     <ProductGrid
       products={products}
       title={decodedCategory}
-      subtitle={`${products.length} products matched and scored for your hair`}
+      subtitle={`${products.length} products matched for your hair`}
     />
   )
 }

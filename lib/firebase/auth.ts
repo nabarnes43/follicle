@@ -1,6 +1,8 @@
 import { adminAuth } from '@/lib/firebase/admin'
 import { NextRequest } from 'next/server'
 
+//TODO I shouldnt need this and the auth.ts in server/
+
 /**
  * Verifies Firebase Auth token from request headers
  * Returns userId if valid, null if invalid/missing

@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button'
 import { Bookmark } from 'lucide-react'
 import { Product } from '@/types/product'
 import { useProductInteraction } from '@/hooks/useProductInteraction'
+import { ProductCardData } from '@/types/productMatching'
+
 
 interface ProductCardProps {
-  product: Product
-  matchScore?: number // Optional - only show if provided
+  product: ProductCardData
+  matchScore?: number
   onClick?: () => void
   hideSaveButton?: boolean
 }

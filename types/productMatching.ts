@@ -1,8 +1,29 @@
 import { Product } from './product'
 
+/** Minimal product data stored in product_scores for card display */
+export interface ProductCardData {
+  id: string
+  name: string
+  brand: string
+  image_url: string | null
+  price: number | null
+  category: string
+}
+
+/** Pre-computed score from Firestore subcollection */
+export interface PreComputedProductMatchScore {
+  product: ProductCardData
+  totalScore: number
+  breakdown: {
+    ingredientScore: number
+    engagementScore: number
+  }
+  matchReasons: string[]
+}
+
 /**
  * RecommendationsResponse - API response from /api/productRecommendations
- * 
+ *
  * This is NOT just a list of products - it's a personalized response containing:
  * 1. Scored products (MatchScore[]) tailored to the user's hair
  * 2. Context about WHO these recommendations are for
@@ -19,9 +40,10 @@ export interface RecommendationsResponse {
   recommendations: ProductMatchScore[]
 }
 
+//TODO clean this up gonna be duplication and un used code here
 /**
  * MatchScore - Represents how well a product matches a specific user's hair profile
- * 
+ *
  * This is the core data structure for product recommendations. It wraps a Product
  * with personalization data showing why it was recommended and how good the match is.
  */
@@ -50,5 +72,3 @@ export interface ProductMatchScore {
   //   protective: number
   // }
 }
-
-

@@ -41,6 +41,34 @@
         }
       ],
       "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "product_scores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "category",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "rank",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "product_scores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "ingredientRefs",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "rank",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

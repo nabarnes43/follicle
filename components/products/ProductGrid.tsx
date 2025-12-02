@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { ProductCard } from '@/components/products/ProductCard'
-import { ProductDetailDialog } from '@/components/products/ProductDetailDialog'
 import { Spinner } from '@/components/ui/spinner'
 import {
   Empty,
@@ -14,15 +13,16 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Package, Search, X } from 'lucide-react'
-import type { ProductMatchScore } from '@/types/productMatching'
+import type { PreComputedProductMatchScore } from '@/types/productMatching'
 import { ProductCardSkeleton } from '@/components/products/ProductCardSkeleton'
+import { useRouter } from 'next/navigation'
 
 const INITIAL_DISPLAY_LIMIT = 48
 const LOAD_MORE_INCREMENT = 48
 
 interface ProductGridProps {
-  /** Pre-scored products from the server */
-  products: ProductMatchScore[]
+  /** Pre-scored products from firebase */
+  products: PreComputedProductMatchScore[]
   /** Title shown at top of page */
   title?: string
   /** Subtitle/description shown below title */
@@ -58,11 +58,11 @@ export function ProductGrid({
 }: ProductGridProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [displayLimit, setDisplayLimit] = useState(INITIAL_DISPLAY_LIMIT)
-  const [selectedMatch, setSelectedMatch] = useState<ProductMatchScore | null>(
-    null
-  )
+  const [selectedMatch, setSelectedMatch] =
+    useState<PreComputedProductMatchScore | null>(null)
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   // Filter by search query (client-side)
   const { displayedProducts, totalCount } = useMemo(() => {
@@ -180,7 +180,7 @@ export function ProductGrid({
                 key={match.product.id}
                 product={match.product}
                 matchScore={showMatchScores ? match.totalScore : undefined}
-                onClick={() => setSelectedMatch(match)}
+                onClick={() => router.push(`/products/${match.product.id}`)}
               />
             ))}
           </div>
@@ -193,14 +193,6 @@ export function ProductGrid({
           )}
         </>
       )}
-
-      {/* Product Detail Dialog */}
-      <ProductDetailDialog
-        match={selectedMatch}
-        isOpen={selectedMatch !== null}
-        onClose={() => setSelectedMatch(null)}
-        showMatchScore={showMatchScores}
-      />
     </div>
   )
 }

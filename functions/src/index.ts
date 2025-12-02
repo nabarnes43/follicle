@@ -175,6 +175,13 @@ async function writeScoresToFirestore(
       matchReasons: item.matchReasons.slice(0, 5), // Limit stored reasons
       interactionsByTier: item.interactionsByTier || null,
       scoredAt: new Date(),
+      // Product card fields
+      productName: item.product.name,
+      productBrand: item.product.brand,
+      productImageUrl: item.product.image_url || null,
+      productPrice: item.product.price || null,
+      // Ingredient filtering
+      ingredientRefs: item.product.ingredient_refs || [],
     })
 
     writeCount++

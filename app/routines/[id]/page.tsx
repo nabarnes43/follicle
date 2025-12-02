@@ -409,7 +409,7 @@ export default function RoutineDetailPage({
               <Card
                 key={`${stepIndex}-${product.id}`}
                 className="cursor-pointer overflow-hidden transition-shadow hover:shadow-lg"
-                onClick={() => setSelectedProduct(createMatchScore(product))}
+                onClick={() => router.push(`/products/${product.id}`)}
               >
                 <CardContent className="p-4">
                   {/* Product Image */}
