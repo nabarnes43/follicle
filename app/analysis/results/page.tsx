@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Copy, Check } from 'lucide-react'
-import { getUser, linkAnonymousResults } from '@/lib/firebase/analysis'
+import { getUser, linkAnonymousResults } from '@/lib/analysis/analysis'
 import { getFollicleIdDescription } from '@/lib/analysis/follicleId'
 import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'

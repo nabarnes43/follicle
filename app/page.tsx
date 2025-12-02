@@ -14,7 +14,7 @@ import {
 import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'
 import SignOutButton from '@/components/auth/SignOutButton'
-import { getUser } from '@/lib/firebase/analysis'
+import { getUser } from '@/lib/analysis/analysis'
 
 export default function HomePage() {
   const router = useRouter()

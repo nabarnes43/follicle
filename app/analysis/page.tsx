@@ -7,7 +7,7 @@ import { ProgressBar } from '@/components/analysis/ProgressBar'
 import { AnalysisQuestion } from '@/components/analysis/AnalysisQuestion'
 import { Button } from '@/components/ui/button'
 import { SHORT_ANALYSIS_QUESTIONS } from '@/lib/analysis/questions-short'
-import { saveAnalysisResults } from '@/lib/firebase/analysis'
+import { saveAnalysisResults } from '@/lib/analysis/analysis'
 import { useAuth } from '@/contexts/auth'
 
 const QUESTIONS_PER_PAGE = 5

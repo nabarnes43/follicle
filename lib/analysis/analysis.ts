@@ -1,11 +1,8 @@
-// lib/firebase/analysis.ts
+// lib/analysis/analysis.ts
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from './client'
+import { db } from '../firebase/client'
 import { User, HairAnalysis } from '@/types/user'
-import {
-  generateFollicleId,
-  answersToHairAnalysis,
-} from '../analysis/follicleId'
+import { generateFollicleId, answersToHairAnalysis } from './follicleId'
 
 /**
  * Save analysis results

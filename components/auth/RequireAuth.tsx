@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth'
-import { getUser } from '@/lib/firebase/analysis'
+import { getUser } from '@/lib/analysis/analysis'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import {
