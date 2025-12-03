@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { User } from '@/types/user'
-
+//TODO merge the lib/firebase/auth.ts or really just remove the other and replace cases with this one
 /**
  * Get the current user's data from a Server Component
  *

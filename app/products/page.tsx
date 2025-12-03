@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
-import { adminDb } from '@/lib/firebase/admin'
+import { getCachedAllScores } from '@/lib/server/productScores'
 import { ProductGrid } from '@/components/products/ProductGrid'
-import { PreComputedProductMatchScore } from '@/types/productMatching'
 
 /**
  * /products - All products, scored for the user
@@ -17,31 +16,7 @@ export default async function ProductsPage() {
     redirect('/analysis')
   }
 
-  const scoresSnapshot = await adminDb
-    .collection('users')
-    .doc(user.userId)
-    .collection('product_scores')
-    .orderBy('rank')
-    .get()
-
-  const products: PreComputedProductMatchScore[] = scoresSnapshot.docs.map(
-    (doc) => {
-      const data = doc.data()
-      return {
-        product: {
-          id: doc.id,
-          name: data.productName,
-          brand: data.productBrand,
-          image_url: data.productImageUrl,
-          price: data.productPrice,
-          category: data.category,
-        },
-        totalScore: data.score,
-        breakdown: data.breakdown,
-        matchReasons: data.matchReasons || [],
-      }
-    }
-  )
+  const products = await getCachedAllScores(user.userId)
 
   return (
     <ProductGrid

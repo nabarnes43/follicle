@@ -17,7 +17,6 @@ import { getFollicleIdDescription } from '@/lib/analysis/follicleId'
 import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { User } from '@/types/user'
-import { productsCache } from '@/lib/matching/products/productsCache'
 
 export default function AnalysisResultsPage() {
   const searchParams = useSearchParams()
@@ -64,12 +63,7 @@ export default function AnalysisResultsPage() {
     }
     loadUser()
   }, [authUser])
-
-  // Prefetch products in the background
-  useEffect(() => {
-    console.log('🚀 Starting prefetch...')
-    productsCache.prefetch()
-  }, [])
+  
   // Handle linking anonymous results after sign in/signup
   useEffect(() => {
     async function handleAccountLink() {

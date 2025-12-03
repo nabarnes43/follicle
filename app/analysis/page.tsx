@@ -77,11 +77,21 @@ export default function AnalysisPage() {
       const follicleId = await saveAnalysisResults(user.uid, email, answers)
       console.log('8. Got follicleId:', follicleId)
 
+      // Invalidate cached product scores so user gets fresh recommendations
+      console.log('9. Invalidating cached scores...')
+      const token = await user.getIdToken()
+      await fetch('/api/revalidate-scores', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
       localStorage.removeItem('analysisAnswers')
-      console.log('9. Navigating to results...')
+      console.log('10. Navigating to results...')
       router.push(`/analysis/results?follicleId=${follicleId}`)
     } catch (error) {
-      console.error('10. ERROR:', error)
+      console.error('11. ERROR:', error)
       setIsSubmitting(false)
     }
   }

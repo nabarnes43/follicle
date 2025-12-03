@@ -4,7 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/auth'
 import NavBar from '@/components/navigation/NavBar'
 import { Toaster } from '@/components/ui/sonner'
-
+import { Suspense } from 'react'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,10 +31,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
+        <Suspense>
           <NavBar />
+        </Suspense>
+        <AuthProvider>
           {children}
-          <Toaster/>
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

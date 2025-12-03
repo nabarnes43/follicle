@@ -3,7 +3,7 @@ import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
 import { FieldValue } from 'firebase-admin/firestore'
 import { ProductInteraction, InteractionType } from '@/types/productInteraction'
-
+//TODO add routing to match ingredients here so its clear and uniform what is being done
 /**
  * POST /api/interactions/products
  */
