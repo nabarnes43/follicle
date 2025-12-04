@@ -17,6 +17,7 @@ export default function NavBar() {
 
   const navLinks = [
     { href: '/ingredients', label: 'Ingredients', icon: TestTubes },
+    { href: '/ingredients/saved', label: 'Saved Ingredients', icon: TestTubes },
     { href: '/products', label: 'Products', icon: Beaker },
     { href: '/products/saved', label: 'Saved Products', icon: Bookmark },
     { href: '/routines/public', label: 'Browse Routines', icon: Globe },

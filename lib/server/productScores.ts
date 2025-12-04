@@ -67,19 +67,24 @@ export async function getCachedScoresByCategory(
  */
 export async function getCachedScoresByIngredient(
   userId: string,
-  ingredientId: string
+  ingredientId: string,
+  options?: { limit?: number }
 ) {
   'use cache'
   cacheTag(`user-scores-${userId}`)
 
-  const snapshot = await adminDb
+  let query = adminDb
     .collection('users')
     .doc(userId)
     .collection('product_scores')
     .where('ingredientRefs', 'array-contains', ingredientId)
     .orderBy('rank')
-    .get()
 
+  if (options?.limit) {
+    query = query.limit(options.limit)
+  }
+
+  const snapshot = await query.get()
   return snapshot.docs.map(docToScore)
 }
 

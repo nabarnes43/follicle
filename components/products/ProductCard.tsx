@@ -95,7 +95,7 @@ export function ProductCard({
             {product.price ? (
               <p className="font-bold">${product.price.toFixed(2)}</p>
             ) : (
-              <p className="text-muted-foreground text-sm">Price N/A</p>
+              <p className="text-muted-foreground text-sm"></p>
             )}
           </div>
 
