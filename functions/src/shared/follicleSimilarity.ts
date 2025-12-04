@@ -4,7 +4,7 @@ import {
   TOTAL_FOLLICLE_WEIGHT,
   MIN_SIMILARITY_THRESHOLD,
   EXACT_MATCH_BOOST,
-} from '../config/constants'
+} from './constants'
 
 export function calculateFollicleSimilarity(
   follicleId1: string,

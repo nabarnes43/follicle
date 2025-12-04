@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedAllScores } from '@/lib/server/productScores'
 import { ProductGrid } from '@/components/products/ProductGrid'
+import { Header } from '@/components/navigation/Header'
 
 /**
  * /products - All products, scored for the user
@@ -19,10 +20,12 @@ export default async function ProductsPage() {
   const products = await getCachedAllScores(user.userId)
 
   return (
-    <ProductGrid
-      products={products}
-      title="Your Product Recommendations"
-      subtitle="Personalized with follicle matching algorithm"
-    />
+    <div>
+      <Header
+        title="Products"
+        subtitle="Personalized with follicle matching algorithm"
+      />
+      <ProductGrid products={products} />
+    </div>
   )
 }

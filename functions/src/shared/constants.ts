@@ -1,10 +1,7 @@
-// functions/src/config/constants.ts
-// Copied from lib/matching/shared/constants.ts
-
 export const MATCH_REASONS_CONFIG = {
-  maxReasonsTotal: 100,
-  maxBeneficialPerCharacteristic: 10,
-  maxAvoidedPerCharacteristic: 10,
+  maxReasonsTotal: 10,
+  maxBeneficialPerCharacteristic: 4,
+  maxAvoidedPerCharacteristic: 1,
 } as const
 
 export const FOLLICLE_WEIGHTS = {

@@ -15,10 +15,11 @@ export async function POST(request: NextRequest) {
     const decodedToken = await adminAuth.verifyIdToken(token)
     const userId = decodedToken.uid
 
-    // Invalidate the user's cached scores with 'max' profile for SWR behavior
+    // Invalidate both product and routine caches
     revalidateTag(`user-scores-${userId}`, 'max')
+    revalidateTag(`user-routine-scores-${userId}`, 'max')
 
-    console.log(`🔄 Invalidated cache for user ${userId}`)
+    console.log(`🔄 Invalidated product and routine caches for user ${userId}`)
 
     return NextResponse.json({ success: true, userId })
   } catch (error) {

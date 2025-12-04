@@ -1,5 +1,4 @@
-// functions/src/types/product.ts
-import { ProductCategory } from '../config/categories'
+import { ProductCategory } from '../products/config/categories'
 
 export interface Product {
   id: string

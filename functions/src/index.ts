@@ -5,11 +5,15 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onRequest } from 'firebase-functions/v2/https'
 
 import { Product } from './types/product'
-import { HairAnalysis } from './types/user'
 import { ProductMatchScore } from './types/productMatching'
-import { matchProductsForUser } from './scoring/productMatcher'
+import { Routine } from './types/routine'
+import { RoutineMatchScore } from './types/routineMatching'
+import { matchProductsForUser } from './products/scoring/productMatcher'
+import { matchRoutinesForUser } from './routines/scoring/routineMatcher'
+import { decodeFollicleIdToAnalysis } from './shared/follicleId'
+import { MATCH_REASONS_CONFIG } from './shared/constants'
 
-// Initialize Firebase Admin (auto-credentials when deployed)
+// Initialize Firebase Admin
 initializeApp()
 
 const db = getFirestore()
@@ -23,14 +27,14 @@ export const healthcheck = onRequest((req, res) => {
 })
 
 // ============================================================================
-// SCORE PRODUCTS ON HAIR ANALYSIS CHANGE
+// SCORE PRODUCTS AND ROUTINES ON FOLLICLE ID CHANGE
 // ============================================================================
 
 export const onUserWrite = onDocumentWritten(
   {
     document: 'users/{userId}',
-    memory: '1GiB', // Scoring 8K products needs more memory
-    timeoutSeconds: 540, // 9 minutes max
+    memory: '1GiB',
+    timeoutSeconds: 540,
   },
   async (event) => {
     const userId = event.params.userId
@@ -43,25 +47,33 @@ export const onUserWrite = onDocumentWritten(
       return
     }
 
-    const beforeAnalysis = beforeData?.hairAnalysis as HairAnalysis | undefined
-    const afterAnalysis = afterData?.hairAnalysis as HairAnalysis | undefined
+    const beforeFollicleId = beforeData?.follicleId as string | undefined
+    const afterFollicleId = afterData.follicleId as string | undefined
 
-    console.log('Before hairAnalysis:', JSON.stringify(beforeAnalysis))
-    console.log('After hairAnalysis:', JSON.stringify(afterAnalysis))
-
-    // Skip if no hair analysis yet
-    if (!afterAnalysis) {
-      console.log(`User ${userId} has no hairAnalysis, skipping`)
+    // Skip if no follicleId yet
+    if (!afterFollicleId) {
+      console.log(`User ${userId} has no follicleId, skipping`)
       return
     }
 
-    // Skip if hairAnalysis hasn't changed (avoid unnecessary rescoring)
-    if (beforeAnalysis && !hasAnalysisChanged(beforeAnalysis, afterAnalysis)) {
-      console.log(`User ${userId} hairAnalysis unchanged, skipping`)
+    // Skip if follicleId hasn't changed
+    if (beforeFollicleId && beforeFollicleId === afterFollicleId) {
+      console.log(
+        `User ${userId} follicleId unchanged (${afterFollicleId}), skipping`
+      )
       return
     }
 
-    console.log(`🚀 Scoring products for user ${userId}...`)
+    console.log(
+      `📊 FollicleId changed: ${beforeFollicleId || 'none'} → ${afterFollicleId}`
+    )
+
+    // Decode follicleId to get HairAnalysis for scoring
+    const hairAnalysis = decodeFollicleIdToAnalysis(afterFollicleId)
+    if (!hairAnalysis) {
+      console.error(`User ${userId} has invalid follicleId: ${afterFollicleId}`)
+      return
+    }
 
     try {
       // 1. Fetch all products
@@ -73,29 +85,47 @@ export const onUserWrite = onDocumentWritten(
 
       console.log(`📦 Fetched ${products.length} products`)
 
-      // 2. Get follicleId
-      const follicleId = afterData.follicleId as string
-      if (!follicleId) {
-        console.error(`User ${userId} has no follicleId`)
-        return
-      }
-
-      // 3. Score all products
-      const scored = await matchProductsForUser(
-        { hairAnalysis: afterAnalysis },
+      // 2. Score products
+      console.log(`🚀 Scoring products for user ${userId}...`)
+      const scoredProducts = await matchProductsForUser(
+        { hairAnalysis },
         products,
-        follicleId
+        afterFollicleId
       )
+      console.log(`✅ Scored ${scoredProducts.length} products`)
 
-      console.log(`✅ Scored ${scored.length} products`)
+      // 3. Write product scores
+      await writeProductScoresToFirestore(userId, scoredProducts)
+      console.log(`💾 Saved product scores for user ${userId}`)
 
-      // 4. Write scores to subcollection
-      await writeScoresToFirestore(userId, scored)
+      // 4. Fetch all public routines
+      const routinesSnapshot = await db
+        .collection('routines')
+        .where('is_public', '==', true)
+        .get()
+      const routines: Routine[] = routinesSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Routine[]
 
-      console.log(`💾 Saved scores for user ${userId}`)
+      console.log(`📋 Fetched ${routines.length} public routines`)
+
+      // 5. Score routines
+      console.log(`🚀 Scoring routines for user ${userId}...`)
+      const scoredRoutines = await matchRoutinesForUser(
+        { hairAnalysis },
+        routines,
+        afterFollicleId,
+        products
+      )
+      console.log(`✅ Scored ${scoredRoutines.length} routines`)
+
+      // 6. Write routine scores
+      await writeRoutineScoresToFirestore(userId, scoredRoutines, products)
+      console.log(`💾 Saved routine scores for user ${userId}`)
     } catch (error) {
       console.error(`❌ Error scoring for user ${userId}:`, error)
-      throw error // Rethrow to mark function as failed (enables retry)
+      throw error
     }
   }
 )
@@ -105,26 +135,9 @@ export const onUserWrite = onDocumentWritten(
 // ============================================================================
 
 /**
- * Check if hair analysis has changed (compare core 5 fields)
- */
-function hasAnalysisChanged(
-  before: HairAnalysis,
-  after: HairAnalysis
-): boolean {
-  return (
-    before.hairType !== after.hairType ||
-    before.porosity !== after.porosity ||
-    before.density !== after.density ||
-    before.thickness !== after.thickness ||
-    before.damage !== after.damage
-  )
-}
-
-/**
  * Write scored products to user's subcollection
- * Uses batched writes (Firestore limit: 500 per batch)
  */
-async function writeScoresToFirestore(
+async function writeProductScoresToFirestore(
   userId: string,
   scored: ProductMatchScore[]
 ): Promise<void> {
@@ -133,33 +146,8 @@ async function writeScoresToFirestore(
     .doc(userId)
     .collection('product_scores')
 
-  // Delete existing scores first
-  const existingScores = await scoresRef.get()
-  if (!existingScores.empty) {
-    const deleteBatches: FirebaseFirestore.WriteBatch[] = []
-    let deleteBatch = db.batch()
-    let deleteCount = 0
+  await deleteCollection(scoresRef)
 
-    existingScores.docs.forEach((doc) => {
-      deleteBatch.delete(doc.ref)
-      deleteCount++
-
-      if (deleteCount === 500) {
-        deleteBatches.push(deleteBatch)
-        deleteBatch = db.batch()
-        deleteCount = 0
-      }
-    })
-
-    if (deleteCount > 0) {
-      deleteBatches.push(deleteBatch)
-    }
-
-    await Promise.all(deleteBatches.map((b) => b.commit()))
-    console.log(`🗑️ Deleted ${existingScores.size} existing scores`)
-  }
-
-  // Write new scores in batches
   const writeBatches: FirebaseFirestore.WriteBatch[] = []
   let writeBatch = db.batch()
   let writeCount = 0
@@ -169,18 +157,19 @@ async function writeScoresToFirestore(
 
     writeBatch.set(docRef, {
       score: item.totalScore,
-      rank: index + 1, // Pre-calculated rank (1 = best)
+      rank: index + 1,
       category: item.product.category,
       breakdown: item.breakdown,
-      matchReasons: item.matchReasons.slice(0, 5), // Limit stored reasons
+      matchReasons: item.matchReasons.slice(
+        0,
+        MATCH_REASONS_CONFIG.maxReasonsTotal
+      ),
       interactionsByTier: item.interactionsByTier || null,
       scoredAt: new Date(),
-      // Product card fields
       productName: item.product.name,
       productBrand: item.product.brand,
       productImageUrl: item.product.image_url || null,
       productPrice: item.product.price || null,
-      // Ingredient filtering
       ingredientRefs: item.product.ingredient_refs || [],
     })
 
@@ -199,6 +188,107 @@ async function writeScoresToFirestore(
 
   await Promise.all(writeBatches.map((b) => b.commit()))
   console.log(
-    `✅ Wrote ${scored.length} scores in ${writeBatches.length} batches`
+    `✅ Wrote ${scored.length} product scores in ${writeBatches.length} batches`
   )
+}
+
+/**
+ * Write scored routines to user's subcollection
+ */
+async function writeRoutineScoresToFirestore(
+  userId: string,
+  scored: RoutineMatchScore[],
+  allProducts: Product[]
+): Promise<void> {
+  const scoresRef = db
+    .collection('users')
+    .doc(userId)
+    .collection('routine_scores')
+
+  await deleteCollection(scoresRef)
+
+  const writeBatches: FirebaseFirestore.WriteBatch[] = []
+  let writeBatch = db.batch()
+  let writeCount = 0
+
+  scored.forEach((item, index) => {
+    const docRef = scoresRef.doc(item.routine.id)
+
+    writeBatch.set(docRef, {
+      score: item.totalScore,
+      rank: index + 1,
+      breakdown: item.breakdown,
+      matchReasons:
+        item.matchReasons.slice(0, MATCH_REASONS_CONFIG.maxReasonsTotal) || [],
+      interactionsByTier: item.interactionsByTier || null,
+      scoredAt: new Date(),
+      // Routine card fields
+      routineName: item.routine.name,
+      routineStepCount: item.routine.steps.length,
+      routineFrequency: item.routine.frequency,
+      routineUserId: item.routine.user_id,
+      routineIsPublic: item.routine.is_public,
+      // Steps with product data for card display
+      routineSteps: item.routine.steps.slice(0, 3).map((step) => {
+        const product = allProducts.find((p) => p.id === step.product_id)
+        return {
+          order: step.order ?? 0,
+          stepName: step.step_name ?? '',
+          productId: step.product_id ?? null,
+          productName: product?.name ?? null,
+          productBrand: product?.brand ?? null,
+          productImageUrl: product?.image_url ?? null,
+        }
+      }),
+    })
+    writeCount++
+
+    if (writeCount === 500) {
+      writeBatches.push(writeBatch)
+      writeBatch = db.batch()
+      writeCount = 0
+    }
+  })
+
+  if (writeCount > 0) {
+    writeBatches.push(writeBatch)
+  }
+
+  await Promise.all(writeBatches.map((b) => b.commit()))
+  console.log(
+    `✅ Wrote ${scored.length} routine scores in ${writeBatches.length} batches`
+  )
+}
+
+/**
+ * Delete all documents in a collection
+ */
+async function deleteCollection(
+  collectionRef: FirebaseFirestore.CollectionReference
+): Promise<void> {
+  const existing = await collectionRef.get()
+
+  if (existing.empty) return
+
+  const deleteBatches: FirebaseFirestore.WriteBatch[] = []
+  let deleteBatch = db.batch()
+  let deleteCount = 0
+
+  existing.docs.forEach((doc) => {
+    deleteBatch.delete(doc.ref)
+    deleteCount++
+
+    if (deleteCount === 500) {
+      deleteBatches.push(deleteBatch)
+      deleteBatch = db.batch()
+      deleteCount = 0
+    }
+  })
+
+  if (deleteCount > 0) {
+    deleteBatches.push(deleteBatch)
+  }
+
+  await Promise.all(deleteBatches.map((b) => b.commit()))
+  console.log(`🗑️ Deleted ${existing.size} existing scores`)
 }

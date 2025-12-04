@@ -86,7 +86,10 @@ export async function getCachedScoresByIngredient(
 /**
  * Get product scores for specific product IDs (cached)
  */
-export async function getCachedScoresByIds(userId: string, productIds: string[]) {
+export async function getCachedScoresByIds(
+  userId: string,
+  productIds: string[]
+) {
   'use cache'
   cacheTag(`user-scores-${userId}`)
 
@@ -121,4 +124,26 @@ export async function getCachedScoresByIds(userId: string, productIds: string[])
   }
 
   return scores.sort((a, b) => b.totalScore - a.totalScore)
+}
+
+/**
+ * Convert Firestore Timestamp to milliseconds (serializable)
+ */
+function toTimestamp(ts: any): number | null {
+  if (!ts) return null
+  if (ts._seconds) return ts._seconds * 1000
+  if (ts.seconds) return ts.seconds * 1000
+  if (ts instanceof Date) return ts.getTime()
+  return null
+}
+
+/**
+ * Serialize product for client component (converts Timestamps)
+ */
+export function serializeProduct(product: any): any {
+  return {
+    ...product,
+    created_at: toTimestamp(product.created_at),
+    updated_at: toTimestamp(product.updated_at),
+  }
 }

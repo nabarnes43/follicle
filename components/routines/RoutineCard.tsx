@@ -4,51 +4,37 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bookmark, Lock, Globe } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Routine } from '@/types/routine'
-import { Product } from '@/types/product'
+import { PreComputedRoutineMatchScore } from '@/types/routineMatching'
 import { useRoutineInteraction } from '@/hooks/useRoutineInteraction'
 
 interface RoutineCardProps {
-  routine: Routine
-  matchScore?: number
-  matchReasons?: string[]
+  routineScore: PreComputedRoutineMatchScore
   showMatchScore?: boolean
-  allProducts: Product[]
   onView?: () => void
-  hideSaveButton?: boolean // NEW - hide save button on My Routines page
+  hideSaveButton?: boolean
 }
 
 export function RoutineCard({
-  routine,
-  matchScore,
-  matchReasons,
-  showMatchScore = false,
-  allProducts,
+  routineScore,
+  showMatchScore = true,
   onView,
-  hideSaveButton = false, // NEW - default to showing it
+  hideSaveButton = false,
 }: RoutineCardProps) {
+  const { routine, totalScore } = routineScore
   const { interactions, toggleSave, isLoading } = useRoutineInteraction(
     routine.id
   )
+
+  const steps = routine.steps || []
 
   const handleSaveClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     toggleSave()
   }
 
-  const formatDate = (ts: any) => {
-    if (!ts?._seconds) return 'Unknown'
-    const date = new Date(ts._seconds * 1000)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
   // Always show exactly 3 step slots
   const slots = [0, 1, 2]
-  const remainingCount = Math.max(0, routine.steps.length - 3)
+  const remainingCount = Math.max(0, routine.stepCount - 3)
 
   return (
     <Card
@@ -59,30 +45,27 @@ export function RoutineCard({
         {/* Header */}
         <div className="mb-3 flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            {routine.is_public ? (
+            {routine.isPublic ? (
               <Globe className="text-muted-foreground h-4 w-4 flex-shrink-0" />
             ) : (
               <Lock className="text-muted-foreground h-4 w-4 flex-shrink-0" />
             )}
-            {/* Routine name - truncate if too long */}
             <h3 className="min-w-0 flex-1 truncate text-lg font-semibold capitalize">
               {routine.name}
             </h3>
           </div>
           {/* Match Score & Save Button */}
           <div className="flex flex-shrink-0 items-center gap-2">
-            {/* Match Score - Only show if enabled */}
-            {showMatchScore && matchScore !== undefined && (
+            {showMatchScore && (
               <div className="text-center">
                 <p className="text-primary text-md leading-none font-semibold">
-                  {Math.round(matchScore * 100)}%
+                  {Math.round(totalScore * 100)}%
                 </p>
                 <p className="text-muted-foreground text-[9px] leading-tight">
                   Match
                 </p>
               </div>
             )}
-            {/* Save Button - Only show if not hidden */}
             {!hideSaveButton && (
               <Button
                 onClick={handleSaveClick}
@@ -102,7 +85,7 @@ export function RoutineCard({
         {/* Metadata */}
         <div className="mb-3 flex h-6 items-center gap-2">
           <p className="text-muted-foreground text-sm">
-            {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''} •{' '}
+            {routine.stepCount} step{routine.stepCount !== 1 ? 's' : ''} •{' '}
             {routine.frequency.unit === 'day'
               ? 'Daily'
               : routine.frequency.unit === 'week'
@@ -123,76 +106,60 @@ export function RoutineCard({
           </p>
           <div className="space-y-2">
             {slots.map((index) => {
-              const step = routine.steps[index]
-
-              // Empty slot - shows placeholder with gray badge and line
+              const step = steps[index]
+              // Empty slot
               if (!step) {
                 return (
                   <div
                     key={`empty-${index}`}
                     className="grid grid-cols-[24px_.5fr_8px_32px_1fr] items-center gap-3"
                   >
-                    {/* Number badge */}
                     <div className="bg-muted text-muted-foreground flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold">
                       {index + 1}
                     </div>
-                    {/* Empty step text */}
                     <span className="text-muted-foreground/50 truncate text-sm italic">
                       Empty step
                     </span>
-                    {/* Separator dot */}
                     <span className="text-muted-foreground/30 text-center">
                       •
                     </span>
-                    {/* Empty image placeholder */}
                     <div className="h-8 w-8 rounded border border-gray-200 bg-gray-50" />
-                    {/* Gray line placeholder */}
                     <div className="bg-muted h-px" />
                   </div>
                 )
               }
-
-              // Real step - fetch product data and display
-              const product = allProducts.find((p) => p.id === step.product_id)
 
               return (
                 <div
                   key={index}
                   className="grid grid-cols-[24px_.5fr_8px_32px_1fr] items-center gap-3"
                 >
-                  {/* Number badge */}
                   <div className="bg-primary text-primary-foreground flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold">
                     {index + 1}
                   </div>
                   <span className="text-muted-foreground min-w-0 truncate text-sm font-medium">
-                    {step.step_name}
+                    {step.stepName}
                   </span>
-                  {/* Separator dot */}
                   <span className="text-muted-foreground text-center">•</span>
-                  {/* Product image */}
-                  {product?.image_url ? (
+                  {step.productImageUrl ? (
                     <img
-                      src={product.image_url}
-                      alt={product.name}
+                      src={step.productImageUrl}
+                      alt={step.productName || ''}
                       className="h-8 w-8 rounded bg-white object-contain"
                     />
                   ) : (
                     <div className="h-8 w-8 rounded bg-gray-100" />
                   )}
                   <span className="min-w-0 truncate text-sm">
-                    {product ? `${product.brand} ${product.name}` : ''}
+                    {step.productBrand && step.productName
+                      ? `${step.productBrand} ${step.productName}`
+                      : ''}
                   </span>
                 </div>
               )
             })}
           </div>
         </div>
-
-        {/* Timestamps */}
-        <p className="text-muted-foreground text-xs">
-          Created {formatDate(routine.created_at)}
-          {routine.updated_at && ` • Updated ${formatDate(routine.updated_at)}`}
-        </p>
       </CardContent>
     </Card>
   )

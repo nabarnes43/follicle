@@ -1,14 +1,15 @@
 import { Header } from '@/components/navigation/Header'
-import { ProductGrid } from '@/components/products/ProductGrid'
+import { RoutineGrid } from '@/components/routines/RoutineGrid'
+import { Loader2 } from 'lucide-react'
 
-export default function IngredientLoading() {
+export default function PrivateRoutinesLoading() {
   return (
     <div>
       <Header
         title="Loading Products"
         subtitle="Personalized with follicle matching algorithm"
       />
-      <ProductGrid products={[]} loading={true}/>
+      <RoutineGrid routines={[]} loading={true}/>
     </div>
   )
 }

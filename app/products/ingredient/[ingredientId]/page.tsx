@@ -3,6 +3,7 @@ import { getServerUser } from '@/lib/server/auth'
 import { adminDb } from '@/lib/firebase/admin'
 import { getCachedScoresByIngredient } from '@/lib/server/productScores'
 import { ProductGrid } from '@/components/products/ProductGrid'
+import { Header } from '@/components/navigation/Header'
 
 export default async function IngredientProductsPage({
   params,
@@ -31,11 +32,12 @@ export default async function IngredientProductsPage({
   const products = await getCachedScoresByIngredient(user.userId, ingredientId)
 
   return (
-    <ProductGrid
-      products={products}
-      title={`Products with ${ingredientName}`}
-      subtitle={`${products.length} products containing this ingredient`}
-      emptyMessage={`No products found containing ${ingredientName}`}
-    />
+    <div>
+      <Header
+        title={`Products with ${ingredientName}`}
+        subtitle={`${products.length} products containing this ingredient`}
+      />
+      <ProductGrid products={products} />
+    </div>
   )
 }

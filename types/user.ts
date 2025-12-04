@@ -18,6 +18,7 @@ export interface User {
   routineProducts?: string[]
   savedProducts?: string[]
   // Routines Cache
+  createdRoutines?: string[]
   savedRoutines?: string[]
   likedRoutines?: string[]
   dislikedRoutines?: string[]

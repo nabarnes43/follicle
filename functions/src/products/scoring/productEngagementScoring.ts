@@ -1,7 +1,7 @@
 import { getFirestore } from 'firebase-admin/firestore'
-import { Product } from '../types/product'
-import { ProductInteraction } from '../types/productInteraction'
-import { calculateFollicleSimilarity } from '../utils/follicleSimilarity'
+import { Product } from '../../types/product'
+import { ProductInteraction } from '../../types/productInteraction'
+import { calculateFollicleSimilarity } from '../../shared/follicleSimilarity'
 import {
   ENGAGEMENT_WEIGHTS,
   MIN_SIMILARITY_THRESHOLD,

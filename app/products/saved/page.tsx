@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedScoresByIds } from '@/lib/server/productScores'
-import SavedTabs from '@/components/products/SavedTabs'
+import { SavedProductsClient } from '@/components/products/SavedProductsClient'
 
 export default async function SavedPage() {
   const user = await getServerUser()
@@ -22,5 +22,11 @@ export default async function SavedPage() {
     getCachedScoresByIds(user.userId, productIds.disliked),
   ])
 
-  return <SavedTabs liked={liked} saved={saved} disliked={disliked} />
+  return (
+    <SavedProductsClient
+      likedScores={liked}
+      savedScores={saved}
+      dislikedScores={disliked}
+    />
+  )
 }

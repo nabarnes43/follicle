@@ -54,7 +54,7 @@ export function generateFollicleId(hairAnalysis: HairAnalysis): string {
 /**
  * Decode a follicle ID back into display-ready components
  * Example: 'CU-H-M-F-N' → { hairType: 'curly hair', porosity: 'high porosity', ... }
- *
+ * TODO Fix this to match functions version with analysis funcitonality changes to server
  * Returns display-ready strings for use in UI and match reasons
  */
 export function decodeFollicleId(follicleId: string): {

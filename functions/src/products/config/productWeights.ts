@@ -7,7 +7,7 @@ import {
   EXACT_MATCH_BOOST,
   ENGAGEMENT_SCORE_DEFAULTS,
   MATCH_REASONS_CONFIG,
-} from './constants'
+} from '../../shared/constants'
 
 export {
   FOLLICLE_WEIGHTS,

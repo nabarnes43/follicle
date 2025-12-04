@@ -1,5 +1,35 @@
 import { Routine } from './routine'
 
+export interface PreComputedRoutineStep {
+  order: number
+  stepName: string
+  productId: string
+  productName: string | null
+  productBrand: string | null
+  productImageUrl: string | null
+}
+
+export interface PreComputedRoutineMatchScore {
+  routine: {
+    id: string
+    name: string
+    stepCount: number
+    frequency: {
+      interval: number
+      unit: 'day' | 'week' | 'month'
+    }
+    isPublic: boolean
+    userId: string
+    steps: PreComputedRoutineStep[]
+  }
+  totalScore: number
+  breakdown: {
+    productScore: number
+    engagementScore: number
+  }
+  matchReasons: string[]
+}
+
 /**
  * RoutineMatchScore - Represents how well a routine matches a specific user's hair profile
  *

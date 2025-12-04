@@ -1,6 +1,9 @@
-// functions/src/utils/follicleId.ts
+// functions/src/shared/follicleId.ts
 import { HairAnalysis } from '../types/user'
 
+/**
+ * Generate a follicle ID from hair analysis
+ */
 export function generateFollicleId(hairAnalysis: HairAnalysis): string {
   const textureMap: Record<string, string> = {
     straight: 'ST',
@@ -45,7 +48,86 @@ export function generateFollicleId(hairAnalysis: HairAnalysis): string {
   return parts.join('-')
 }
 
-export function decodeFollicleId(follicleId: string): {
+/**
+ * Decode follicle ID to HairAnalysis object for scoring
+ * Use this when you need the actual values for matching algorithms
+ *
+ * @example
+ * decodeFollicleIdToAnalysis('CU-H-M-F-N')
+ * // → { hairType: 'curly', porosity: 'high', density: 'medium', thickness: 'fine', damage: 'none' }
+ */
+export function decodeFollicleIdToAnalysis(
+  follicleId: string
+): HairAnalysis | null {
+  const parts = follicleId.split('-')
+
+  if (parts.length !== 5) {
+    console.warn('Invalid follicle ID format:', follicleId)
+    return null
+  }
+
+  const textureMap: Record<string, HairAnalysis['hairType']> = {
+    ST: 'straight',
+    WV: 'wavy',
+    CU: 'curly',
+    CO: 'coily',
+    PR: 'protective',
+  }
+
+  const porosityMap: Record<string, HairAnalysis['porosity']> = {
+    L: 'low',
+    M: 'medium',
+    H: 'high',
+  }
+
+  const densityMap: Record<string, HairAnalysis['density']> = {
+    L: 'low',
+    M: 'medium',
+    H: 'high',
+  }
+
+  const thicknessMap: Record<string, HairAnalysis['thickness']> = {
+    F: 'fine',
+    M: 'medium',
+    C: 'coarse',
+  }
+
+  const damageMap: Record<string, HairAnalysis['damage']> = {
+    N: 'none',
+    S: 'some',
+    V: 'severe',
+  }
+
+  const hairType = textureMap[parts[0]]
+  const porosity = porosityMap[parts[1]]
+  const density = densityMap[parts[2]]
+  const thickness = thicknessMap[parts[3]]
+  const damage = damageMap[parts[4]]
+
+  // Validate all parts decoded successfully
+  if (!hairType || !porosity || !density || !thickness || !damage) {
+    console.warn('Invalid follicle ID values:', follicleId)
+    return null
+  }
+
+  return {
+    hairType,
+    porosity,
+    density,
+    thickness,
+    damage,
+  }
+}
+
+/**
+ * Decode follicle ID to human-readable strings for UI display
+ * Use this for showing users their hair profile in a friendly format
+ *
+ * @example
+ * decodeFollicleIdForDisplay('CU-H-M-F-N')
+ * // → { hairType: 'curly hair', porosity: 'high porosity', ... }
+ */
+export function decodeFollicleIdForDisplay(follicleId: string): {
   hairType: string
   porosity: string
   density: string

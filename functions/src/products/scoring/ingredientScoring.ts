@@ -1,6 +1,6 @@
-import { Product } from '../types/product'
-import { HairAnalysis } from '../types/user'
-import { generateFollicleId, decodeFollicleId } from '../utils/follicleId'
+import { Product } from '../../types/product'
+import { HairAnalysis } from '../../types/user'
+import { generateFollicleId, decodeFollicleIdForDisplay } from '../../shared/follicleId'
 import { INGREDIENT_PROFILES } from '../config/ingredientProfiles'
 import {
   INGREDIENT_CATEGORY_WEIGHTS,
@@ -9,7 +9,7 @@ import {
   getPositionScore,
 } from '../config/productWeights'
 
-/**
+/** TODO update the analysis to use ID and the decode ID rather than the actual user analysis well still store the analysis but dont need it for scoring
  * Score a product based on its ingredients for a specific user
  * Uses the "Lego system" - each hair characteristic scores independently
  *
@@ -50,7 +50,7 @@ export function scoreByIngredients(
 
   // Decode follicle ID to get display-ready names
   const follicleId = generateFollicleId(hairAnalysis)
-  const decoded = decodeFollicleId(follicleId)
+  const decoded = decodeFollicleIdForDisplay(follicleId)
 
   if (!decoded) {
     // Fallback if decode fails

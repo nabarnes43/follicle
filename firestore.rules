@@ -12,7 +12,13 @@ service cloud.firestore {
       match /product_scores/{scoreId} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if false;  // Only written by Firebase Functions
-  }
+      }
+
+      // Routine scores subcollection
+      match /routine_scores/{scoreId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;  // Only written by Firebase Functions
+      }
     }
     
     // Products collection

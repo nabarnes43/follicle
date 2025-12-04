@@ -23,16 +23,14 @@ const LOAD_MORE_INCREMENT = 48
 interface ProductGridProps {
   /** Pre-scored products from firebase */
   products: PreComputedProductMatchScore[]
-  /** Title shown at top of page */
-  title?: string
-  /** Subtitle/description shown below title */
-  subtitle?: string
   /** Whether to show match scores on cards (default: true) */
   showMatchScores?: boolean
   /** Message shown when no products match filters */
   emptyMessage?: string
   /** Show skeleton loading state */
   loading?: boolean
+  /** Hide save button on cards (for saved page) */
+  hideSaveButton?: boolean
 }
 
 /**
@@ -50,11 +48,10 @@ interface ProductGridProps {
  */
 export function ProductGrid({
   products,
-  title = 'Products',
-  subtitle,
   showMatchScores = true,
   emptyMessage = 'No products found',
   loading = false,
+  hideSaveButton = false,
 }: ProductGridProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [displayLimit, setDisplayLimit] = useState(INITIAL_DISPLAY_LIMIT)
@@ -108,13 +105,7 @@ export function ProductGrid({
   }, [displayLimit, totalCount])
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">{title}</h1>
-        {subtitle && <p className="text-muted-foreground">{subtitle}</p>}
-      </div>
-
+    <div className="container mx-auto px-4 py-4">
       {/* Search Bar */}
       <div className="mb-8">
         <div className="relative max-w-md">
@@ -181,6 +172,7 @@ export function ProductGrid({
                 product={match.product}
                 matchScore={showMatchScores ? match.totalScore : undefined}
                 onClick={() => router.push(`/products/${match.product.id}`)}
+                hideSaveButton={hideSaveButton}
               />
             ))}
           </div>

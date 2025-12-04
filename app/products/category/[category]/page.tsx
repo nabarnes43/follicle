@@ -3,6 +3,7 @@ import { getServerUser } from '@/lib/server/auth'
 import { getCachedScoresByCategory } from '@/lib/server/productScores'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { PRODUCT_CATEGORIES } from '@/lib/matching/products/config/categories'
+import { Header } from '@/components/navigation/Header'
 
 export default async function CategoryProductsPage({
   params,
@@ -25,10 +26,12 @@ export default async function CategoryProductsPage({
   const products = await getCachedScoresByCategory(user.userId, decodedCategory)
 
   return (
-    <ProductGrid
-      products={products}
-      title={decodedCategory}
-      subtitle={`${products.length} products matched for your hair`}
-    />
+    <div>
+      <Header
+        title={decodedCategory}
+        subtitle={`${products.length} products matched for your hair`}
+      />
+      <ProductGrid products={products} />
+    </div>
   )
 }

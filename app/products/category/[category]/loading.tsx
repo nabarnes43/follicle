@@ -1,7 +1,11 @@
+import { Header } from '@/components/navigation/Header'
 import { ProductGrid } from '@/components/products/ProductGrid'
 
 export default function CategoryLoading() {
   return (
-    <ProductGrid products={[]} title="Loading category..." loading={true} />
+    <div>
+      <Header title="Loading Category" />
+      <ProductGrid products={[]} loading={true} />
+    </div>
   )
 }
