@@ -11,7 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { INGREDIENT_FUNCTION_TYPES } from '@/lib/ingredients/config/functionTypes'
+import { INGREDIENT_FUNCTION_TYPES } from '@/lib/constants/functionTypes'
 import {
   Select,
   SelectContent,

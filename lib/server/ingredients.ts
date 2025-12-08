@@ -74,13 +74,3 @@ export async function getCachedIngredientsByIds(
     (a, b) => (b.product_count ?? 0) - (a.product_count ?? 0)
   )
 }
-/**
- * Serialize ingredient for client component (converts Timestamps if needed)
- */
-export function serializeIngredient(ingredient: Ingredient): Ingredient {
-  return {
-    ...ingredient,
-    // Add timestamp conversions if Ingredient type has Date fields
-    // For now, returning as-is since Ingredient has string dates
-  }
-}

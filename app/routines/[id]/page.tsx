@@ -28,7 +28,7 @@ export default async function RoutineDetailPage({
 
   // Check privacy
   if (!routine.is_public && routine.user_id !== user?.userId) {
-    redirect('/routines/private')
+    redirect('/routines/public')
   }
 
   // Fetch author name

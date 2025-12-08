@@ -4,16 +4,16 @@ import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Search, X, Star } from 'lucide-react'
-import { Product } from '@/types/product'
-import { productsCache } from '@/lib/matching/products/productsCache'
+import { PreComputedProductMatchScore } from '@/types/productMatching'
 import Fuse from 'fuse.js'
 
 interface ProductSearchProps {
-  onSelect: (product: Product) => void
+  onSelect: (match: PreComputedProductMatchScore) => void // Pass full match object
   placeholder?: string
   excludeIds?: string[]
   savedProductIds?: string[]
   likedProductIds?: string[]
+  productScores: PreComputedProductMatchScore[] // Required prop
 }
 
 export function ProductSearch({
@@ -22,32 +22,38 @@ export function ProductSearch({
   excludeIds = [],
   savedProductIds = [],
   likedProductIds = [],
+  productScores, 
 }: ProductSearchProps) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Product[]>([])
-  const [quickAccessProducts, setQuickAccessProducts] = useState<Product[]>([]) // RENAMED
+  const [results, setResults] = useState<PreComputedProductMatchScore[]>([])
+  const [quickAccessMatches, setQuickAccessMatches] = useState<
+    PreComputedProductMatchScore[]
+  >([])
   const [isOpen, setIsOpen] = useState(false)
-  const [fuse, setFuse] = useState<Fuse<Product> | null>(null)
+  const [fuse, setFuse] = useState<Fuse<PreComputedProductMatchScore> | null>(
+    null
+  )
 
-  // Initialize Fuse once
+  // Initialize Fuse with productScores
   useEffect(() => {
-    productsCache.getProducts().then((products) => {
-      setFuse(
-        new Fuse(products, {
-          keys: ['name', 'brand'],
-          threshold: 0.3,
-          ignoreLocation: true,
-        })
-      )
-
-      // Combine saved + liked (unique IDs only)
-      const combinedIds = [...new Set([...savedProductIds, ...likedProductIds])]
-      const quickAccess = products.filter(
-        (p) => combinedIds.includes(p.id) && !excludeIds.includes(p.id)
-      )
-      setQuickAccessProducts(quickAccess)
+    // Create Fuse instance for fuzzy search on product name and brand
+    const fuseInstance = new Fuse(productScores, {
+      keys: ['product.name', 'product.brand'],
+      threshold: 0.3,
+      ignoreLocation: true,
     })
+    setFuse(fuseInstance)
+
+    // Combine saved + liked (unique IDs only)
+    const combinedIds = [...new Set([...savedProductIds, ...likedProductIds])]
+    const quickAccess = productScores.filter(
+      (ps) =>
+        combinedIds.includes(ps.product.id) &&
+        !excludeIds.includes(ps.product.id)
+    )
+    setQuickAccessMatches(quickAccess)
   }, [
+    productScores,
     savedProductIds.join(','),
     likedProductIds.join(','),
     excludeIds.join(','),
@@ -64,7 +70,7 @@ export function ProductSearch({
       const filtered = fuse
         .search(query)
         .map((r) => r.item)
-        .filter((p) => !excludeIds.includes(p.id))
+        .filter((ps) => !excludeIds.includes(ps.product.id))
         .slice(0, 20)
       setResults(filtered)
     }, 300)
@@ -72,18 +78,18 @@ export function ProductSearch({
     return () => clearTimeout(timeoutId)
   }, [query, fuse, excludeIds.join(',')])
 
-  const handleSelect = (product: Product) => {
-    onSelect(product)
+  const handleSelect = (match: PreComputedProductMatchScore) => {
+    onSelect(match)
     setQuery('')
     setResults([])
     setIsOpen(false)
   }
 
   // Determine what to show in dropdown
-  const showQuickAccess = !query.trim() && quickAccessProducts.length > 0
+  const showQuickAccess = !query.trim() && quickAccessMatches.length > 0
   const showSearchResults = query.trim() && results.length > 0
   const showNoResults = query.trim() && results.length === 0
-  const showEmptyState = !query.trim() && quickAccessProducts.length === 0
+  const showEmptyState = !query.trim() && quickAccessMatches.length === 0
 
   return (
     <div className="relative w-full">
@@ -124,16 +130,16 @@ export function ProductSearch({
                 <Star className="h-3 w-3 fill-current" />
                 Saved & Liked Products
               </div>
-              {quickAccessProducts.map((product) => (
+              {quickAccessMatches.map((match) => (
                 <button
-                  key={product.id}
-                  onClick={() => handleSelect(product)}
+                  key={match.product.id}
+                  onClick={() => handleSelect(match)}
                   className="hover:bg-accent flex w-full items-center gap-3 px-3 py-2 text-left"
                 >
-                  {product.image_url ? (
+                  {match.product.image_url ? (
                     <img
-                      src={product.image_url}
-                      alt={product.name}
+                      src={match.product.image_url}
+                      alt={match.product.name}
                       className="h-12 w-12 rounded object-contain"
                     />
                   ) : (
@@ -143,13 +149,13 @@ export function ProductSearch({
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-muted-foreground text-xs">
-                      {product.brand}
+                      {match.product.brand}
                     </p>
                     <p className="truncate text-sm font-medium">
-                      {product.name}
+                      {match.product.name}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {product.category}
+                      {match.product.category}
                     </p>
                   </div>
                 </button>
@@ -160,21 +166,21 @@ export function ProductSearch({
           {/* Search Results */}
           {showSearchResults && (
             <div className="py-1">
-              {quickAccessProducts.length > 0 && (
+              {quickAccessMatches.length > 0 && (
                 <div className="text-muted-foreground border-t px-3 py-2 text-xs font-semibold">
                   All Products
                 </div>
               )}
-              {results.map((product) => (
+              {results.map((match) => (
                 <button
-                  key={product.id}
-                  onClick={() => handleSelect(product)}
+                  key={match.product.id}
+                  onClick={() => handleSelect(match)}
                   className="hover:bg-accent flex w-full items-center gap-3 px-3 py-2 text-left"
                 >
-                  {product.image_url ? (
+                  {match.product.image_url ? (
                     <img
-                      src={product.image_url}
-                      alt={product.name}
+                      src={match.product.image_url}
+                      alt={match.product.name}
                       className="h-12 w-12 rounded object-contain"
                     />
                   ) : (
@@ -184,13 +190,13 @@ export function ProductSearch({
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-muted-foreground text-xs">
-                      {product.brand}
+                      {match.product.brand}
                     </p>
                     <p className="truncate text-sm font-medium">
-                      {product.name}
+                      {match.product.name}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {product.category}
+                      {match.product.category}
                     </p>
                   </div>
                 </button>

@@ -1,4 +1,3 @@
-import { getFirestore } from 'firebase-admin/firestore'
 import { Routine } from '../../types/routine'
 import { RoutineInteraction } from '../../types/routineInteraction'
 import { calculateFollicleSimilarity } from '../../shared/follicleSimilarity'
@@ -23,17 +22,16 @@ export interface RoutineInteractionsByTier {
 export async function scoreRoutineByEngagement(
   routine: Routine,
   userFollicleId: string,
-  includeReasons: boolean = true
+  includeReasons: boolean = true,
+  db: FirebaseFirestore.Firestore
 ): Promise<{
   score: number
   reasons: string[]
   interactionsByTier?: RoutineInteractionsByTier
 }> {
   const reasons: string[] = []
-  const adminDb = getFirestore()
-
   try {
-    const snapshot = await adminDb
+    const snapshot = await db
       .collection('routine_interactions')
       .where('routineId', '==', routine.id)
       .get()

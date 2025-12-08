@@ -1,21 +1,20 @@
-// functions/src/index.ts
 import { initializeApp } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 import { onDocumentWritten } from 'firebase-functions/v2/firestore'
 import { onRequest } from 'firebase-functions/v2/https'
+import { onSchedule } from 'firebase-functions/v2/scheduler'
 
-import { Product } from './types/product'
-import { ProductMatchScore } from './types/productMatching'
+import {
+  scoreProductForUser,
+  scoreRoutineForUser,
+  scoreAllProductsForUser,
+  scoreAllRoutinesForUser,
+} from './helpers/scoring'
 import { Routine } from './types/routine'
-import { RoutineMatchScore } from './types/routineMatching'
-import { matchProductsForUser } from './products/scoring/productMatcher'
-import { matchRoutinesForUser } from './routines/scoring/routineMatcher'
-import { decodeFollicleIdToAnalysis } from './shared/follicleId'
-import { MATCH_REASONS_CONFIG } from './shared/constants'
+import { Product } from './types/product'
 
 // Initialize Firebase Admin
 initializeApp()
-
 const db = getFirestore()
 
 // ============================================================================
@@ -27,10 +26,328 @@ export const healthcheck = onRequest((req, res) => {
 })
 
 // ============================================================================
-// SCORE PRODUCTS AND ROUTINES ON FOLLICLE ID CHANGE
+// PRODUCT SCORING TRIGGERS
 // ============================================================================
 
-export const onUserWrite = onDocumentWritten(
+/**
+ * When a product is created/updated, score it for all users
+ */
+export const onProductWrite = onDocumentWritten(
+  {
+    document: 'products/{productId}',
+    memory: '1GiB',
+    timeoutSeconds: 540,
+  },
+  async (event) => {
+    const productId = event.params.productId
+    const afterData = event.data?.after.data()
+
+    // Skip if product was deleted
+    if (!afterData) {
+      console.log(`Product ${productId} deleted, removing from all user scores`)
+
+      // Remove from all user scores
+      const usersSnapshot = await db.collection('users').get()
+      const deleteBatch = db.batch()
+
+      for (const userDoc of usersSnapshot.docs) {
+        const scoreRef = db
+          .collection('users')
+          .doc(userDoc.id)
+          .collection('product_scores')
+          .doc(productId)
+
+        deleteBatch.delete(scoreRef)
+      }
+
+      await deleteBatch.commit()
+      console.log(`✅ Removed product ${productId} from all user scores`)
+      return
+    }
+
+    const product = { id: productId, ...afterData }
+
+    console.log(`📦 Product ${productId} changed, scoring for all users`)
+
+    try {
+      // Get all users with follicleIds
+      const usersSnapshot = await db
+        .collection('users')
+        .where('follicleId', '!=', null)
+        .get()
+
+      console.log(`👥 Scoring product for ${usersSnapshot.size} users`)
+
+      // Score in batches of 10
+      const batchSize = 10
+      const userIds = usersSnapshot.docs.map((doc) => doc.id)
+
+      for (let i = 0; i < userIds.length; i += batchSize) {
+        const batch = userIds.slice(i, i + batchSize)
+
+        await Promise.all(
+          batch.map(async (userId) => {
+            try {
+              await scoreProductForUser(userId, product as any, db)
+              console.log(`✅ Scored product ${productId} for user ${userId}`)
+            } catch (error) {
+              console.error(`❌ Error scoring for user ${userId}:`, error)
+            }
+          })
+        )
+      }
+
+      console.log(`✅ Finished scoring product ${productId}`)
+    } catch (error) {
+      console.error(`❌ Error in onProductWrite:`, error)
+      throw error
+    }
+  }
+)
+
+// ============================================================================
+// PRODUCT INTERACTION TRIGGERS
+// ============================================================================
+
+/**
+ * When a product interaction is created/deleted, rescore that product for ALL users
+ * This handles: like, dislike, save, routine interactions
+ * Ensures product scores stay up-to-date globally
+ */
+export const onProductInteractionWrite = onDocumentWritten(
+  {
+    document: 'product_interactions/{interactionId}',
+    memory: '512MiB',
+    timeoutSeconds: 300,
+  },
+  async (event) => {
+    const interactionId = event.params.interactionId
+    const afterData = event.data?.after.data()
+    const beforeData = event.data?.before.data()
+
+    // Get productId from interaction
+    const productId = afterData?.productId || beforeData?.productId
+
+    if (!productId) {
+      console.error('No productId found in interaction data')
+      return
+    }
+
+    console.log(
+      `Product interaction ${interactionId} changed for product ${productId}`
+    )
+
+    try {
+      // NEW: Fetch just this ONE product
+      const productDoc = await db.collection('products').doc(productId).get()
+
+      if (!productDoc.exists) {
+        console.error(`Product ${productId} not found`)
+        return
+      }
+
+      const product = { ...(productDoc.data() as Product) }
+
+      console.log(`📦 Fetched product: ${product.name}`)
+
+      // Get all users with follicleIds
+      const usersSnapshot = await db
+        .collection('users')
+        .where('follicleId', '!=', null)
+        .get()
+
+      console.log(
+        `👥 Rescoring product ${productId} for ${usersSnapshot.size} users`
+      )
+
+      // Score in batches of 10
+      const batchSize = 10
+      const userIds = usersSnapshot.docs.map((doc) => doc.id)
+
+      for (let i = 0; i < userIds.length; i += batchSize) {
+        const batch = userIds.slice(i, i + batchSize)
+
+        await Promise.all(
+          batch.map(async (userId) => {
+            try {
+              await scoreProductForUser(userId, product as Product, db)
+              console.log(`✅ Rescored product ${productId} for user ${userId}`)
+            } catch (error) {
+              console.error(`❌ Error rescoring for user ${userId}:`, error)
+            }
+          })
+        )
+      }
+
+      console.log(`✅ Finished rescoring product ${productId}`)
+    } catch (error) {
+      console.error(`❌ Error in onProductInteractionWrite:`, error)
+      throw error
+    }
+  }
+)
+
+// ============================================================================
+// ROUTINE SCORING TRIGGERS
+// ============================================================================
+
+/**
+ * When a routine is created/updated/deleted, score it for relevant users
+ * - Private routines: Score only for owner
+ * - Public routines: Score for all users
+ * - Public→Private: Remove from non-owners' scores
+ *
+ * Note: Product rescoring is handled automatically by onProductInteractionWrite
+ */
+export const onRoutineWrite = onDocumentWritten(
+  {
+    document: 'routines/{routineId}',
+    memory: '1GiB',
+    timeoutSeconds: 540,
+  },
+  async (event) => {
+    const routineId = event.params.routineId
+    const beforeData = event.data?.before.data()
+    const afterData = event.data?.after.data()
+
+    // CASE 1: Routine was deleted
+    if (!afterData) {
+      console.log(`Routine ${routineId} deleted, removing from all user scores`)
+
+      const usersSnapshot = await db.collection('users').get()
+      const deleteBatch = db.batch()
+
+      for (const userDoc of usersSnapshot.docs) {
+        const scoreRef = db
+          .collection('users')
+          .doc(userDoc.id)
+          .collection('routine_scores')
+          .doc(routineId)
+
+        deleteBatch.delete(scoreRef)
+      }
+
+      await deleteBatch.commit()
+      console.log(`✅ Removed routine ${routineId} from all user scores`)
+      return
+    }
+
+    const routine = { id: routineId, ...afterData } as Routine
+    const wasPublic = beforeData?.is_public === true
+    const isPublic = routine.is_public === true
+    const isDeleted = routine.deleted_at !== null
+    const ownerId = routine.user_id
+
+    console.log(`📋 Routine ${routineId} changed:`, {
+      wasPublic,
+      isPublic,
+      isDeleted,
+      ownerId,
+    })
+
+    // CASE 2: Routine is soft-deleted
+    if (isDeleted) {
+      console.log(`Routine ${routineId} is soft-deleted, skipping`)
+      return
+    }
+
+    // CASE 3: Public → Private transition
+    if (wasPublic && !isPublic) {
+      console.log(`Routine ${routineId} changed from public to private`)
+
+      // Remove from all users except owner
+      const usersSnapshot = await db.collection('users').get()
+      const batch = db.batch()
+
+      for (const userDoc of usersSnapshot.docs) {
+        if (userDoc.id === ownerId) continue // Skip owner
+
+        const scoreRef = db
+          .collection('users')
+          .doc(userDoc.id)
+          .collection('routine_scores')
+          .doc(routineId)
+
+        batch.delete(scoreRef)
+      }
+
+      await batch.commit()
+      console.log(`✅ Removed private routine from non-owners' scores`)
+
+      // Still need to rescore for owner
+      try {
+        await scoreRoutineForUser(ownerId, routine, db)
+        console.log(`✅ Rescored private routine for owner ${ownerId}`)
+      } catch (error) {
+        console.error(`❌ Error rescoring for owner:`, error)
+      }
+
+      return
+    }
+
+    // CASE 4: Normal routine scoring (create, edit, or private→public)
+    try {
+      // Determine who needs this routine scored
+      let usersToScore: string[] = []
+
+      if (isPublic) {
+        // PUBLIC: Score for all users
+        console.log(`Public routine - scoring for all users`)
+
+        const usersSnapshot = await db
+          .collection('users')
+          .where('follicleId', '!=', null)
+          .get()
+
+        usersToScore = usersSnapshot.docs.map((doc) => doc.id)
+      } else {
+        // PRIVATE: Score only for owner
+        console.log(`Private routine - scoring only for owner ${ownerId}`)
+        usersToScore = [ownerId]
+      }
+
+      console.log(`👥 Scoring routine for ${usersToScore.length} users`)
+
+      // Score routine in batches of 10
+      const batchSize = 10
+
+      for (let i = 0; i < usersToScore.length; i += batchSize) {
+        const batch = usersToScore.slice(i, i + batchSize)
+
+        await Promise.all(
+          batch.map(async (userId) => {
+            try {
+              await scoreRoutineForUser(userId, routine, db)
+              console.log(`✅ Scored routine ${routineId} for user ${userId}`)
+            } catch (error) {
+              console.error(
+                `❌ Error scoring routine for user ${userId}:`,
+                error
+              )
+            }
+          })
+        )
+      }
+
+      console.log(`✅ Finished scoring routine ${routineId}`)
+
+      // Product rescoring is handled automatically by onProductInteractionWrite
+      // when product interactions are created/updated/deleted
+    } catch (error) {
+      console.error(`❌ Error in onRoutineWrite:`, error)
+      throw error
+    }
+  }
+)
+
+// ============================================================================
+// USER ANALYSIS CHANGE TRIGGER
+// ============================================================================
+
+/**
+ * When user's follicleId changes (quiz completed/retaken), rescore everything
+ */
+export const onUserAnalysisChange = onDocumentWritten(
   {
     document: 'users/{userId}',
     memory: '1GiB',
@@ -58,237 +375,54 @@ export const onUserWrite = onDocumentWritten(
 
     // Skip if follicleId hasn't changed
     if (beforeFollicleId && beforeFollicleId === afterFollicleId) {
-      console.log(
-        `User ${userId} follicleId unchanged (${afterFollicleId}), skipping`
-      )
+      console.log(`User ${userId} follicleId unchanged, skipping`)
       return
     }
 
     console.log(
-      `📊 FollicleId changed: ${beforeFollicleId || 'none'} → ${afterFollicleId}`
+      `📊 FollicleId changed for user ${userId}: ${beforeFollicleId || 'none'} → ${afterFollicleId}`
     )
 
-    // Decode follicleId to get HairAnalysis for scoring
-    const hairAnalysis = decodeFollicleIdToAnalysis(afterFollicleId)
-    if (!hairAnalysis) {
-      console.error(`User ${userId} has invalid follicleId: ${afterFollicleId}`)
-      return
-    }
-
     try {
-      // 1. Fetch all products
-      const productsSnapshot = await db.collection('products').get()
-      const products: Product[] = productsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Product[]
-
-      console.log(`📦 Fetched ${products.length} products`)
-
-      // 2. Score products
+      // Rescore all products for this user
       console.log(`🚀 Scoring products for user ${userId}...`)
-      const scoredProducts = await matchProductsForUser(
-        { hairAnalysis },
-        products,
-        afterFollicleId
-      )
-      console.log(`✅ Scored ${scoredProducts.length} products`)
+      await scoreAllProductsForUser(userId, db)
 
-      // 3. Write product scores
-      await writeProductScoresToFirestore(userId, scoredProducts)
-      console.log(`💾 Saved product scores for user ${userId}`)
-
-      // 4. Fetch all public routines
-      const routinesSnapshot = await db
-        .collection('routines')
-        .where('is_public', '==', true)
-        .get()
-      const routines: Routine[] = routinesSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Routine[]
-
-      console.log(`📋 Fetched ${routines.length} public routines`)
-
-      // 5. Score routines
+      // Rescore all routines for this user
       console.log(`🚀 Scoring routines for user ${userId}...`)
-      const scoredRoutines = await matchRoutinesForUser(
-        { hairAnalysis },
-        routines,
-        afterFollicleId,
-        products
-      )
-      console.log(`✅ Scored ${scoredRoutines.length} routines`)
+      await scoreAllRoutinesForUser(userId, db)
 
-      // 6. Write routine scores
-      await writeRoutineScoresToFirestore(userId, scoredRoutines, products)
-      console.log(`💾 Saved routine scores for user ${userId}`)
+      console.log(`✅ Finished rescoring everything for user ${userId}`)
     } catch (error) {
-      console.error(`❌ Error scoring for user ${userId}:`, error)
+      console.error(`❌ Error rescoring for user ${userId}:`, error)
       throw error
     }
   }
 )
 
 // ============================================================================
-// HELPER FUNCTIONS
+// SCHEDULED DAILY RESCORE (TODO)
 // ============================================================================
 
 /**
- * Write scored products to user's subcollection
+ * TODO: Daily full rescore for all users
+ * Run at 3 AM UTC when traffic is low
  */
-async function writeProductScoresToFirestore(
-  userId: string,
-  scored: ProductMatchScore[]
-): Promise<void> {
-  const scoresRef = db
-    .collection('users')
-    .doc(userId)
-    .collection('product_scores')
+export const scheduledDailyRescore = onSchedule(
+  {
+    schedule: 'every day 03:00',
+    timeZone: 'UTC',
+    memory: '2GiB',
+    timeoutSeconds: 540,
+  },
+  async (event) => {
+    console.log('📅 Starting daily full rescore (TODO: implement logic)')
 
-  await deleteCollection(scoresRef)
+    // TODO: Decide on logic
+    // - Rescore all users?
+    // - Only active users (last 30 days)?
+    // - Recalculate ranks?
 
-  const writeBatches: FirebaseFirestore.WriteBatch[] = []
-  let writeBatch = db.batch()
-  let writeCount = 0
-
-  scored.forEach((item, index) => {
-    const docRef = scoresRef.doc(item.product.id)
-
-    writeBatch.set(docRef, {
-      score: item.totalScore,
-      rank: index + 1,
-      category: item.product.category,
-      breakdown: item.breakdown,
-      matchReasons: item.matchReasons.slice(
-        0,
-        MATCH_REASONS_CONFIG.maxReasonsTotal
-      ),
-      interactionsByTier: item.interactionsByTier || null,
-      scoredAt: new Date(),
-      productName: item.product.name,
-      productBrand: item.product.brand,
-      productImageUrl: item.product.image_url || null,
-      productPrice: item.product.price || null,
-      ingredientRefs: item.product.ingredient_refs || [],
-    })
-
-    writeCount++
-
-    if (writeCount === 500) {
-      writeBatches.push(writeBatch)
-      writeBatch = db.batch()
-      writeCount = 0
-    }
-  })
-
-  if (writeCount > 0) {
-    writeBatches.push(writeBatch)
+    console.log('✅ Daily rescore placeholder completed')
   }
-
-  await Promise.all(writeBatches.map((b) => b.commit()))
-  console.log(
-    `✅ Wrote ${scored.length} product scores in ${writeBatches.length} batches`
-  )
-}
-
-/**
- * Write scored routines to user's subcollection
- */
-async function writeRoutineScoresToFirestore(
-  userId: string,
-  scored: RoutineMatchScore[],
-  allProducts: Product[]
-): Promise<void> {
-  const scoresRef = db
-    .collection('users')
-    .doc(userId)
-    .collection('routine_scores')
-
-  await deleteCollection(scoresRef)
-
-  const writeBatches: FirebaseFirestore.WriteBatch[] = []
-  let writeBatch = db.batch()
-  let writeCount = 0
-
-  scored.forEach((item, index) => {
-    const docRef = scoresRef.doc(item.routine.id)
-
-    writeBatch.set(docRef, {
-      score: item.totalScore,
-      rank: index + 1,
-      breakdown: item.breakdown,
-      matchReasons:
-        item.matchReasons.slice(0, MATCH_REASONS_CONFIG.maxReasonsTotal) || [],
-      interactionsByTier: item.interactionsByTier || null,
-      scoredAt: new Date(),
-      // Routine card fields
-      routineName: item.routine.name,
-      routineStepCount: item.routine.steps.length,
-      routineFrequency: item.routine.frequency,
-      routineUserId: item.routine.user_id,
-      routineIsPublic: item.routine.is_public,
-      // Steps with product data for card display
-      routineSteps: item.routine.steps.slice(0, 3).map((step) => {
-        const product = allProducts.find((p) => p.id === step.product_id)
-        return {
-          order: step.order ?? 0,
-          stepName: step.step_name ?? '',
-          productId: step.product_id ?? null,
-          productName: product?.name ?? null,
-          productBrand: product?.brand ?? null,
-          productImageUrl: product?.image_url ?? null,
-        }
-      }),
-    })
-    writeCount++
-
-    if (writeCount === 500) {
-      writeBatches.push(writeBatch)
-      writeBatch = db.batch()
-      writeCount = 0
-    }
-  })
-
-  if (writeCount > 0) {
-    writeBatches.push(writeBatch)
-  }
-
-  await Promise.all(writeBatches.map((b) => b.commit()))
-  console.log(
-    `✅ Wrote ${scored.length} routine scores in ${writeBatches.length} batches`
-  )
-}
-
-/**
- * Delete all documents in a collection
- */
-async function deleteCollection(
-  collectionRef: FirebaseFirestore.CollectionReference
-): Promise<void> {
-  const existing = await collectionRef.get()
-
-  if (existing.empty) return
-
-  const deleteBatches: FirebaseFirestore.WriteBatch[] = []
-  let deleteBatch = db.batch()
-  let deleteCount = 0
-
-  existing.docs.forEach((doc) => {
-    deleteBatch.delete(doc.ref)
-    deleteCount++
-
-    if (deleteCount === 500) {
-      deleteBatches.push(deleteBatch)
-      deleteBatch = db.batch()
-      deleteCount = 0
-    }
-  })
-
-  if (deleteCount > 0) {
-    deleteBatches.push(deleteBatch)
-  }
-
-  await Promise.all(deleteBatches.map((b) => b.commit()))
-  console.log(`🗑️ Deleted ${existing.size} existing scores`)
-}
+)

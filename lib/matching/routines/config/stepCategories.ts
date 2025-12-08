@@ -1,4 +1,4 @@
-import { type ProductCategory } from '@/lib/matching/products/config/categories'
+import { type ProductCategory } from '@/lib/constants/categories'
 
 /**
  * STEP CATEGORY WEIGHTS
@@ -9,8 +9,8 @@ import { type ProductCategory } from '@/lib/matching/products/config/categories'
  */
 export const STEP_CATEGORY_WEIGHTS: Record<ProductCategory, number> = {
   // Core cleansing (highest priority)
-  'Shampoos': 1.0,
- 'Conditioners': 1.0,
+  Shampoos: 1.0,
+  Conditioners: 1.0,
 
   // Deep treatments
   'Hair Masks': 0.95,
@@ -21,7 +21,7 @@ export const STEP_CATEGORY_WEIGHTS: Record<ProductCategory, number> = {
   'Leave-in Conditioners': 0.85,
   'Hair Oils': 0.8,
   'Hair Serums': 0.8,
-  'Detanglers': 0.75,
+  Detanglers: 0.75,
 
   // Styling products
   'Styling Creams & Sprays': 0.7,

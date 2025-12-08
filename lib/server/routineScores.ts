@@ -1,10 +1,33 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { PreComputedRoutineMatchScore } from '@/types/routineMatching'
+import { Routine } from '@/types/routine'
 import { cacheTag } from 'next/cache'
 
+/**
+ * Convert Firestore Timestamp to Date (serializable)
+ */
+function toDate(ts: any): Date | null {
+  if (!ts) return null
+  if (ts._seconds !== undefined) return new Date(ts._seconds * 1000)
+  if (ts.seconds !== undefined) return new Date(ts.seconds * 1000)
+  if (ts instanceof Date) return ts
+  return null
+}
 
 /**
- * Transform Firestore doc to PreComputedRoutineMatchScore
+ * Serialize routine for client component (converts Timestamps)
+ */
+export function serializeRoutine(routine: any): Routine {
+  return {
+    ...routine,
+    created_at: toDate(routine.created_at),
+    updated_at: toDate(routine.updated_at),
+    deleted_at: toDate(routine.deleted_at),
+  }
+}
+
+/**
+ * Transform Firestore doc to PreComputedRoutineMatchScore (serialized)
  */
 function docToScore(
   doc: FirebaseFirestore.QueryDocumentSnapshot
@@ -27,7 +50,7 @@ function docToScore(
 }
 
 /**
- * Get all routine scores for a user (cached)
+ * Get all routine scores for a user (cached, serialized)
  */
 export async function getCachedAllRoutineScores(userId: string) {
   'use cache'
@@ -37,14 +60,14 @@ export async function getCachedAllRoutineScores(userId: string) {
     .collection('users')
     .doc(userId)
     .collection('routine_scores')
-    .orderBy('rank')
+    .orderBy('score', 'desc') // CHANGED: from orderBy('rank')
     .get()
 
   return snapshot.docs.map(docToScore)
 }
 
 /**
- * Get routine scores for specific routine IDs (cached)
+ * Get routine scores for specific routine IDs (cached, serialized)
  */
 export async function getCachedRoutineScoresByIds(
   userId: string,
@@ -85,27 +108,4 @@ export async function getCachedRoutineScoresByIds(
   }
 
   return scores.sort((a, b) => b.totalScore - a.totalScore)
-}
-
-/**
- * Convert Firestore Timestamp to milliseconds (serializable)
- */
-function toTimestamp(ts: any): number | null {
-  if (!ts) return null
-  if (ts._seconds) return ts._seconds * 1000
-  if (ts.seconds) return ts.seconds * 1000
-  if (ts instanceof Date) return ts.getTime()
-  return null
-}
-
-/**
- * Serialize routine for client component (converts Timestamps)
- */
-export function serializeRoutine(routine: any): any {
-  return {
-    ...routine,
-    created_at: toTimestamp(routine.created_at),
-    updated_at: toTimestamp(routine.updated_at),
-    deleted_at: toTimestamp(routine.deleted_at),
-  }
 }

@@ -44,15 +44,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           })
         )
 
-        // Only update auth-related fields, don't touch analysis data
-        const authData = {
+        // Only update auth-related fields that should sync from Firebase Auth
+        const authData: any = {
           userId: currentUser.uid,
           email: currentUser.email || null,
-          photoUrl: currentUser.photoURL || null,
-          displayName: currentUser.displayName || null,
           isAnonymous: currentUser.isAnonymous,
           providerData: providerData,
           lastLoginAt: serverTimestamp(),
+        }
+
+        // Only set displayName/photoUrl if Firebase Auth has them
+        // This prevents overwriting custom values with null
+        if (currentUser.displayName) {
+          authData.displayName = currentUser.displayName
+        }
+
+        if (currentUser.photoURL) {
+          authData.photoUrl = currentUser.photoURL
         }
 
         if (!userDoc.exists()) {
@@ -60,27 +68,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await setDoc(userDocRef, {
             ...authData,
             createdAt: serverTimestamp(),
-            // Don't set follicleId or analysisComplete - let analysis handle that
+            // Set defaults for new users only
+            displayName: authData.displayName || null,
+            photoUrl: authData.photoUrl || null,
           })
           console.log('✅ User document created')
         } else {
           console.log('🔄 Updating existing user document')
-          // Use merge: true to only update auth fields, preserve analysis data
+          // merge: true preserves all fields not in authData (analysis data, custom profile data)
           await setDoc(userDocRef, authData, { merge: true })
           console.log('✅ User document updated')
         }
 
         setUser(currentUser)
         localStorage.setItem('userId', currentUser.uid)
-        // Set session cookie for server-side auth (refreshes automatically with token)
+
+        // Set session cookie for server-side auth
         const token = await currentUser.getIdToken()
         const secure = window.location.protocol === 'https:' ? '; Secure' : ''
         document.cookie = `session=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`
+
         setLoading(false)
       } else {
         console.log('🔐 No user found, signing in anonymously...')
         // Clear session cookie
-        document.cookie = 'session=; path=/; max-age=0; path=/'
+        document.cookie = 'session=; path=/; max-age=0'
         signInAnonymously(auth).catch((error) => {
           console.error('❌ Anonymous sign-in error:', error)
           setLoading(false)

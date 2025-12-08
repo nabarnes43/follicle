@@ -93,7 +93,7 @@ export function RoutineDetailClient({
     try {
       const token = await user?.getIdToken()
 
-      const response = await fetch(`/api/routines/${routine.id}`, {
+      const response = await fetch(`/api/routines/${routine.id}/delete`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -216,16 +216,17 @@ export function RoutineDetailClient({
               </Button>
 
               {/* Show Adapt button if NOT owner */}
-              {!isOwner && (
-                <Button
-                  onClick={() => router.push(`/routines/${routine.id}/adapt`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Adapt
-                </Button>
-              )}
+              {!isOwner &&
+                routine.id &&(
+                  <Button
+                    onClick={() => router.push(`/routines/${routine.id}/adapt`)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Adapt
+                  </Button>
+                )}
 
               {/* Show Edit button if owner */}
               {isOwner && (

@@ -12,6 +12,7 @@ export function useProductInteraction(productId: string) {
   const { user: authUser } = useAuth() // Firebase Auth user
   const [firestoreUser, setFirestoreUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isReady, setIsReady] = useState(false)
 
   // Track current interaction state for this product
   const [interactions, setInteractions] = useState<UserProductInteractions>({
@@ -29,16 +30,20 @@ export function useProductInteraction(productId: string) {
   const fetchFirestoreUser = useCallback(async () => {
     if (!authUser?.uid) {
       setFirestoreUser(null)
+      setIsReady(false)
       return
     }
 
     try {
       const userDoc = await getDoc(doc(db, 'users', authUser.uid))
       if (userDoc.exists()) {
-        setFirestoreUser(userDoc.data() as User)
+        const userData = userDoc.data() as User
+        setFirestoreUser(userData)
+        setIsReady(!!userData.follicleId)
       }
     } catch (error) {
       console.error('Failed to fetch user document:', error)
+      setIsReady(false)
     }
   }, [authUser])
 
@@ -189,6 +194,7 @@ export function useProductInteraction(productId: string) {
     // State
     interactions,
     isLoading,
+    isReady,
 
     // Actions
     toggleLike,

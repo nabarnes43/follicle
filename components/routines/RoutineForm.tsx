@@ -1,55 +1,64 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User } from '@/types/user'
 import { Routine, RoutineStep } from '@/types/routine'
-import { Product } from '@/types/product'
+import { PreComputedProductMatchScore } from '@/types/productMatching'
 import { RoutineStepCard } from '@/components/routines/RoutineStepCard'
+import { RoutineStepCardSkeleton } from '@/components/routines/RoutineStepCardSkeleton'
 import { FrequencySelector } from '@/components/routines/FrequencySelector'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Spinner } from '@/components/ui/spinner'
-import { productsCache } from '@/lib/matching/products/productsCache'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/auth'
 import { toast } from 'sonner'
 
 interface RoutineFormProps {
   mode: 'create' | 'edit' | 'adapt'
-  routineId?: string // Required for edit/adapt modes
+  routineId?: string
+  initialRoutine?: Routine
   userData: User
+  productScores: PreComputedProductMatchScore[]
+  loading?: boolean // NEW
 }
 
-export function RoutineForm({ mode, routineId, userData }: RoutineFormProps) {
+export function RoutineForm({
+  mode,
+  routineId,
+  initialRoutine,
+  userData,
+  productScores,
+  loading = false, // NEW - default to false
+}: RoutineFormProps) {
   const { user } = useAuth()
   const router = useRouter()
 
-  const [allProducts, setAllProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(mode !== 'create') // Only load if edit/adapt
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const savedProductIds = userData.savedProducts || []
   const likedProductIds = userData.likedProducts || []
 
-  const [routine, setRoutine] = useState<Routine>({
-    id: '',
-    user_id: userData.userId,
-    follicle_id: userData.follicleId,
-    name: '',
-    description: '',
-    steps: [],
-    frequency: { interval: 1, unit: 'week' },
-    is_public: false,
-    created_at: new Date(),
-    updated_at: new Date(),
-  })
+  const [routine, setRoutine] = useState<Routine>(
+    initialRoutine || {
+      id: '',
+      user_id: userData.userId,
+      follicle_id: userData.follicleId,
+      name: '',
+      description: '',
+      steps: [],
+      frequency: { interval: 1, unit: 'week' },
+      is_public: false,
+      created_at: null,
+      updated_at: null,
+    }
+  )
 
-  // Get page title based on mode
   const getTitle = () => {
     switch (mode) {
       case 'create':
@@ -61,7 +70,6 @@ export function RoutineForm({ mode, routineId, userData }: RoutineFormProps) {
     }
   }
 
-  // Get button text based on mode
   const getButtonText = () => {
     if (isSaving) return 'Saving...'
     switch (mode) {
@@ -74,77 +82,15 @@ export function RoutineForm({ mode, routineId, userData }: RoutineFormProps) {
     }
   }
 
-  // Load products and routine (if edit/adapt)
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Always load products
-        const products = await productsCache.getProducts()
-        setAllProducts(products)
-
-        // Load existing routine for edit/adapt modes
-        if (mode !== 'create' && routineId) {
-          const token = await user?.getIdToken()
-          const response = await fetch(`/api/routines/${routineId}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          })
-
-          if (!response.ok) {
-            if (response.status === 404) {
-              toast.error('Routine not found')
-              router.push('/routines/private')
-              return
-            }
-            throw new Error('Failed to load routine')
-          }
-
-          const { routine: fetchedRoutine } = await response.json()
-
-          if (mode === 'edit') {
-            // EDIT MODE: Verify ownership
-            if (fetchedRoutine.user_id !== userData.userId) {
-              toast.error('You can only edit your own routines')
-              router.push('/routines/private')
-              return
-            }
-            // Load routine as-is
-            setRoutine(fetchedRoutine)
-          } else {
-            // ADAPT MODE: Create copy
-            setRoutine({
-              ...fetchedRoutine,
-              id: '', // New ID will be generated
-              user_id: userData.userId,
-              follicle_id: userData.follicleId,
-              name: `${fetchedRoutine.name} (Adaptation)`,
-              is_public: false, // Start as private
-              adaptedFrom: routineId, // Track source
-              created_at: new Date(),
-              updated_at: new Date(),
-            })
-          }
-        }
-      } catch (err) {
-        console.error('Error loading data:', err)
-        toast.error('Failed to load routine')
-        router.push('/routines/private')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [mode, routineId, userData.userId, user, router])
-
   const handleAddStep = () => {
     const newStep: RoutineStep = {
       order: routine.steps.length + 1,
-      step_name: 'Shampoos',
+      step_name: 'Shampoos' as any,
       product_id: '',
-      amount: '',
+      amount: undefined,
       frequency: { interval: 1, unit: 'day' },
       notes: '',
-      technique: '',
+      technique: undefined,
     }
     setRoutine({ ...routine, steps: [...routine.steps, newStep] })
   }
@@ -205,8 +151,8 @@ export function RoutineForm({ mode, routineId, userData }: RoutineFormProps) {
       const token = await user?.getIdToken()
 
       if (mode === 'edit') {
-        // UPDATE existing routine
-        const response = await fetch(`/api/routines/${routineId}`, {
+        // EDIT - call /api/routines/[id]/edit
+        const response = await fetch(`/api/routines/${routineId}/edit`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -228,8 +174,30 @@ export function RoutineForm({ mode, routineId, userData }: RoutineFormProps) {
 
         toast.success('Routine updated!')
         router.push('/routines/private')
+        setTimeout(() => {
+          window.location.reload()
+        }, 100)
+      } else if (mode === 'adapt') {
+        // ADAPT - call /api/routines/[id]/adapt
+        const response = await fetch(`/api/routines/${routineId}/adapt`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(routine),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to adapt routine')
+        }
+
+        toast.success('Routine adapted!')
+        router.push('/routines/private')
       } else {
-        // CREATE new routine (for both 'create' and 'adapt' modes)
+        // CREATE - call /api/routines/create
         const response = await fetch('/api/routines/create', {
           method: 'POST',
           headers: {
@@ -242,74 +210,25 @@ export function RoutineForm({ mode, routineId, userData }: RoutineFormProps) {
         const data = await response.json()
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to save routine')
+          throw new Error(data.error || 'Failed to create routine')
         }
 
-        const createdRoutineId = data.routineId
-          if (mode === 'adapt' && routineId) {
-            try {
-              await fetch('/api/interactions/routines', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  routineId: routineId, // Source routine ID
-                  follicleId: userData.follicleId,
-                  type: 'adapt',
-                }),
-              })
-            } catch (error) {
-              console.error('Failed to track adapt interaction:', error)
-              // Don't block save if this fails
-            }
-          }
+        toast.success('Routine created!')
 
-
-        // Track routine interactions for all products
-        const allProductIds = routine.steps
-          .map((step) => step.product_id)
-          .filter((id) => id)
-
-        const uniqueProductIds = [...new Set(allProductIds)]
-
-        // Track in parallel with routineId
-        Promise.all(
-          uniqueProductIds.map(async (productId) => {
-            try {
-              const response = await fetch('/api/interactions/products', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  productId,
-                  follicleId: userData.follicleId,
-                  type: 'routine',
-                  routineId: createdRoutineId, // NEW - pass the created routine ID
-                }),
-              })
-              if (!response.ok) {
-                console.error(
-                  `Failed to track routine interaction for product ${productId}`
-                )
-              }
-            } catch (error) {
-              console.error(
-                `Error tracking routine interaction for product ${productId}:`,
-                error
-              )
-            }
-          })
-        ).catch((err) => {
-          console.error('Some routine interactions failed to track:', err)
+        // Reset form state before redirect
+        setRoutine({
+          id: '',
+          user_id: userData.userId,
+          follicle_id: userData.follicleId,
+          name: '',
+          description: '',
+          steps: [],
+          frequency: { interval: 1, unit: 'week' },
+          is_public: false,
+          created_at: null as any,
+          updated_at: null as any,
         })
 
-        const successMessage =
-          mode === 'adapt' ? 'Routine adapted!' : 'Routine created!'
-        toast.success(successMessage)
         router.push('/routines/private')
       }
     } catch (error) {
@@ -324,14 +243,59 @@ export function RoutineForm({ mode, routineId, userData }: RoutineFormProps) {
     }
   }
 
+  // SKELETON LOADING STATE
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <Spinner className="h-8 w-8" />
+      <div className="container mx-auto max-w-4xl p-6">
+        {/* Header */}
+        <div className="mb-8 flex items-center gap-4">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-48" />
+        </div>
+
+        {/* Routine Name */}
+        <div className="mb-6">
+          <Skeleton className="mb-2 h-4 w-32" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        {/* Description */}
+        <div className="mb-6">
+          <Skeleton className="mb-2 h-4 w-40" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+
+        {/* Frequency */}
+        <div className="mb-8">
+          <Skeleton className="mb-2 h-4 w-48" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        {/* Public/Private Toggle */}
+        <div className="mb-8">
+          <Skeleton className="h-20 w-full rounded-lg" />
+        </div>
+
+        {/* Steps */}
+        <div className="mb-6">
+          <Skeleton className="mb-4 h-8 w-24" />
+          <div className="space-y-4">
+            <RoutineStepCardSkeleton />
+            <RoutineStepCardSkeleton />
+            <RoutineStepCardSkeleton />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-4 border-t pt-4">
+          <Skeleton className="h-12 flex-1" />
+          <Skeleton className="h-12 w-24" />
+        </div>
       </div>
     )
   }
 
+  // ACTUAL FORM (when not loading)
   return (
     <div className="container mx-auto max-w-4xl p-6">
       {/* Header */}
@@ -433,7 +397,7 @@ export function RoutineForm({ mode, routineId, userData }: RoutineFormProps) {
                   onMoveDown={() => handleMoveStep(index, 'down')}
                   isFirst={index === 0}
                   isLast={index === routine.steps.length - 1}
-                  allProducts={allProducts}
+                  productScores={productScores}
                   savedProductIds={savedProductIds}
                   likedProductIds={likedProductIds}
                 />

@@ -1,15 +1,28 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { FrequencySelector } from './FrequencySelector'
 import { RoutineStep } from '@/types/routine'
-import { Product } from '@/types/product'
+import { PreComputedProductMatchScore } from '@/types/productMatching'
 import { Trash2, X, ChevronUp, ChevronDown } from 'lucide-react'
-import { ProductSearch } from '../products/ProductsSearch'
+import { ProductSearch } from './ProductsSearch'
+import {
+  TECHNIQUES,
+  AMOUNTS,
+  Amount,
+  Technique,
+} from '@/lib/constants/routineBuilder'
+import { ProductCategory } from '@/lib/constants/categories'
 
 interface RoutineStepCardProps {
   step: RoutineStep
@@ -18,7 +31,7 @@ interface RoutineStepCardProps {
   onDelete: () => void
   onMoveUp?: () => void
   onMoveDown?: () => void
-  allProducts: Product[]
+  productScores: PreComputedProductMatchScore[] // CHANGED: from allProducts
   isFirst?: boolean
   isLast?: boolean
   savedProductIds?: string[]
@@ -32,20 +45,23 @@ export function RoutineStepCard({
   onDelete,
   onMoveUp,
   onMoveDown,
-  allProducts,
+  productScores,
   isFirst = false,
   isLast = false,
   savedProductIds = [],
   likedProductIds = [],
 }: RoutineStepCardProps) {
-  // Find the product
-  const product = allProducts.find((p) => p.id === step.product_id)
+  // Find the product from productScores
+  const productMatch = productScores.find(
+    (ps) => ps.product.id === step.product_id
+  )
+  const product = productMatch?.product
 
-  const handleAddProduct = (selectedProduct: Product) => {
+  const handleAddProduct = (selectedMatch: PreComputedProductMatchScore) => {
     onUpdate({
       ...step,
-      step_name: selectedProduct.category,
-      product_id: selectedProduct.id,
+      step_name: selectedMatch.product.category as ProductCategory,
+      product_id: selectedMatch.product.id,
     })
   }
 
@@ -57,10 +73,17 @@ export function RoutineStepCard({
     })
   }
 
-  const handleUpdateAmount = (amount: string) => {
+  const handleUpdateAmount = (amount: Amount) => {
     onUpdate({
       ...step,
       amount,
+    })
+  }
+
+  const handleUpdateTechnique = (technique: Technique) => {
+    onUpdate({
+      ...step,
+      technique,
     })
   }
 
@@ -127,12 +150,6 @@ export function RoutineStepCard({
               <p className="text-muted-foreground text-xs">{product.brand}</p>
               <p className="truncate text-sm font-medium">{product.name}</p>
             </div>
-            <Input
-              placeholder="Amount"
-              value={step.amount || ''}
-              onChange={(e) => handleUpdateAmount(e.target.value)}
-              className="w-32"
-            />
             <Button
               type="button"
               variant="ghost"
@@ -150,8 +167,29 @@ export function RoutineStepCard({
             placeholder="Select a product for this step..."
             savedProductIds={savedProductIds}
             likedProductIds={likedProductIds}
+            productScores={productScores}
           />
         )}
+      </div>
+
+      {/* Amount Dropdown */}
+      <div className="mb-4">
+        <Label htmlFor={`amount-${step.order}`}>Amount (optional)</Label>
+        <Select
+          value={step.amount || ''} // Convert undefined to empty string for Select
+          onValueChange={(value) => handleUpdateAmount(value as Amount)} // Cast to Amount
+        >
+          <SelectTrigger id={`amount-${step.order}`} className="mt-1">
+            <SelectValue placeholder="Select amount..." />
+          </SelectTrigger>
+          <SelectContent>
+            {AMOUNTS.map((amount) => (
+              <SelectItem key={amount} value={amount}>
+                {amount}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Frequency */}
@@ -163,17 +201,24 @@ export function RoutineStepCard({
         />
       </div>
 
-      {/* Technique */}
+      {/* Technique Dropdown */}
       <div className="mb-4">
         <Label htmlFor={`technique-${step.order}`}>Technique (optional)</Label>
-        <Textarea
-          id={`technique-${step.order}`}
-          value={step.technique || ''}
-          onChange={(e) => onUpdate({ ...step, technique: e.target.value })}
-          placeholder="e.g., Scrunch, rake through, prayer hands..."
-          rows={2}
-          className="mt-1"
-        />
+        <Select
+          value={step.technique || ''} // Convert undefined to empty string for Select
+          onValueChange={(value) => handleUpdateTechnique(value as Technique)} // Cast to Technique
+        >
+          <SelectTrigger id={`technique-${step.order}`} className="mt-1">
+            <SelectValue placeholder="Select technique..." />
+          </SelectTrigger>
+          <SelectContent>
+            {TECHNIQUES.map((technique) => (
+              <SelectItem key={technique} value={technique}>
+                {technique}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Notes */}

@@ -26,16 +26,18 @@ export function ProductDetailClient({
     toggleSave,
     trackView,
     isLoading,
+    isReady, // NEW
   } = useProductInteraction(product.id)
 
   const hasTrackedView = useRef(false)
 
+  // Track view once user data is ready
   useEffect(() => {
-    if (!hasTrackedView.current) {
+    if (isReady && !hasTrackedView.current) {
       hasTrackedView.current = true
       trackView()
     }
-  }, [trackView])
+  }, [isReady, trackView])
 
   const scorePercent = productScore
     ? Math.round(productScore.totalScore * 100)
@@ -101,7 +103,7 @@ export function ProductDetailClient({
       <div className="mb-8 flex gap-2">
         <Button
           onClick={toggleLike}
-          disabled={isLoading}
+          disabled={isLoading || !isReady} // NEW - disable until ready
           variant={interactions.like ? 'default' : 'outline'}
         >
           <Heart
@@ -112,7 +114,7 @@ export function ProductDetailClient({
 
         <Button
           onClick={toggleDislike}
-          disabled={isLoading}
+          disabled={isLoading || !isReady} // NEW
           variant={interactions.dislike ? 'destructive' : 'outline'}
         >
           <ThumbsDown
@@ -123,7 +125,7 @@ export function ProductDetailClient({
 
         <Button
           onClick={toggleSave}
-          disabled={isLoading}
+          disabled={isLoading || !isReady} // NEW
           variant={interactions.save ? 'default' : 'outline'}
         >
           <Bookmark

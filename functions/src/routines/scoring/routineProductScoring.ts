@@ -13,7 +13,8 @@ export async function scoreRoutineProducts(
   routine: Routine,
   allProducts: Product[],
   userHairAnalysis: HairAnalysis,
-  userFollicleId: string
+  userFollicleId: string,
+  db: FirebaseFirestore.Firestore
 ): Promise<number> {
   let totalWeightedScore = 0
   let totalWeight = 0
@@ -35,6 +36,7 @@ export async function scoreRoutineProducts(
       { hairAnalysis: userHairAnalysis },
       [product],
       userFollicleId,
+      db,
       { limit: 1 }
     )
 

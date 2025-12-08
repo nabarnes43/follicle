@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase/firestore'
-import { ProductCategory } from '@/lib/matching/products/config/categories'
+import { ProductCategory } from '@/lib/constants/categories'
+import { Technique, Amount } from '@/lib/constants/routineBuilder'
 
 // Main routine interface
 export interface Routine {
@@ -11,8 +12,8 @@ export interface Routine {
   steps: RoutineStep[]
   frequency: Frequency // Overall routine frequency
   is_public: boolean
-  created_at: Date
-  updated_at: Date
+  created_at: Date | null
+  updated_at?: Date | null
   adaptedFrom?: string // ID of routine this was copied from (immediate parent only)
   deleted_at?: Timestamp | null
 }
@@ -30,8 +31,9 @@ export interface RoutineStep {
   order: number
   step_name: ProductCategory // Must be one of the valid product categories
   product_id: string // Single product ID instead of array
-  amount?: string // Optional amount for this product
+  amount?: Amount // Optional amount for this product
   frequency: Frequency
   notes?: string
-  technique?: string
+  technique?: Technique
 }
+ 

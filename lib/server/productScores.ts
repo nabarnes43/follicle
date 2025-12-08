@@ -35,7 +35,7 @@ export async function getCachedAllScores(userId: string) {
     .collection('users')
     .doc(userId)
     .collection('product_scores')
-    .orderBy('rank')
+    .orderBy('score', 'desc') // CHANGED: from orderBy('rank')
     .get()
 
   return snapshot.docs.map(docToScore)
@@ -56,7 +56,7 @@ export async function getCachedScoresByCategory(
     .doc(userId)
     .collection('product_scores')
     .where('category', '==', category)
-    .orderBy('rank')
+    .orderBy('score', 'desc') // CHANGED: from orderBy('rank')
     .get()
 
   return snapshot.docs.map(docToScore)
@@ -78,7 +78,7 @@ export async function getCachedScoresByIngredient(
     .doc(userId)
     .collection('product_scores')
     .where('ingredientRefs', 'array-contains', ingredientId)
-    .orderBy('rank')
+    .orderBy('score', 'desc') // CHANGED: from orderBy('rank')
 
   if (options?.limit) {
     query = query.limit(options.limit)

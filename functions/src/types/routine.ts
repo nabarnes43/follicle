@@ -24,4 +24,5 @@ export interface Routine {
   adaptedFrom?: string
   created_at: any
   updated_at?: any
+  deleted_at?: any | null
 }

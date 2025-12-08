@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { ProductSearch } from '@/components/products/ProductsSearch'
+import { ProductSearch } from '@/components/routines/ProductsSearch'
 import { Product } from '@/types/product'
 
 export default function ProductSearchTest() {

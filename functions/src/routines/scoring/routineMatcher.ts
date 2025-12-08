@@ -13,7 +13,8 @@ async function scoreRoutine(
   routine: Routine,
   hairAnalysis: HairAnalysis,
   follicleId: string,
-  allProducts: Product[]
+  allProducts: Product[],
+  db: FirebaseFirestore.Firestore
 ): Promise<RoutineMatchScore> {
   const matchReasons: string[] = []
 
@@ -22,7 +23,8 @@ async function scoreRoutine(
     routine,
     allProducts,
     hairAnalysis,
-    follicleId
+    follicleId,
+    db
   )
 
   // 2. Engagement Score (90%)
@@ -30,7 +32,7 @@ async function scoreRoutine(
     score: engagementScore,
     reasons: engagementReasons,
     interactionsByTier,
-  } = await scoreRoutineByEngagement(routine, follicleId, true)
+  } = await scoreRoutineByEngagement(routine, follicleId, true, db)
 
   matchReasons.push(...engagementReasons)
 
@@ -59,6 +61,7 @@ export async function matchRoutinesForUser(
   routines: Routine[],
   follicleId: string,
   allProducts: Product[],
+  db: FirebaseFirestore.Firestore,
   options: { limit?: number } = {}
 ): Promise<RoutineMatchScore[]> {
   const { limit = 9999 } = options
@@ -68,7 +71,7 @@ export async function matchRoutinesForUser(
   // Process all routines (small dataset, no batching needed)
   const scores = await Promise.all(
     routines.map((routine) =>
-      scoreRoutine(routine, user.hairAnalysis, follicleId, allProducts)
+      scoreRoutine(routine, user.hairAnalysis, follicleId, allProducts, db)
     )
   )
 

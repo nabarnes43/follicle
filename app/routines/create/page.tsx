@@ -1,12 +1,29 @@
-'use client'
-
-import { RequireAuth } from '@/components/auth/RequireAuth'
+import { redirect } from 'next/navigation'
+import { getServerUser } from '@/lib/server/auth'
+import { getCachedAllScores } from '@/lib/server/productScores'
 import { RoutineForm } from '@/components/routines/RoutineForm'
 
-export default function CreateRoutinePage() {
+export default async function CreateRoutinePage() {
+  // Get authenticated user
+  const userData = await getServerUser()
+
+  // Redirect if not authenticated or no follicleId
+  if (!userData) {
+    redirect('/auth/signin')
+  }
+
+  if (!userData.follicleId) {
+    redirect('/quiz')
+  }
+
+  // Fetch user's product scores
+  const productScores = await getCachedAllScores(userData.userId)
+
   return (
-    <RequireAuth requireFollicleId>
-      {(userData) => <RoutineForm mode="create" userData={userData} />}
-    </RequireAuth>
+    <RoutineForm
+      mode="create"
+      userData={userData}
+      productScores={productScores}
+    />
   )
 }

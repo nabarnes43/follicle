@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedScoresByCategory } from '@/lib/server/productScores'
 import { ProductGrid } from '@/components/products/ProductGrid'
-import { PRODUCT_CATEGORIES } from '@/lib/matching/products/config/categories'
+import { PRODUCT_CATEGORIES } from '@/lib/constants/categories'
 import { Header } from '@/components/navigation/Header'
 
 export default async function CategoryProductsPage({

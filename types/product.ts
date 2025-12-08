@@ -1,4 +1,4 @@
-import { ProductCategory } from '@/lib/matching/products/config/categories'
+import { ProductCategory } from '@/lib/constants/categories'
 
 export interface Product {
   id: string

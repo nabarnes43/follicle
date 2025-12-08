@@ -11,6 +11,7 @@ interface PrivateRoutinesClientProps {
   createdScores: PreComputedRoutineMatchScore[]
   savedScores: PreComputedRoutineMatchScore[]
   likedScores: PreComputedRoutineMatchScore[]
+  dislikedScores: PreComputedRoutineMatchScore[]
   adaptedScores: PreComputedRoutineMatchScore[]
 }
 
@@ -18,6 +19,7 @@ export function PrivateRoutinesClient({
   createdScores,
   savedScores,
   likedScores,
+  dislikedScores,
   adaptedScores,
 }: PrivateRoutinesClientProps) {
   const searchParams = useSearchParams()
@@ -41,6 +43,10 @@ export function PrivateRoutinesClient({
             <Heart className="h-4 w-4" />
             Liked ({likedScores.length})
           </TabsTrigger>
+          <TabsTrigger value="disliked" className="flex items-center gap-2">
+            <Heart className="h-4 w-4" />
+            Disliked ({dislikedScores.length})
+          </TabsTrigger>
           <TabsTrigger value="adapted" className="flex items-center gap-2">
             <Copy className="h-4 w-4" />
             Adapted ({adaptedScores.length})
@@ -48,31 +54,23 @@ export function PrivateRoutinesClient({
         </TabsList>
 
         <TabsContent value="created">
-          <RoutineGrid
-            routines={createdScores}
-            showMatchScore={false}
-          />
+          <RoutineGrid routines={createdScores} showMatchScore={false} />
         </TabsContent>
 
         <TabsContent value="saved">
-          <RoutineGrid
-            routines={savedScores}
-            showMatchScore={false}
-          />
+          <RoutineGrid routines={savedScores} showMatchScore={false} />
         </TabsContent>
 
         <TabsContent value="liked">
-          <RoutineGrid
-            routines={likedScores}
-            showMatchScore={false}
-          />
+          <RoutineGrid routines={likedScores} showMatchScore={false} />
+        </TabsContent>
+
+        <TabsContent value="disliked">
+          <RoutineGrid routines={dislikedScores} showMatchScore={false} />
         </TabsContent>
 
         <TabsContent value="adapted">
-          <RoutineGrid
-            routines={adaptedScores}
-            showMatchScore={false}
-          />
+          <RoutineGrid routines={adaptedScores} showMatchScore={false} />
         </TabsContent>
       </Tabs>
     </div>

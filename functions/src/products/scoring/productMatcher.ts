@@ -2,7 +2,7 @@ import { Product } from '../../types/product'
 import { HairAnalysis } from '../../types/user'
 import { ProductMatchScore } from '../../types/productMatching'
 import { scoreByIngredients } from './ingredientScoring'
-import { scoreByEngagement } from './productEngagementScoring'
+import { scoreProductByEngagement } from './productEngagementScoring'
 import { ALGORITHM_WEIGHTS } from '../config/productWeights'
 
 const BATCH_SIZE = 2000 // Process 2000 products at a time
@@ -34,7 +34,8 @@ function applyFilters(
 async function scoreProduct(
   product: Product,
   hairAnalysis: HairAnalysis,
-  follicleId: string
+  follicleId: string,
+  db: FirebaseFirestore.Firestore
 ): Promise<ProductMatchScore> {
   const matchReasons: string[] = []
 
@@ -49,7 +50,7 @@ async function scoreProduct(
     score: engagementScore,
     reasons: engagementReasons,
     interactionsByTier,
-  } = await scoreByEngagement(product, follicleId, true)
+  } = await scoreProductByEngagement(product, follicleId, true, db)
 
   matchReasons.push(...engagementReasons)
 
@@ -84,6 +85,7 @@ export async function matchProductsForUser(
   user: { hairAnalysis: HairAnalysis },
   products: Product[],
   follicleId: string,
+  db: FirebaseFirestore.Firestore,
   options: {
     category?: string
     limit?: number
@@ -99,14 +101,12 @@ export async function matchProductsForUser(
 
   for (let i = 0; i < filteredProducts.length; i += BATCH_SIZE) {
     const batch = filteredProducts.slice(i, i + BATCH_SIZE)
-
     // Process this batch in parallel
     const batchScores = await Promise.all(
       batch.map((product) =>
-        scoreProduct(product, user.hairAnalysis, follicleId)
+        scoreProduct(product, user.hairAnalysis, follicleId, db)
       )
     )
-
     scoredProducts.push(...batchScores)
 
     // Log progress

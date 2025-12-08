@@ -7,11 +7,11 @@ export interface User {
   displayName?: string | null
   follicleId: string
   analysisComplete: Timestamp | FieldValue | null
-  createdAt: Timestamp | FieldValue
+  createdAt: Timestamp | FieldValue | null
   hairAnalysis?: HairAnalysis // This can stay optional with ?
   isAnonymous: boolean
   providerData: ProviderData[]
-  lastLoginAt: Timestamp | FieldValue
+  lastLoginAt: Timestamp | FieldValue | null
   // Products Cache
   likedProducts?: string[] // Cache for fast UI checks
   dislikedProducts?: string[] // Cache for fast UI checks

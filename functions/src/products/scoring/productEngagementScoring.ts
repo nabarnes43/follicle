@@ -1,4 +1,3 @@
-import { getFirestore } from 'firebase-admin/firestore'
 import { Product } from '../../types/product'
 import { ProductInteraction } from '../../types/productInteraction'
 import { calculateFollicleSimilarity } from '../../shared/follicleSimilarity'
@@ -21,21 +20,21 @@ export interface InteractionsByTier {
  * Score a product based on engagement from users with similar hair
  * Uses fuzzy follicle matching - closer matches = more weight
  */
-export async function scoreByEngagement(
+export async function scoreProductByEngagement(
   product: Product,
   userFollicleId: string,
-  includeReasons: boolean = true
+  includeReasons: boolean = true,
+  db: FirebaseFirestore.Firestore
 ): Promise<{
   score: number
   reasons: string[]
   interactionsByTier?: InteractionsByTier
 }> {
   const reasons: string[] = []
-  const adminDb = getFirestore()
 
   try {
     // Query interactions for this product
-    const snapshot = await adminDb
+    const snapshot = await db
       .collection('product_interactions')
       .where('productId', '==', product.id)
       .get()
@@ -110,6 +109,12 @@ export async function scoreByEngagement(
     // Calculate final score
     let finalScore = ENGAGEMENT_SCORE_DEFAULTS.NEUTRAL_SCORE
 
+    console.log(
+      'Pre Views and Score Product',
+      weightedViews,
+      finalScore,
+      product
+    )
     if (weightedViews > 0) {
       // Calculate rates (action / views)
       const routineRate = weightedRoutine / weightedViews
@@ -132,6 +137,13 @@ export async function scoreByEngagement(
         Math.min(ENGAGEMENT_SCORE_DEFAULTS.MAX_SCORE, score + 0.5)
       )
     }
+
+    console.log(
+      'Post Views and Score Product',
+      weightedViews,
+      finalScore,
+      product
+    )
 
     // Add reasons if requested
     if (includeReasons) {

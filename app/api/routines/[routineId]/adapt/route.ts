@@ -1,12 +1,19 @@
 import { NextRequest } from 'next/server'
 import { Timestamp, FieldValue } from 'firebase-admin/firestore'
-import { revalidateTag } from 'next/cache'
 import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
 import { Routine } from '@/types/routine'
+import { revalidateTag } from 'next/cache'
 import { scoreRoutineForUser } from '@/functions/src/helpers/scoring'
 
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/routines/[routineId]/adapt
+ * Creates an adapted copy of an existing routine
+ */
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ routineId: string }> }
+) {
   try {
     const userId = await verifyAuthToken(request)
 
@@ -14,49 +21,51 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const routine: Routine = await request.json()
+    const { routineId: sourceRoutineId } = await params
+    const adaptedRoutine: Routine = await request.json()
 
     // Validation
-    if (!routine.follicle_id || !routine.name) {
+    if (!adaptedRoutine.follicle_id || !adaptedRoutine.name) {
       return Response.json(
         { error: 'Missing required fields: follicle_id or name' },
         { status: 400 }
       )
     }
 
-    if (routine.steps.length === 0) {
+    if (adaptedRoutine.steps.length === 0) {
       return Response.json(
         { error: 'Routine must have at least one step' },
         { status: 400 }
       )
     }
 
-    const routineId = adminDb.collection('routines').doc().id
+    const newRoutineId = adminDb.collection('routines').doc().id
 
-    console.log(`💾 Saving routine: ${routine.name} (${routineId})`)
+    console.log(`🔄 Adapting routine: ${adaptedRoutine.name} (${newRoutineId})`)
 
-    // Save routine
+    // Save adapted routine
     const routineToSave = {
-      ...routine,
-      id: routineId,
+      ...adaptedRoutine,
+      id: newRoutineId,
       user_id: userId,
+      adaptedFrom: sourceRoutineId,
       updated_at: Timestamp.now(),
       created_at: Timestamp.now(),
       deleted_at: null,
     }
 
-    await adminDb.collection('routines').doc(routineId).set(routineToSave)
+    await adminDb.collection('routines').doc(newRoutineId).set(routineToSave)
 
     // Update user cache
     await adminDb
       .collection('users')
       .doc(userId)
       .update({
-        createdRoutines: FieldValue.arrayUnion(routineId),
+        adaptedRoutines: FieldValue.arrayUnion(newRoutineId),
       })
 
     // Track product interactions using batch writes
-    const productIds = routineToSave.steps
+    const productIds = adaptedRoutine.steps
       .map((step) => step.product_id)
       .filter(Boolean)
 
@@ -75,9 +84,9 @@ export async function POST(request: NextRequest) {
         interactionBatch.set(interactionRef, {
           userId,
           productId,
-          follicleId: routineToSave.follicle_id,
+          follicleId: adaptedRoutine.follicle_id,
           type: 'routine',
-          routineId: routineId,
+          routineId: newRoutineId,
           timestamp: Timestamp.now(),
         })
       })
@@ -101,13 +110,28 @@ export async function POST(request: NextRequest) {
         })
     }
 
-    // Score immediately for creator
+    // Track adapt interaction for source routine
     try {
-      console.log(`🚀 Scoring routine immediately for creator...`)
-      await scoreRoutineForUser(userId, routineToSave as any, adminDb)
-      console.log(`✅ Scored routine immediately for creator`)
+      await adminDb
+        .collection('routine_interactions')
+        .add({
+          userId,
+          follicleId: adaptedRoutine.follicle_id,
+          type: 'adapt',
+          createdRoutineId: newRoutineId,
+          timestamp: Timestamp.now(),
+        })
     } catch (error) {
-      console.error('Failed to score routine immediately:', error)
+      console.error('Failed to track adapt interaction:', error)
+    }
+
+    // Score immediately for user
+    try {
+      console.log(`🚀 Scoring adapted routine immediately for user...`)
+      await scoreRoutineForUser(userId, routineToSave as any, adminDb)
+      console.log(`✅ Scored adapted routine immediately`)
+    } catch (error) {
+      console.error('Failed to score adapted routine immediately:', error)
       // Don't block - Cloud Function will retry
     }
 
@@ -117,19 +141,19 @@ export async function POST(request: NextRequest) {
       revalidateTag(`user-scores-${userId}`, 'max'),
     ])
 
-    console.log(`✅ Routine created: ${routineId}`)
+    console.log(`✅ Routine adapted: ${newRoutineId}`)
     console.log(`🔄 Cache invalidated for user ${userId}`)
 
     return Response.json({
       success: true,
-      routineId,
-      message: 'Routine created successfully',
+      routineId: newRoutineId,
+      message: 'Routine adapted successfully',
     })
   } catch (error) {
-    console.error('Error creating routine:', error)
+    console.error('Error adapting routine:', error)
     return Response.json(
       {
-        error: 'Failed to create routine',
+        error: 'Failed to adapt routine',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
