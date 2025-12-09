@@ -3,7 +3,6 @@ import { Timestamp, FieldValue } from 'firebase/firestore'
 export type RoutineInteractionType =
   | 'like'
   | 'dislike'
-  | 'adapt'
   | 'save'
   | 'view'
 
@@ -19,7 +18,8 @@ export interface RoutineInteraction {
 export interface UserRoutineInteractions {
   like: boolean
   dislike: boolean
-  adapt: boolean
   save: boolean
   view: boolean
 }
+
+//Adapt is handled as crud interaction these are user layer

@@ -1,6 +1,6 @@
 import { Timestamp, FieldValue } from 'firebase/firestore'
 
-export type InteractionType = 'like' | 'dislike' | 'save' | 'view' | 'routine' | 'reroll'
+export type InteractionType = 'like' | 'dislike' | 'save' | 'view'
 
 /**
  * ProductInteraction - User interaction with a product
@@ -32,6 +32,5 @@ export interface UserProductInteractions {
   dislike: boolean
   save: boolean
   view: boolean
-  routine: boolean
-  reroll: boolean
 }
+//Routine and reroll not noted here
