@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
 import { FieldValue } from 'firebase-admin/firestore'
 import { InteractionType } from '@/types/productInteraction'
+import { scoreProductForUser } from '@/functions/src/helpers/scoring'
+import { invalidateUserScores } from '@/lib/server/cache'
 
 // Only user-initiated interactions (not 'routine' - that's handled in routine creation)
 const VALID_TYPES: InteractionType[] = ['like', 'dislike', 'save', 'view']
@@ -129,7 +131,33 @@ export async function POST(
     }
 
     await batch.commit()
-    console.log(`✅ Product ${type}d successfully: ${productId}`)
+
+    // Skip scoring for views (analytics only)
+    if (type === 'view') {
+      return NextResponse.json({ success: true }, { status: 201 })
+    }
+
+    // Fetch product for scoring
+    const productDoc = await adminDb.collection('products').doc(productId).get()
+
+    if (!productDoc.exists) {
+      console.warn(`Product ${productId} not found for scoring`)
+      return NextResponse.json({ success: true }, { status: 201 })
+    }
+
+    const product = { id: productDoc.id, ...productDoc.data() }
+
+    // Score immediately for this user
+    try {
+      await scoreProductForUser(userId, product as any, adminDb)
+      console.log(`✅ Scored product ${productId} for user ${userId}`)
+    } catch (error) {
+      console.error(`Failed to score product ${productId}:`, error)
+      // Don't block response - Cloud Function will rescore anyway
+    }
+
+    // Invalidate cache
+    await invalidateUserScores(userId)
 
     return NextResponse.json(
       {
@@ -140,7 +168,6 @@ export async function POST(
       { status: 201 }
     )
   } catch (error) {
-    console.error('❌ Error creating product interaction:', error)
     return NextResponse.json(
       { error: 'Failed to create interaction. Please try again.' },
       { status: 500 }
@@ -215,7 +242,32 @@ export async function DELETE(
     }
 
     await batch.commit()
-    console.log(`✅ Product un-${type}d successfully: ${productId}`)
+
+    // Skip scoring for views (analytics only)
+    if (type === 'view') {
+      return NextResponse.json({ success: true }, { status: 200 })
+    }
+
+    // Fetch product for rescoring
+    const productDoc = await adminDb.collection('products').doc(productId).get()
+
+    if (!productDoc.exists) {
+      console.warn(`Product ${productId} not found for scoring`)
+      return NextResponse.json({ success: true }, { status: 200 })
+    }
+
+    const product = { id: productDoc.id, ...productDoc.data() }
+
+    // Rescore after removing interaction
+    try {
+      await scoreProductForUser(userId, product as any, adminDb)
+      console.log(`✅ Rescored product ${productId} for user ${userId}`)
+    } catch (error) {
+      console.error(`Failed to rescore product ${productId}:`, error)
+    }
+
+    // Invalidate cache
+    await invalidateUserScores(userId)
 
     return NextResponse.json(
       {
@@ -225,7 +277,6 @@ export async function DELETE(
       { status: 200 }
     )
   } catch (error) {
-    console.error('❌ Error deleting product interaction:', error)
     return NextResponse.json(
       { error: 'Failed to delete interaction. Please try again.' },
       { status: 500 }

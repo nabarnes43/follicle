@@ -1,12 +1,12 @@
 'use client'
 
+import { useState } from 'react'
+import { useAuth } from '@/contexts/auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bookmark } from 'lucide-react'
-import { Product } from '@/types/product'
 import { useProductInteraction } from '@/hooks/useProductInteraction'
 import { ProductCardData } from '@/types/productMatching'
-
 
 interface ProductCardProps {
   product: ProductCardData
@@ -15,30 +15,41 @@ interface ProductCardProps {
   hideSaveButton?: boolean
 }
 
-/**
- * ProductCard - Displays a single product
- *
- * Shows:
- * - Product image, brand, name, and price
- * - Match score (optional - only if matchScore prop provided)
- * - Save button (bookmark icon)
- *
- * Click card to view details
- * Click bookmark to save/unsave (doesn't open dialog)
- */
 export function ProductCard({
   product,
-  matchScore,
+  matchScore: initialMatchScore, // 👈 Rename
   onClick,
   hideSaveButton,
 }: ProductCardProps) {
+  const { user } = useAuth()
+  const [matchScore, setMatchScore] = useState(initialMatchScore) // 👈 Local state
   const { interactions, toggleSave, isLoading } = useProductInteraction(
     product.id
   )
 
-  const handleSaveClick = (e: React.MouseEvent) => {
+  const handleSaveClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    toggleSave()
+    await toggleSave()
+
+    // 👇 NEW: Fetch fresh score after interaction
+    if (user) {
+      try {
+        const token = await user.getIdToken()
+        const response = await fetch(`/api/products/${product.id}/score`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.score) {
+            setMatchScore(data.score.totalScore) // 👈 Update local state
+            console.log('✅ Updated score in card:', data.score.totalScore)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch fresh score:', error)
+      }
+    }
   }
 
   return (
@@ -55,7 +66,6 @@ export function ProductCard({
               {product.name}
             </h3>
           </div>
-          {/* Save Button - Only show if not hidden */}
           {!hideSaveButton && (
             <Button
               onClick={handleSaveClick}

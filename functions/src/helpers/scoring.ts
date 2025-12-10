@@ -118,6 +118,15 @@ export async function scoreProductForUser(
     return
   }
 
+  // (before Firestore write)
+  console.log(`SCORE BREAKDOWN for product ${product.id} (user ${userId}):`)
+  console.log(`  • Total Score: ${scored.totalScore.toFixed(4)}`)
+  console.log(
+    `  • Engagement Score: ${scored.breakdown.engagementScore.toFixed(4)}`
+  )
+  console.log(
+    `  • Ingredient Score: ${scored.breakdown.ingredientScore?.toFixed(4) || 'N/A'}`
+  )
   // Write score
   await db
     .collection('users')

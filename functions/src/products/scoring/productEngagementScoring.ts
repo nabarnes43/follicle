@@ -109,12 +109,6 @@ export async function scoreProductByEngagement(
     // Calculate final score
     let finalScore = ENGAGEMENT_SCORE_DEFAULTS.NEUTRAL_SCORE
 
-    console.log(
-      'Pre Views and Score Product',
-      weightedViews,
-      finalScore,
-      product
-    )
     if (weightedViews > 0) {
       // Calculate rates (action / views)
       const routineRate = weightedRoutine / weightedViews
@@ -137,13 +131,6 @@ export async function scoreProductByEngagement(
         Math.min(ENGAGEMENT_SCORE_DEFAULTS.MAX_SCORE, score + 0.5)
       )
     }
-
-    console.log(
-      'Post Views and Score Product',
-      weightedViews,
-      finalScore,
-      product
-    )
 
     // Add reasons if requested
     if (includeReasons) {

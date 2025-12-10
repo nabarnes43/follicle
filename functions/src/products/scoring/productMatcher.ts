@@ -108,11 +108,6 @@ export async function matchProductsForUser(
       )
     )
     scoredProducts.push(...batchScores)
-
-    // Log progress
-    console.log(
-      `Scored ${Math.min(i + BATCH_SIZE, filteredProducts.length)} / ${filteredProducts.length} products`
-    )
   }
 
   // Sort and limit

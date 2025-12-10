@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/auth'
 import { useProductInteraction } from '@/hooks/useProductInteraction'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,9 +17,13 @@ interface ProductDetailClientProps {
 
 export function ProductDetailClient({
   product,
-  productScore,
+  productScore: initialProductScore, // 👈 Rename
 }: ProductDetailClientProps) {
   const router = useRouter()
+  const { user } = useAuth()
+  const [productScore, setProductScore] = useState(initialProductScore) // 👈 Local state
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
   const {
     interactions,
     toggleLike,
@@ -26,7 +31,7 @@ export function ProductDetailClient({
     toggleSave,
     trackView,
     isLoading,
-    isReady, // NEW
+    isReady,
   } = useProductInteraction(product.id)
 
   const hasTrackedView = useRef(false)
@@ -39,12 +44,61 @@ export function ProductDetailClient({
     }
   }, [isReady, trackView])
 
+  // 👇 NEW: Function to fetch fresh score
+  const refetchScore = async () => {
+    if (!user) return
+
+    setIsRefreshing(true)
+
+    try {
+      const token = await user.getIdToken()
+      const response = await fetch(`/api/products/${product.id}/score`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.score) {
+          setProductScore(data.score)
+          console.log('✅ Fetched fresh score:', data.score.totalScore)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch fresh score:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // 👇 UPDATED: Handlers that refetch score
+  const handleLike = async () => {
+    await toggleLike()
+    await refetchScore()
+  }
+
+  const handleDislike = async () => {
+    await toggleDislike()
+    await refetchScore()
+  }
+
+  const handleSave = async () => {
+    await toggleSave()
+    await refetchScore()
+  }
+
   const scorePercent = productScore
     ? Math.round(productScore.totalScore * 100)
     : null
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
+      {/* 👇 NEW: Show refreshing indicator */}
+      {isRefreshing && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
+          <p className="text-sm text-blue-700">Updating score...</p>
+        </div>
+      )}
+
       {/* Back Button */}
       <Button
         onClick={() => router.back()}
@@ -102,8 +156,8 @@ export function ProductDetailClient({
       {/* Interaction Buttons */}
       <div className="mb-8 flex gap-2">
         <Button
-          onClick={toggleLike}
-          disabled={isLoading || !isReady} // NEW - disable until ready
+          onClick={handleLike}
+          disabled={isLoading || !isReady || isRefreshing}
           variant={interactions.like ? 'default' : 'outline'}
         >
           <Heart
@@ -113,8 +167,8 @@ export function ProductDetailClient({
         </Button>
 
         <Button
-          onClick={toggleDislike}
-          disabled={isLoading || !isReady} // NEW
+          onClick={handleDislike}
+          disabled={isLoading || !isReady || isRefreshing}
           variant={interactions.dislike ? 'destructive' : 'outline'}
         >
           <ThumbsDown
@@ -124,8 +178,8 @@ export function ProductDetailClient({
         </Button>
 
         <Button
-          onClick={toggleSave}
-          disabled={isLoading || !isReady} // NEW
+          onClick={handleSave}
+          disabled={isLoading || !isReady || isRefreshing}
           variant={interactions.save ? 'default' : 'outline'}
         >
           <Bookmark

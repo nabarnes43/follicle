@@ -51,8 +51,8 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "rank",
-          "order": "ASCENDING"
+          "fieldPath": "score",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -65,8 +65,8 @@
           "arrayConfig": "CONTAINS"
         },
         {
-          "fieldPath": "rank",
-          "order": "ASCENDING"
+          "fieldPath": "score",
+          "order": "DESCENDING"
         }
       ]
     }

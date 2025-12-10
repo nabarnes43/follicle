@@ -138,7 +138,7 @@ export const onProductInteractionWrite = onDocumentWritten(
     )
 
     try {
-      // NEW: Fetch just this ONE product
+      // Fetch just this ONE product
       const productDoc = await db.collection('products').doc(productId).get()
 
       if (!productDoc.exists) {
