@@ -92,13 +92,6 @@ export function ProductDetailClient({
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
-      {/* 👇 NEW: Show refreshing indicator */}
-      {isRefreshing && (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
-          <p className="text-sm text-blue-700">Updating score...</p>
-        </div>
-      )}
-
       {/* Back Button */}
       <Button
         onClick={() => router.back()}

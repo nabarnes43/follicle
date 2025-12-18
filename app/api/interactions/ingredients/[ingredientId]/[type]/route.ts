@@ -137,7 +137,6 @@ export async function POST(
     }
 
     await batch.commit()
-    console.log(`Ingredient ${type}d successfully`)
     return NextResponse.json(
       {
         success: true,

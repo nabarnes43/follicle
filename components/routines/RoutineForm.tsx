@@ -173,10 +173,8 @@ export function RoutineForm({
         }
 
         toast.success('Routine updated!')
-        router.push('/routines/private')
-        setTimeout(() => {
-          window.location.reload()
-        }, 100)
+        router.push(`/routines/${routineId}`)
+        router.refresh()
       } else if (mode === 'adapt') {
         // ADAPT - call /api/routines/[id]/adapt
         const response = await fetch(`/api/routines/${routineId}/adapt`, {

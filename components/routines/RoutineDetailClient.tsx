@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Routine } from '@/types/routine'
@@ -56,11 +56,13 @@ export function RoutineDetailClient({
   productsMap,
   authorName,
   adaptedFromAuthor,
-  matchScore,
+  matchScore: initialMatchScore,
   currentUserId,
 }: RoutineDetailClientProps) {
   const router = useRouter()
   const { user } = useAuth()
+  const [matchScore, setMatchScore] = useState(initialMatchScore)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -71,16 +73,60 @@ export function RoutineDetailClient({
     toggleSave,
     trackView,
     isLoading: interactionLoading,
+    isReady,
   } = useRoutineInteraction(routine.id)
 
   const hasTrackedView = useRef(false)
 
+  // Track view once when user is ready
   useEffect(() => {
-    if (!hasTrackedView.current) {
+    if (isReady && !hasTrackedView.current) {
       hasTrackedView.current = true
       trackView()
     }
-  }, [trackView])
+  }, [isReady, trackView])
+
+  // Fetch fresh score after interactions
+  const refetchScore = async () => {
+    if (!user) return
+
+    setIsRefreshing(true)
+
+    try {
+      const token = await user.getIdToken()
+      const response = await fetch(`/api/routines/${routine.id}/score`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.score) {
+          setMatchScore(data.score)
+          console.log('✅ Fetched fresh routine score:', data.score.totalScore)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch fresh routine score:', error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // Updated interaction handlers
+  const handleLike = async () => {
+    await toggleLike()
+    await refetchScore()
+  }
+
+  const handleDislike = async () => {
+    await toggleDislike()
+    await refetchScore()
+  }
+
+  const handleSave = async () => {
+    await toggleSave()
+    await refetchScore()
+  }
 
   const handleShare = () => {
     const link = `${window.location.origin}/routines/${routine.id}`
@@ -135,6 +181,13 @@ export function RoutineDetailClient({
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
+          {/* Refreshing Indicator */}
+          {isRefreshing && (
+            <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
+              <p className="text-sm text-blue-700">Updating score...</p>
+            </div>
+          )}
+
           {/* Title Row with Back Button */}
           <div className="mb-4 flex items-center gap-3">
             <Button onClick={() => router.back()} variant="ghost" size="sm">
@@ -180,8 +233,8 @@ export function RoutineDetailClient({
             {/* Left: Like, Dislike, Save, Adapt/Edit */}
             <div className="flex gap-2">
               <Button
-                onClick={toggleLike}
-                disabled={interactionLoading}
+                onClick={handleLike}
+                disabled={interactionLoading || isRefreshing}
                 variant={interactions.like ? 'default' : 'outline'}
                 size="sm"
               >
@@ -192,8 +245,8 @@ export function RoutineDetailClient({
               </Button>
 
               <Button
-                onClick={toggleDislike}
-                disabled={interactionLoading}
+                onClick={handleDislike}
+                disabled={interactionLoading || isRefreshing}
                 variant={interactions.dislike ? 'destructive' : 'outline'}
                 size="sm"
               >
@@ -204,8 +257,8 @@ export function RoutineDetailClient({
               </Button>
 
               <Button
-                onClick={toggleSave}
-                disabled={interactionLoading}
+                onClick={handleSave}
+                disabled={interactionLoading || isRefreshing}
                 variant={interactions.save ? 'default' : 'outline'}
                 size="sm"
               >
@@ -216,17 +269,16 @@ export function RoutineDetailClient({
               </Button>
 
               {/* Show Adapt button if NOT owner */}
-              {!isOwner &&
-                routine.id &&(
-                  <Button
-                    onClick={() => router.push(`/routines/${routine.id}/adapt`)}
-                    variant="outline"
-                    size="sm"
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Adapt
-                  </Button>
-                )}
+              {!isOwner && routine.id && (
+                <Button
+                  onClick={() => router.push(`/routines/${routine.id}/adapt`)}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Adapt
+                </Button>
+              )}
 
               {/* Show Edit button if owner */}
               {isOwner && (

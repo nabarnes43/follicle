@@ -200,6 +200,16 @@ export async function scoreRoutineForUser(
 
   const scored = scoredRoutines[0]
 
+  // (before Firestore write)
+  console.log(`SCORE BREAKDOWN for routine ${routine.id} (user ${userId}):`)
+  console.log(`  • Total Score: ${scored.totalScore.toFixed(4)}`)
+  console.log(
+    `  • Engagement Score: ${scored.breakdown.engagementScore.toFixed(4)}`
+  )
+  console.log(
+    `  • Product Score: ${scored.breakdown.productScore?.toFixed(4) || 'N/A'}`
+  )
+
   // Write score
   await db
     .collection('users')

@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import { useAuth } from '@/contexts/auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Bookmark, Lock, Globe } from 'lucide-react'
@@ -20,16 +22,41 @@ export function RoutineCard({
   onView,
   hideSaveButton = false,
 }: RoutineCardProps) {
-  const { routine, totalScore } = routineScore
+  const { user } = useAuth()
+  const { routine, totalScore: initialTotalScore } = routineScore
+  const [totalScore, setTotalScore] = useState(initialTotalScore)
   const { interactions, toggleSave, isLoading } = useRoutineInteraction(
     routine.id
   )
 
   const steps = routine.steps || []
 
-  const handleSaveClick = (e: React.MouseEvent) => {
+  const handleSaveClick = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    toggleSave()
+    await toggleSave()
+
+    // Fetch fresh score after interaction
+    if (user) {
+      try {
+        const token = await user.getIdToken()
+        const response = await fetch(`/api/routines/${routine.id}/score`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.score) {
+            setTotalScore(data.score.totalScore)
+            console.log(
+              '✅ Updated routine score in card:',
+              data.score.totalScore
+            )
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch fresh routine score:', error)
+      }
+    }
   }
 
   // Always show exactly 3 step slots

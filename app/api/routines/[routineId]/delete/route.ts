@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
-import { revalidateTag } from 'next/cache'
+import { scoreProductForUser } from '@/functions/src/helpers/scoring'
+import { invalidateUserScores } from '@/lib/server/cache'
+import { removeProductInteractionsFromRoutine } from '@/lib/server/routineScores'
 
 /**
  * DELETE /api/routines/[routineId]/delete
@@ -48,30 +50,10 @@ export async function DELETE(
       deleted_at: FieldValue.serverTimestamp(),
     })
 
-    // Remove 'routine' interactions for products in THIS routine only
-    const productIds = (routine.steps || [])
-      .map((s: any) => s.product_id)
-      .filter(Boolean)
-
-    for (const productId of productIds) {
-      const interactionQuery = await adminDb
-        .collection('product_interactions')
-        .where('userId', '==', userId)
-        .where('productId', '==', productId)
-        .where('type', '==', 'routine')
-        .where('routineId', '==', routineId)
-        .get()
-
-      // Delete all matching interactions
-      interactionQuery.forEach((doc) => {
-        batch.delete(doc.ref)
-      })
-    }
-
     // Remove from user's cache arrays
     const userRef = adminDb.collection('users').doc(userId)
     batch.update(userRef, {
-      createdRoutines: FieldValue.arrayRemove(routineId), // NEW - also remove from createdRoutines
+      createdRoutines: FieldValue.arrayRemove(routineId),
       savedRoutines: FieldValue.arrayRemove(routineId),
       likedRoutines: FieldValue.arrayRemove(routineId),
       dislikedRoutines: FieldValue.arrayRemove(routineId),
@@ -80,11 +62,42 @@ export async function DELETE(
 
     await batch.commit()
 
-    // INVALIDATE CACHE
-    await Promise.all([
-      revalidateTag(`user-routine-scores-${userId}`, 'max'),
-      revalidateTag(`user-scores-${userId}`, 'max'),
-    ])
+    // Remove product interactions using shared function
+    const productIds = (routine.steps || [])
+      .map((s: any) => s.product_id)
+      .filter(Boolean) as string[]
+
+    await removeProductInteractionsFromRoutine(userId, routineId, productIds)
+
+    // Rescore affected products (their engagement scores changed)
+    const uniqueProductIds = [...new Set(productIds)]
+
+    if (uniqueProductIds.length > 0) {
+      console.log(
+        `🔄 Rescoring ${uniqueProductIds.length} products after routine deletion...`
+      )
+
+      for (const productId of uniqueProductIds) {
+        try {
+          const productDoc = await adminDb
+            .collection('products')
+            .doc(productId)
+            .get()
+          if (productDoc.exists) {
+            const product = { id: productDoc.id, ...productDoc.data() }
+            await scoreProductForUser(userId, product as any, adminDb)
+          }
+        } catch (error) {
+          console.error(`Failed to rescore product ${productId}:`, error)
+          // Continue with other products
+        }
+      }
+
+      console.log(`✅ Rescored ${uniqueProductIds.length} products`)
+    }
+
+    // Invalidate cache
+    await invalidateUserScores(userId)
 
     console.log(`✅ Routine deleted: ${routineId}`)
 

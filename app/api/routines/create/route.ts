@@ -1,10 +1,13 @@
 import { NextRequest } from 'next/server'
-import { Timestamp, FieldValue } from 'firebase-admin/firestore'
-import { revalidateTag } from 'next/cache'
+import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
 import { Routine } from '@/types/routine'
-import { scoreRoutineForUser } from '@/functions/src/helpers/scoring'
+import {
+  trackProductInteractionsInRoutine,
+  scoreRoutineAndInvalidateCache,
+  updateUserRoutineCache,
+} from '@/lib/server/routineScores'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,78 +50,25 @@ export async function POST(request: NextRequest) {
 
     await adminDb.collection('routines').doc(routineId).set(routineToSave)
 
-    // Update user cache
-    await adminDb
-      .collection('users')
-      .doc(userId)
-      .update({
-        createdRoutines: FieldValue.arrayUnion(routineId),
-      })
-
-    // Track product interactions using batch writes
+    // Track product interactions using shared function
     const productIds = routineToSave.steps
       .map((step) => step.product_id)
-      .filter(Boolean)
+      .filter(Boolean) as string[]
 
-    const uniqueProductIds = [...new Set(productIds)]
+    await trackProductInteractionsInRoutine(
+      userId,
+      routineId,
+      productIds,
+      routineToSave.follicle_id
+    )
 
-    if (uniqueProductIds.length > 0) {
-      console.log(
-        `📝 Tracking ${uniqueProductIds.length} product interactions...`
-      )
+    // Update user cache
+    await updateUserRoutineCache(userId, routineId, 'create')
 
-      const interactionBatch = adminDb.batch()
-
-      // Add interaction for each product
-      uniqueProductIds.forEach((productId) => {
-        const interactionRef = adminDb.collection('product_interactions').doc()
-        interactionBatch.set(interactionRef, {
-          userId,
-          productId,
-          follicleId: routineToSave.follicle_id,
-          type: 'routine',
-          routineId: routineId,
-          timestamp: Timestamp.now(),
-        })
-      })
-
-      // Update user cache (routineProducts array)
-      const userRef = adminDb.collection('users').doc(userId)
-      interactionBatch.update(userRef, {
-        routineProducts: FieldValue.arrayUnion(...uniqueProductIds),
-      })
-
-      // Commit batch in background (don't block response)
-      interactionBatch
-        .commit()
-        .then(() => {
-          console.log(
-            `✅ Tracked ${uniqueProductIds.length} product interactions`
-          )
-        })
-        .catch((err) => {
-          console.error('Failed to track product interactions:', err)
-        })
-    }
-
-    // Score immediately for creator
-    try {
-      console.log(`🚀 Scoring routine immediately for creator...`)
-      await scoreRoutineForUser(userId, routineToSave as any, adminDb)
-      console.log(`✅ Scored routine immediately for creator`)
-    } catch (error) {
-      console.error('Failed to score routine immediately:', error)
-      // Don't block - Cloud Function will retry
-    }
-
-    // Invalidate cache
-    await Promise.all([
-      revalidateTag(`user-routine-scores-${userId}`, 'max'),
-      revalidateTag(`user-scores-${userId}`, 'max'),
-    ])
+    // Score immediately and invalidate cache
+    await scoreRoutineAndInvalidateCache(userId, routineToSave as any)
 
     console.log(`✅ Routine created: ${routineId}`)
-    console.log(`🔄 Cache invalidated for user ${userId}`)
 
     return Response.json({
       success: true,

@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
+import { Timestamp } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
-import { revalidateTag } from 'next/cache'
-import { scoreRoutineForUser } from '@/functions/src/helpers/scoring'
+import {
+  calculateRoutineProductDiff,
+  removeProductInteractionsFromRoutine,
+  trackProductInteractionsInRoutine,
+  scoreRoutineAndInvalidateCache,
+} from '@/lib/server/routineScores'
 
 export async function PATCH(
   request: NextRequest,
@@ -39,112 +43,53 @@ export async function PATCH(
       )
     }
 
-    // Prepare batch for atomic updates
-    const batch = adminDb.batch()
-
     // Update routine
-    batch.update(routineRef, {
+    await routineRef.update({
       ...updates,
       updated_at: Timestamp.now(),
     })
 
+    console.log(`✅ Routine updated in Firestore: ${routineId}`)
+
     // Handle product interaction changes (if steps changed)
     if (updates.steps) {
-      const oldProductIds = (existingRoutine.steps || [])
-        .map((s: any) => s.product_id)
-        .filter(Boolean)
-
-      const newProductIds = updates.steps
-        .map((s: any) => s.product_id)
-        .filter(Boolean)
-
-      const oldSet = new Set(oldProductIds)
-      const newSet = new Set(newProductIds)
-
-      // Products removed from routine
-      const removedProducts = oldProductIds.filter(
-        (id: string) => !newSet.has(id)
-      )
-
-      // Products added to routine
-      const addedProducts = newProductIds.filter(
-        (id: string) => !oldSet.has(id)
+      const { addedProducts, removedProducts } = calculateRoutineProductDiff(
+        existingRoutine.steps || [],
+        updates.steps
       )
 
       // Remove old interactions
-      for (const productId of removedProducts) {
-        const interactionQuery = await adminDb
-          .collection('product_interactions')
-          .where('userId', '==', userId)
-          .where('productId', '==', productId)
-          .where('type', '==', 'routine')
-          .where('routineId', '==', routineId)
-          .get()
-
-        interactionQuery.forEach((doc) => {
-          batch.delete(doc.ref)
-        })
+      if (removedProducts.length > 0) {
+        await removeProductInteractionsFromRoutine(
+          userId,
+          routineId,
+          removedProducts
+        )
       }
 
       // Add new interactions
-      for (const productId of addedProducts) {
-        const interactionRef = adminDb.collection('product_interactions').doc()
-        batch.set(interactionRef, {
-          userId,
-          productId,
-          follicleId: existingRoutine.follicle_id,
-          type: 'routine',
-          routineId: routineId,
-          timestamp: Timestamp.now(),
-        })
-      }
-
-      // Update user cache
-      if (removedProducts.length > 0) {
-        batch.update(adminDb.collection('users').doc(userId), {
-          routineProducts: FieldValue.arrayRemove(...removedProducts),
-        })
-      }
-
       if (addedProducts.length > 0) {
-        batch.update(adminDb.collection('users').doc(userId), {
-          routineProducts: FieldValue.arrayUnion(...addedProducts),
-        })
+        await trackProductInteractionsInRoutine(
+          userId,
+          routineId,
+          addedProducts,
+          existingRoutine.follicle_id
+        )
       }
     }
 
-    // Commit all changes
-    await batch.commit()
-
-    console.log(`✅ Routine updated in Firestore: ${routineId}`)
-
-    // Score immediately for user
-    try {
-      console.log(`🚀 Scoring updated routine immediately for user...`)
-
-      const updatedRoutineDoc = await adminDb
-        .collection('routines')
-        .doc(routineId)
-        .get()
-      const updatedRoutine = {
-        id: updatedRoutineDoc.id,
-        ...updatedRoutineDoc.data(),
-      }
-
-      await scoreRoutineForUser(userId, updatedRoutine as any, adminDb)
-      console.log(`✅ Scored updated routine immediately`)
-    } catch (error) {
-      console.error('Failed to score routine immediately:', error)
-      // Don't block - Cloud Function will retry
+    // Fetch updated routine for scoring
+    const updatedRoutineDoc = await adminDb
+      .collection('routines')
+      .doc(routineId)
+      .get()
+    const updatedRoutine = {
+      id: updatedRoutineDoc.id,
+      ...updatedRoutineDoc.data(),
     }
 
-    // Invalidate cache IMMEDIATELY after
-    await Promise.all([
-      revalidateTag(`user-routine-scores-${userId}`, 'max'),
-      revalidateTag(`user-scores-${userId}`, 'max'),
-    ])
-
-    console.log(`🔄 Cache invalidated for user ${userId}`)
+    // Score immediately and invalidate cache
+    await scoreRoutineAndInvalidateCache(userId, updatedRoutine as any)
 
     return NextResponse.json({
       success: true,

@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
 import { FieldValue } from 'firebase-admin/firestore'
 import { RoutineInteractionType } from '@/types/routineInteraction'
+import { scoreRoutineForUser } from '@/functions/src/helpers/scoring'
+import { invalidateUserScores } from '@/lib/server/cache'
 
 // Only user-initiated interactions
 const VALID_TYPES: RoutineInteractionType[] = [
@@ -134,7 +136,33 @@ export async function POST(
     }
 
     await batch.commit()
-    console.log(`✅ Routine ${type}d successfully: ${routineId}`)
+
+    // Skip scoring for views (analytics only)
+    if (type === 'view') {
+      return NextResponse.json({ success: true }, { status: 201 })
+    }
+
+    // Fetch routine for scoring
+    const routineDoc = await adminDb.collection('routines').doc(routineId).get()
+
+    if (!routineDoc.exists) {
+      console.warn(`Routine ${routineId} not found for scoring`)
+      return NextResponse.json({ success: true }, { status: 201 })
+    }
+
+    const routine = { id: routineDoc.id, ...routineDoc.data() }
+
+    // Score immediately for this user
+    try {
+      await scoreRoutineForUser(userId, routine as any, adminDb)
+      console.log(`✅ Scored routine ${routineId} for user ${userId}`)
+    } catch (error) {
+      console.error(`Failed to score routine ${routineId}:`, error)
+      // Don't block response - Cloud Function will rescore anyway
+    }
+
+    // Invalidate cache
+    await invalidateUserScores(userId)
 
     return NextResponse.json(
       {
@@ -220,8 +248,32 @@ export async function DELETE(
     }
 
     await batch.commit()
-    console.log(`✅ Routine un-${type}d successfully: ${routineId}`)
 
+    // Skip scoring for views (analytics only)
+    if (type === 'view') {
+      return NextResponse.json({ success: true }, { status: 200 })
+    }
+
+    // Fetch routine for rescoring
+    const routineDoc = await adminDb.collection('routines').doc(routineId).get()
+
+    if (!routineDoc.exists) {
+      console.warn(`Routine ${routineId} not found for scoring`)
+      return NextResponse.json({ success: true }, { status: 200 })
+    }
+
+    const routine = { id: routineDoc.id, ...routineDoc.data() }
+
+    // Rescore after removing interaction
+    try {
+      await scoreRoutineForUser(userId, routine as any, adminDb)
+      console.log(`✅ Rescored routine ${routineId} for user ${userId}`)
+    } catch (error) {
+      console.error(`Failed to rescore routine ${routineId}:`, error)
+    }
+
+    // Invalidate cache
+    await invalidateUserScores(userId)
     return NextResponse.json(
       {
         success: true,

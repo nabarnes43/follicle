@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -41,10 +41,15 @@ export function IngredientDetailClient({
     isLoading: interactionLoading,
   } = useIngredientInteraction(ingredient.id)
 
+  const hasTrackedView = useRef(false)
+
   // Track view once on mount
-  useState(() => {
-    trackView()
-  })
+  useEffect(() => {
+    if (!hasTrackedView.current) {
+      hasTrackedView.current = true
+      trackView()
+    }
+  }, [trackView])
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
