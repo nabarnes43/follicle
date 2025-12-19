@@ -78,13 +78,19 @@ export function RoutineDetailClient({
 
   const hasTrackedView = useRef(false)
 
+  // Reset tracking when product changes
+  useEffect(() => {
+    hasTrackedView.current = false
+  }, [routine.id])
+
   // Track view once when user is ready
   useEffect(() => {
     if (isReady && !hasTrackedView.current) {
       hasTrackedView.current = true
+      console.log('Tracking view for routine:', routine.id, 'isReady:', isReady)
       trackView()
     }
-  }, [isReady, trackView])
+  }, [isReady, trackView, routine.id])
 
   // Fetch fresh score after interactions
   const refetchScore = async () => {

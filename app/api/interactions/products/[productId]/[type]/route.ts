@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
-import { FieldValue } from 'firebase-admin/firestore'
 import { InteractionType } from '@/types/productInteraction'
 import { scoreProductForUser } from '@/functions/src/helpers/scoring'
 import { invalidateUserScores } from '@/lib/server/cache'
+import {
+  createInteraction,
+  deleteInteraction,
+  interactionExists,
+} from '@/lib/server/interactions'
 
 // Only user-initiated interactions (not 'routine' - that's handled in routine creation)
 const VALID_TYPES: InteractionType[] = ['like', 'dislike', 'save', 'view']
-
-// Map interaction types to user cache field names
-const CACHE_FIELD_MAP: Record<string, string> = {
-  like: 'likedProducts',
-  dislike: 'dislikedProducts',
-  save: 'savedProducts',
-}
 
 /**
  * POST /api/interactions/products/[productId]/[type]
@@ -56,81 +53,27 @@ export async function POST(
     }
     const follicleId = userDoc.data()?.follicleId || ''
 
-    // Views allow multiple, others don't
-    if (type !== 'view') {
-      const existingInteraction = await adminDb
-        .collection('product_interactions')
-        .where('userId', '==', userId)
-        .where('productId', '==', productId)
-        .where('type', '==', type)
-        .limit(1)
-        .get()
-
-      if (!existingInteraction.empty) {
-        return NextResponse.json(
-          { error: `You already ${type}d this product` },
-          { status: 409 }
-        )
-      }
+    const exists = await interactionExists(userId, productId, 'product', type)
+    if (exists) {
+      console.log(`Interaction already exists: ${type} on product ${productId}`)
+      return NextResponse.json(
+        {
+          success: true,
+          message: `Already ${type}d`,
+          cached: true,
+        },
+        { status: 208 }
+      )
     }
 
-    // Check for mutual exclusivity (like vs dislike)
-    let oppositeType: string | null = null
-    if (type === 'like') oppositeType = 'dislike'
-    if (type === 'dislike') oppositeType = 'like'
-
-    let oppositeInteractionDoc = null
-
-    if (oppositeType) {
-      const oppositeQuery = await adminDb
-        .collection('product_interactions')
-        .where('userId', '==', userId)
-        .where('productId', '==', productId)
-        .where('type', '==', oppositeType)
-        .limit(1)
-        .get()
-
-      if (!oppositeQuery.empty) {
-        oppositeInteractionDoc = oppositeQuery.docs[0]
-      }
-    }
-
-    // Use batch write for atomic operations
-    const batch = adminDb.batch()
-    const userRef = adminDb.collection('users').doc(userId)
-
-    // Delete opposite interaction if exists (like/dislike mutual exclusivity)
-    if (oppositeInteractionDoc && oppositeType) {
-      batch.delete(oppositeInteractionDoc.ref)
-
-      // Remove from user cache
-      const oppositeField = CACHE_FIELD_MAP[oppositeType]
-      if (oppositeField) {
-        batch.update(userRef, {
-          [oppositeField]: FieldValue.arrayRemove(productId),
-        })
-      }
-    }
-
-    // Create new interaction
-    const newInteractionRef = adminDb.collection('product_interactions').doc()
-    batch.set(newInteractionRef, {
+    // Create interaction (handles mutual exclusivity and cache updates)
+    const interactionId = await createInteraction(
       userId,
       productId,
-      follicleId,
+      'product',
       type,
-      timestamp: FieldValue.serverTimestamp(),
-    })
-
-    // Update user cache (not for views)
-    const cacheField = CACHE_FIELD_MAP[type]
-    if (cacheField) {
-      batch.update(userRef, {
-        [cacheField]: FieldValue.arrayUnion(productId),
-      })
-    }
-
-    await batch.commit()
+      follicleId
+    )
 
     // Skip scoring for views (analytics only)
     if (type === 'view') {
@@ -163,7 +106,7 @@ export async function POST(
       {
         success: true,
         message: `Product ${type}d successfully`,
-        interactionId: newInteractionRef.id,
+        interactionId,
       },
       { status: 201 }
     )
@@ -208,40 +151,15 @@ export async function DELETE(
       )
     }
 
-    // Find the interaction
-    const interactionQuery = await adminDb
-      .collection('product_interactions')
-      .where('userId', '==', userId)
-      .where('productId', '==', productId)
-      .where('type', '==', type)
-      .limit(1)
-      .get()
+    // Delete interaction (handles cache updates)
+    const deleted = await deleteInteraction(userId, productId, 'product', type)
 
-    if (interactionQuery.empty) {
+    if (!deleted) {
       return NextResponse.json(
         { error: `No ${type} interaction found for this product` },
         { status: 404 }
       )
     }
-
-    const interactionDoc = interactionQuery.docs[0]
-
-    // Use batch write for atomic operations
-    const batch = adminDb.batch()
-    const userRef = adminDb.collection('users').doc(userId)
-
-    // Delete interaction
-    batch.delete(interactionDoc.ref)
-
-    // Update user cache (not for views)
-    const cacheField = CACHE_FIELD_MAP[type]
-    if (cacheField) {
-      batch.update(userRef, {
-        [cacheField]: FieldValue.arrayRemove(productId),
-      })
-    }
-
-    await batch.commit()
 
     // Skip scoring for views (analytics only)
     if (type === 'view') {

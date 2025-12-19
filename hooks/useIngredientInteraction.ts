@@ -18,6 +18,7 @@ export function useIngredientInteraction(ingredientId: string) {
   const { user: authUser } = useAuth()
   const [firestoreUser, setFirestoreUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isReady, setIsReady] = useState(false)
 
   const [interactions, setInteractions] = useState<UserIngredientInteractions>({
     like: false,
@@ -33,16 +34,20 @@ export function useIngredientInteraction(ingredientId: string) {
   const fetchFirestoreUser = useCallback(async () => {
     if (!authUser?.uid) {
       setFirestoreUser(null)
+      setIsReady(false)
       return
     }
 
     try {
       const userDoc = await getDoc(doc(db, 'users', authUser.uid))
       if (userDoc.exists()) {
-        setFirestoreUser(userDoc.data() as User)
+        const userData = userDoc.data() as User
+        setFirestoreUser(userData)
+        setIsReady(!!userData.follicleId)
       }
     } catch (error) {
       console.error('Failed to fetch user document:', error)
+      setIsReady(false)
     }
   }, [authUser])
 
@@ -72,14 +77,17 @@ export function useIngredientInteraction(ingredientId: string) {
    */
   const interact = useCallback(
     async (type: IngredientInteractionType, shouldDelete: boolean = false) => {
-      if (!authUser?.uid) {
-        console.warn('User must be logged in to interact')
+      if (!authUser?.uid || !firestoreUser?.follicleId) {
+        // 👈 UPDATED
+        console.warn('User must be logged in with follicleId to interact')
         return { success: false, error: 'Not authenticated' }
       }
 
-      // Optimistic update
+      // Optimistic update (skip for views)
       const previousState = interactions[type]
-      setInteractions((prev) => ({ ...prev, [type]: !previousState }))
+      if (type !== 'view') {
+        setInteractions((prev) => ({ ...prev, [type]: !previousState }))
+      }
       setIsLoading(true)
 
       try {
@@ -102,13 +110,17 @@ export function useIngredientInteraction(ingredientId: string) {
           throw new Error(data.error || 'Request failed')
         }
 
-        // Refetch user to sync cache arrays
-        await fetchFirestoreUser()
+        // Refetch user to sync cache arrays (skip for views)
+        if (type !== 'view') {
+          await fetchFirestoreUser()
+        }
 
         return { success: true, data }
       } catch (error) {
-        // Rollback optimistic update
-        setInteractions((prev) => ({ ...prev, [type]: previousState }))
+        // Rollback optimistic update (skip for views)
+        if (type !== 'view') {
+          setInteractions((prev) => ({ ...prev, [type]: previousState }))
+        }
 
         const errorMessage =
           error instanceof Error ? error.message : 'Request failed'
@@ -119,7 +131,7 @@ export function useIngredientInteraction(ingredientId: string) {
         setIsLoading(false)
       }
     },
-    [authUser, ingredientId, interactions, fetchFirestoreUser]
+    [authUser, firestoreUser, ingredientId, interactions, fetchFirestoreUser] // 👈 UPDATED
   )
 
   /**
@@ -165,7 +177,7 @@ export function useIngredientInteraction(ingredientId: string) {
   }, [interactions.allergic, interact])
 
   /**
-   * Track view (allow multiple views)
+   * Track view (fire-and-forget)
    */
   const trackView = useCallback(async () => {
     return interact('view', false)
@@ -175,6 +187,7 @@ export function useIngredientInteraction(ingredientId: string) {
     // State
     interactions,
     isLoading,
+    isReady,
 
     // Actions
     toggleLike,

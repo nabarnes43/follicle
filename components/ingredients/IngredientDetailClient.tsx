@@ -39,17 +39,29 @@ export function IngredientDetailClient({
     toggleAllergic,
     trackView,
     isLoading: interactionLoading,
+    isReady,
   } = useIngredientInteraction(ingredient.id)
 
   const hasTrackedView = useRef(false)
 
-  // Track view once on mount
+  // Reset tracking when ingredient changes
   useEffect(() => {
-    if (!hasTrackedView.current) {
+    hasTrackedView.current = false
+  }, [ingredient.id])
+
+  // Track view once when user is ready
+  useEffect(() => {
+    if (isReady && !hasTrackedView.current) {
       hasTrackedView.current = true
+      console.log(
+        'Tracking view for ingredient:',
+        ingredient.id,
+        'isReady:',
+        isReady
+      )
       trackView()
     }
-  }, [trackView])
+  }, [isReady, trackView, ingredient.id])
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -100,7 +112,7 @@ export function IngredientDetailClient({
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={toggleLike}
-                disabled={interactionLoading}
+                disabled={interactionLoading || !isReady}
                 variant={interactions.like ? 'default' : 'outline'}
                 size="sm"
               >
@@ -112,7 +124,7 @@ export function IngredientDetailClient({
 
               <Button
                 onClick={toggleDislike}
-                disabled={interactionLoading}
+                disabled={interactionLoading || !isReady}
                 variant={interactions.dislike ? 'destructive' : 'outline'}
                 size="sm"
               >
@@ -124,7 +136,7 @@ export function IngredientDetailClient({
 
               <Button
                 onClick={toggleAvoid}
-                disabled={interactionLoading}
+                disabled={interactionLoading || !isReady}
                 variant={interactions.avoid ? 'destructive' : 'outline'}
                 size="sm"
               >
@@ -134,7 +146,7 @@ export function IngredientDetailClient({
 
               <Button
                 onClick={toggleAllergic}
-                disabled={interactionLoading}
+                disabled={interactionLoading || !isReady}
                 variant={interactions.allergic ? 'destructive' : 'outline'}
                 size="sm"
               >

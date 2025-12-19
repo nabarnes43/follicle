@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
-import { FieldValue } from 'firebase-admin/firestore'
 import { RoutineInteractionType } from '@/types/routineInteraction'
 import { scoreRoutineForUser } from '@/functions/src/helpers/scoring'
 import { invalidateUserScores } from '@/lib/server/cache'
+import {
+  createInteraction,
+  deleteInteraction,
+  interactionExists,
+} from '@/lib/server/interactions'
 
 // Only user-initiated interactions
 const VALID_TYPES: RoutineInteractionType[] = [
@@ -13,13 +17,6 @@ const VALID_TYPES: RoutineInteractionType[] = [
   'save',
   'view',
 ]
-
-// Map interaction types to user cache field names
-const CACHE_FIELD_MAP: Record<string, string> = {
-  like: 'likedRoutines',
-  dislike: 'dislikedRoutines',
-  save: 'savedRoutines',
-}
 
 /**
  * POST /api/interactions/routines/[routineId]/[type]
@@ -61,81 +58,28 @@ export async function POST(
     }
     const follicleId = userDoc.data()?.follicleId || ''
 
-    // Views allow multiple, others don't
-    if (type !== 'view') {
-      const existingInteraction = await adminDb
-        .collection('routine_interactions')
-        .where('userId', '==', userId)
-        .where('routineId', '==', routineId)
-        .where('type', '==', type)
-        .limit(1)
-        .get()
+    const exists = await interactionExists(userId, routineId, 'routine', type)
 
-      if (!existingInteraction.empty) {
-        return NextResponse.json(
-          { error: `You already ${type}d this routine` },
-          { status: 409 }
-        )
-      }
+    if (exists) {
+      console.log(`Interaction already exists: ${type} on routine ${routineId}`)
+      return NextResponse.json(
+        {
+          success: true,
+          message: `Already ${type}d`,
+          cached: true,
+        },
+        { status: 208 }
+      )
     }
 
-    // Check for mutual exclusivity (like vs dislike)
-    let oppositeType: string | null = null
-    if (type === 'like') oppositeType = 'dislike'
-    if (type === 'dislike') oppositeType = 'like'
-
-    let oppositeInteractionDoc = null
-
-    if (oppositeType) {
-      const oppositeQuery = await adminDb
-        .collection('routine_interactions')
-        .where('userId', '==', userId)
-        .where('routineId', '==', routineId)
-        .where('type', '==', oppositeType)
-        .limit(1)
-        .get()
-
-      if (!oppositeQuery.empty) {
-        oppositeInteractionDoc = oppositeQuery.docs[0]
-      }
-    }
-
-    // Use batch write for atomic operations
-    const batch = adminDb.batch()
-    const userRef = adminDb.collection('users').doc(userId)
-
-    // Delete opposite interaction if exists (like/dislike mutual exclusivity)
-    if (oppositeInteractionDoc && oppositeType) {
-      batch.delete(oppositeInteractionDoc.ref)
-
-      // Remove from user cache
-      const oppositeField = CACHE_FIELD_MAP[oppositeType]
-      if (oppositeField) {
-        batch.update(userRef, {
-          [oppositeField]: FieldValue.arrayRemove(routineId),
-        })
-      }
-    }
-
-    // Create new interaction
-    const newInteractionRef = adminDb.collection('routine_interactions').doc()
-    batch.set(newInteractionRef, {
+    // Create interaction (handles mutual exclusivity and cache updates)
+    const interactionId = await createInteraction(
       userId,
       routineId,
-      follicleId,
+      'routine',
       type,
-      timestamp: FieldValue.serverTimestamp(),
-    })
-
-    // Update user cache (not for views)
-    const cacheField = CACHE_FIELD_MAP[type]
-    if (cacheField) {
-      batch.update(userRef, {
-        [cacheField]: FieldValue.arrayUnion(routineId),
-      })
-    }
-
-    await batch.commit()
+      follicleId
+    )
 
     // Skip scoring for views (analytics only)
     if (type === 'view') {
@@ -168,7 +112,7 @@ export async function POST(
       {
         success: true,
         message: `Routine ${type}d successfully`,
-        interactionId: newInteractionRef.id,
+        interactionId,
       },
       { status: 201 }
     )
@@ -214,40 +158,15 @@ export async function DELETE(
       )
     }
 
-    // Find the interaction
-    const interactionQuery = await adminDb
-      .collection('routine_interactions')
-      .where('userId', '==', userId)
-      .where('routineId', '==', routineId)
-      .where('type', '==', type)
-      .limit(1)
-      .get()
+    // Delete interaction (handles cache updates)
+    const deleted = await deleteInteraction(userId, routineId, 'routine', type)
 
-    if (interactionQuery.empty) {
+    if (!deleted) {
       return NextResponse.json(
         { error: `No ${type} interaction found for this routine` },
         { status: 404 }
       )
     }
-
-    const interactionDoc = interactionQuery.docs[0]
-
-    // Use batch write for atomic operations
-    const batch = adminDb.batch()
-    const userRef = adminDb.collection('users').doc(userId)
-
-    // Delete interaction
-    batch.delete(interactionDoc.ref)
-
-    // Update user cache (not for views)
-    const cacheField = CACHE_FIELD_MAP[type]
-    if (cacheField) {
-      batch.update(userRef, {
-        [cacheField]: FieldValue.arrayRemove(routineId),
-      })
-    }
-
-    await batch.commit()
 
     // Skip scoring for views (analytics only)
     if (type === 'view') {
@@ -274,6 +193,7 @@ export async function DELETE(
 
     // Invalidate cache
     await invalidateUserScores(userId)
+
     return NextResponse.json(
       {
         success: true,

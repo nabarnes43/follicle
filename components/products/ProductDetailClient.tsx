@@ -36,15 +36,26 @@ export function ProductDetailClient({
 
   const hasTrackedView = useRef(false)
 
-  // Track view once user data is ready
+  // Reset tracking when product changes
+  useEffect(() => {
+    hasTrackedView.current = false
+  }, [product.id])
+
+  // Track view once when user is ready
   useEffect(() => {
     if (isReady && !hasTrackedView.current) {
       hasTrackedView.current = true
+      console.log(
+        'Tracking view for product:',
+        product.id,
+        'isReady:',
+        isReady
+      )
       trackView()
     }
-  }, [isReady, trackView])
+  }, [isReady, trackView, product.id])
 
-  // 👇 NEW: Function to fetch fresh score
+  // Function to fetch fresh score
   const refetchScore = async () => {
     if (!user) return
 
