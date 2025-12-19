@@ -13,7 +13,7 @@ export default async function CategoryProductsPage({
   const { category } = await params
   const user = await getServerUser()
 
-  if (!user?.hairAnalysis || !user?.follicleId) {
+  if (!user?.follicleId) {
     redirect('/analysis')
   }
 

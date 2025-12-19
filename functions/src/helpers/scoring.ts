@@ -2,7 +2,6 @@ import { Product } from '../types/product'
 import { Routine } from '../types/routine'
 import { matchProductsForUser } from '../products/scoring/productMatcher'
 import { matchRoutinesForUser } from '../routines/scoring/routineMatcher'
-import { decodeFollicleIdToAnalysis } from '../shared/follicleId'
 import { MATCH_REASONS_CONFIG } from '../shared/constants'
 
 /**
@@ -57,9 +56,9 @@ export async function fetchRoutineById(
 }
 
 /**
- * Get user's follicleId and decode to HairAnalysis
+ * Get user's follicleId
  */
-export async function getUserHairAnalysis(
+export async function getUserFollicleId(
   userId: string,
   db: FirebaseFirestore.Firestore
 ) {
@@ -75,13 +74,7 @@ export async function getUserHairAnalysis(
     return null
   }
 
-  const hairAnalysis = decodeFollicleIdToAnalysis(follicleId)
-
-  if (!hairAnalysis) {
-    return null
-  }
-
-  return { follicleId, hairAnalysis }
+  return follicleId 
 }
 
 /**
@@ -92,20 +85,17 @@ export async function scoreProductForUser(
   product: Product,
   db: FirebaseFirestore.Firestore
 ): Promise<void> {
-  const userAnalysis = await getUserHairAnalysis(userId, db)
+  const follicleId = await getUserFollicleId(userId, db)
 
-  if (!userAnalysis) {
+  if (!follicleId) {
     console.log(`User ${userId} has no valid follicleId, skipping`)
     return
   }
-
-  const { follicleId, hairAnalysis } = userAnalysis
 
   // If allProducts not provided, we're scoring just one product
   const productToScore = [product]
 
   const scoredProducts = await matchProductsForUser(
-    { hairAnalysis },
     productToScore,
     follicleId,
     db
@@ -159,14 +149,12 @@ export async function scoreRoutineForUser(
   routine: Routine,
   db: FirebaseFirestore.Firestore
 ): Promise<void> {
-  const userAnalysis = await getUserHairAnalysis(userId, db)
+  const follicleId = await getUserFollicleId(userId, db)
 
-  if (!userAnalysis) {
+  if (!follicleId) {
     console.log(`User ${userId} has no valid follicleId, skipping`)
     return
   }
-
-  const { follicleId, hairAnalysis } = userAnalysis
 
   //Fetch only products in this routine
   const productIds = routine.steps
@@ -186,7 +174,6 @@ export async function scoreRoutineForUser(
   )
 
   const scoredRoutines = await matchRoutinesForUser(
-    { hairAnalysis },
     [routine],
     follicleId,
     products,
@@ -253,20 +240,17 @@ export async function scoreAllProductsForUser(
   userId: string,
   db: FirebaseFirestore.Firestore
 ): Promise<void> {
-  const userAnalysis = await getUserHairAnalysis(userId, db)
+  const follicleId = await getUserFollicleId(userId, db)
 
-  if (!userAnalysis) {
+  if (!follicleId) {
     console.log(`User ${userId} has no valid follicleId, skipping`)
     return
   }
-
-  const { follicleId, hairAnalysis } = userAnalysis
 
   const products = await fetchAllProducts(db)
   console.log(`📦 Fetched ${products.length} products for user ${userId}`)
 
   const scoredProducts = await matchProductsForUser(
-    { hairAnalysis },
     products,
     follicleId,
     db
@@ -336,14 +320,12 @@ export async function scoreAllRoutinesForUser(
   userId: string,
   db: FirebaseFirestore.Firestore
 ): Promise<void> {
-  const userAnalysis = await getUserHairAnalysis(userId, db)
+  const follicleId = await getUserFollicleId(userId, db)
 
-  if (!userAnalysis) {
+  if (!follicleId) {
     console.log(`User ${userId} has no valid follicleId, skipping`)
     return
   }
-
-  const { follicleId, hairAnalysis } = userAnalysis
 
   const products = await fetchAllProducts(db)
   const routines = await fetchAllPublicRoutines(db)
@@ -353,7 +335,6 @@ export async function scoreAllRoutinesForUser(
   )
 
   const scoredRoutines = await matchRoutinesForUser(
-    { hairAnalysis },
     routines,
     follicleId,
     products,

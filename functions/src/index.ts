@@ -112,6 +112,7 @@ export const onProductWrite = onDocumentWritten(
 /**
  * When a product interaction is created/deleted, rescore that product for ALL users
  * This handles: like, dislike, save, routine interactions
+ * Skips views but still logs for analytics
  * Ensures product scores stay up-to-date globally
  */
 export const onProductInteractionWrite = onDocumentWritten(
@@ -127,9 +128,18 @@ export const onProductInteractionWrite = onDocumentWritten(
 
     // Get productId from interaction
     const productId = afterData?.productId || beforeData?.productId
+    const interactionType = afterData?.type || beforeData?.type
 
     if (!productId) {
       console.error('No productId found in interaction data')
+      return
+    }
+
+    // Skip views (analytics only, don't trigger global rescore)
+    if (interactionType === 'view') {
+      console.log(
+        `View interaction for product ${productId}, skipping global rescore`
+      )
       return
     }
 
@@ -182,6 +192,118 @@ export const onProductInteractionWrite = onDocumentWritten(
       console.log(`✅ Finished rescoring product ${productId}`)
     } catch (error) {
       console.error(`❌ Error in onProductInteractionWrite:`, error)
+      throw error
+    }
+  }
+)
+
+// ============================================================================
+// ROUTINE INTERACTION TRIGGERS
+// ============================================================================
+
+/**
+ * When a routine interaction is created/deleted, rescore that routine for ALL users
+ * This handles: like, dislike, save, adapt interactions
+ * Skips views but still logs for analytics
+ * Ensures routine scores stay up-to-date globally
+ */
+export const onRoutineInteractionWrite = onDocumentWritten(
+  {
+    document: 'routine_interactions/{interactionId}',
+    memory: '512MiB',
+    timeoutSeconds: 300,
+  },
+  async (event) => {
+    const interactionId = event.params.interactionId
+    const afterData = event.data?.after.data()
+    const beforeData = event.data?.before.data()
+
+    // Get routineId from interaction
+    const routineId = afterData?.routineId || beforeData?.routineId
+    const interactionType = afterData?.type || beforeData?.type
+
+    if (!routineId) {
+      console.error('No routineId found in interaction data')
+      return
+    }
+
+    // Skip views (analytics only, don't trigger global rescore)
+    if (interactionType === 'view') {
+      console.log(
+        `View interaction for routine ${routineId}, skipping global rescore`
+      )
+      return
+    }
+
+    console.log(
+      `Routine interaction ${interactionId} changed for routine ${routineId}`
+    )
+
+    try {
+      // Fetch just this ONE routine
+      const routineDoc = await db.collection('routines').doc(routineId).get()
+
+      if (!routineDoc.exists) {
+        console.error(`Routine ${routineId} not found`)
+        return
+      }
+
+      const routine = { id: routineId, ...routineDoc.data() } as Routine
+
+      // Skip if routine is deleted or private
+      if (routine.deleted_at) {
+        console.log(`Routine ${routineId} is deleted, skipping`)
+        return
+      }
+
+      if (!routine.is_public) {
+        console.log(`Routine ${routineId} is private, skipping global rescore`)
+        // Only score for owner
+        try {
+          await scoreRoutineForUser(routine.user_id, routine, db)
+          console.log(
+            `✅ Rescored private routine for owner ${routine.user_id}`
+          )
+        } catch (error) {
+          console.error(`❌ Error rescoring for owner:`, error)
+        }
+        return
+      }
+
+      console.log(`📋 Fetched routine: ${routine.name}`)
+
+      // Get all users with follicleIds
+      const usersSnapshot = await db
+        .collection('users')
+        .where('follicleId', '!=', null)
+        .get()
+
+      console.log(
+        `👥 Rescoring routine ${routineId} for ${usersSnapshot.size} users`
+      )
+
+      // Score in batches of 10
+      const batchSize = 10
+      const userIds = usersSnapshot.docs.map((doc) => doc.id)
+
+      for (let i = 0; i < userIds.length; i += batchSize) {
+        const batch = userIds.slice(i, i + batchSize)
+
+        await Promise.all(
+          batch.map(async (userId) => {
+            try {
+              await scoreRoutineForUser(userId, routine, db)
+              console.log(`✅ Rescored routine ${routineId} for user ${userId}`)
+            } catch (error) {
+              console.error(`❌ Error rescoring for user ${userId}:`, error)
+            }
+          })
+        )
+      }
+
+      console.log(`✅ Finished rescoring routine ${routineId}`)
+    } catch (error) {
+      console.error(`❌ Error in onRoutineInteractionWrite:`, error)
       throw error
     }
   }

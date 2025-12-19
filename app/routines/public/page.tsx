@@ -6,7 +6,7 @@ import { RoutineGrid } from '@/components/routines/RoutineGrid'
 export default async function PublicRoutinesPage() {
   const user = await getServerUser()
 
-  if (!user?.hairAnalysis || !user?.follicleId) {
+  if (!user?.follicleId) {
     redirect('/analysis')
   }
 

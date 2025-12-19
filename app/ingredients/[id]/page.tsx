@@ -21,7 +21,7 @@ export default async function IngredientDetailPage({
 
   // Fetch products containing this ingredient (if user has analysis)
   const products =
-    user?.userId && user?.hairAnalysis
+    user?.userId && user?.follicleId
       ? await getCachedScoresByIngredient(user.userId, id, { limit: 6 })
       : []
 

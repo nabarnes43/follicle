@@ -6,7 +6,7 @@ import { SavedProductsClient } from '@/components/products/SavedProductsClient'
 export default async function SavedPage() {
   const user = await getServerUser()
 
-  if (!user?.hairAnalysis || !user?.follicleId) {
+  if (!user?.follicleId) {
     redirect('/analysis')
   }
 

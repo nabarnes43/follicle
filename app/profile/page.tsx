@@ -30,10 +30,10 @@ import {
   LogOut,
   UserPlus,
 } from 'lucide-react'
-import { getFollicleIdDescription } from '@/lib/analysis/follicleId'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
+import { decodeFollicleIdForDisplay } from '@/functions/src/shared/follicleId'
 
 function ProfileContent({ userData }: { userData: User }) {
   const router = useRouter()
@@ -69,7 +69,12 @@ function ProfileContent({ userData }: { userData: User }) {
     }
     return map[freq] || freq
   }
-
+  const decoded = userData.follicleId
+    ? decodeFollicleIdForDisplay(userData.follicleId)
+    : null
+  const follicleIdDescription = decoded
+    ? Object.values(decoded).join(' • ')
+    : 'No analysis completed'
   const hair = userData.hairAnalysis
   const isAnonymous = userData.isAnonymous
   const memberSince = userData.createdAt
@@ -159,7 +164,7 @@ function ProfileContent({ userData }: { userData: User }) {
                   {userData.follicleId}
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  {getFollicleIdDescription(userData.follicleId)}
+                  {follicleIdDescription}
                 </p>
               </div>
               <Button variant="outline" size="icon" onClick={copyFollicleId}>

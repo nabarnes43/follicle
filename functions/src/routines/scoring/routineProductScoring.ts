@@ -1,6 +1,5 @@
 import { Routine } from '../../types/routine'
 import { Product } from '../../types/product'
-import { HairAnalysis } from '../../types/user'
 import { matchProductsForUser } from '../../products/scoring/productMatcher'
 import { getStepCategoryWeight } from '../config/stepCategories'
 import { getFrequencyWeight } from '../config/routineWeights'
@@ -12,8 +11,7 @@ import { getFrequencyWeight } from '../config/routineWeights'
 export async function scoreRoutineProducts(
   routine: Routine,
   allProducts: Product[],
-  userHairAnalysis: HairAnalysis,
-  userFollicleId: string,
+  follicleId: string,
   db: FirebaseFirestore.Firestore
 ): Promise<number> {
   let totalWeightedScore = 0
@@ -33,11 +31,9 @@ export async function scoreRoutineProducts(
     }
 
     const scoredProducts = await matchProductsForUser(
-      { hairAnalysis: userHairAnalysis },
       [product],
-      userFollicleId,
+      follicleId,
       db,
-      { limit: 1 }
     )
 
     if (scoredProducts.length === 0) {

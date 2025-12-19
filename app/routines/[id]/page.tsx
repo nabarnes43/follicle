@@ -58,7 +58,7 @@ export default async function RoutineDetailPage({
 
   // Fetch match score if user has analysis
   const matchScore =
-    user?.userId && user?.hairAnalysis && user?.follicleId
+    user?.userId && user?.follicleId
       ? (await getCachedRoutineScoresByIds(user.userId, [id]))[0]
       : null
 

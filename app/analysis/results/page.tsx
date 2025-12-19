@@ -13,10 +13,10 @@ import {
 } from '@/components/ui/card'
 import { Copy, Check } from 'lucide-react'
 import { getUser, linkAnonymousResults } from '@/lib/analysis/analysis'
-import { getFollicleIdDescription } from '@/lib/analysis/follicleId'
 import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { User } from '@/types/user'
+import { decodeFollicleIdForDisplay } from '@/functions/src/shared/follicleId'
 
 export default function AnalysisResultsPage() {
   const searchParams = useSearchParams()
@@ -63,7 +63,7 @@ export default function AnalysisResultsPage() {
     }
     loadUser()
   }, [authUser])
-  
+
   // Handle linking anonymous results after sign in/signup
   useEffect(() => {
     async function handleAccountLink() {
@@ -99,6 +99,11 @@ export default function AnalysisResultsPage() {
       setTimeout(() => setCopied(false), 2000)
     }
   }
+
+  const decoded = follicleId ? decodeFollicleIdForDisplay(follicleId) : null
+  const follicleIdDescription = decoded
+    ? Object.values(decoded).join(' • ')
+    : 'No analysis completed'
 
   if (loading) {
     return (
@@ -136,7 +141,7 @@ export default function AnalysisResultsPage() {
                   {follicleId}
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  {follicleId && getFollicleIdDescription(follicleId)}
+                  {follicleId && follicleIdDescription}
                 </p>
               </div>
               <Button variant="outline" size="icon" onClick={copyFollicleId}>
@@ -240,7 +245,7 @@ export default function AnalysisResultsPage() {
 
         {/* CTA */}
         <div className="flex justify-center gap-4">
-          <Button size="lg" onClick={() => router.push('/recommendations')}>
+          <Button size="lg" onClick={() => router.push('/products')}>
             View Product Recommendations
           </Button>
           <Button size="lg" variant="outline" onClick={() => router.push('/')}>

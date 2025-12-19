@@ -2,7 +2,7 @@
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase/client'
 import { User, HairAnalysis } from '@/types/user'
-import { generateFollicleId, answersToHairAnalysis } from './follicleId'
+import { generateFollicleId } from '@/functions/src/shared/follicleId'
 
 /**
  * Save analysis results
@@ -12,7 +12,22 @@ export async function saveAnalysisResults(
   email: string | undefined,
   answers: Record<string, any>
 ): Promise<string> {
-  const hairAnalysis = answersToHairAnalysis(answers)
+  const hairAnalysis: HairAnalysis = {
+    // Required fields - used for follicleId
+    hairType: answers.hairType,
+    porosity: answers.porosity,
+    density: answers.density,
+    thickness: answers.thickness,
+    damage: answers.damage,
+
+    // Optional fields
+    length: answers.length,
+    scalpType: answers.scalpType,
+    mainGoal: answers.mainGoal,
+    budget: answers.budget,
+    washFrequency: answers.washFrequency,
+  }
+
   const follicleId = generateFollicleId(hairAnalysis)
 
   await setDoc(

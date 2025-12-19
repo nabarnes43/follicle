@@ -1,6 +1,8 @@
 import { Product } from '../../types/product'
-import { HairAnalysis } from '../../types/user'
-import { generateFollicleId, decodeFollicleIdForDisplay } from '../../shared/follicleId'
+import {
+  decodeFollicleIdForDisplay,
+  decodeFollicleIdToAnalysis,
+} from '../../shared/follicleId'
 import { INGREDIENT_PROFILES } from '../config/ingredientProfiles'
 import {
   INGREDIENT_CATEGORY_WEIGHTS,
@@ -14,13 +16,13 @@ import {
  * Uses the "Lego system" - each hair characteristic scores independently
  *
  * @param product - Product to score
- * @param hairAnalysis - User's hair characteristics
+ * @param follicleId - User's hair characteristics
  * @param includeReasons - Whether to generate match reasons (for display)
  * @returns Score from 0.0 to 1.0 and optional match reasons
  */
 export function scoreByIngredients(
   product: Product,
-  hairAnalysis: HairAnalysis,
+  follicleId: string,
   includeReasons: boolean = false
 ): {
   score: number
@@ -48,11 +50,12 @@ export function scoreByIngredients(
   )
   const totalIngredients = productIngredients.length
 
-  // Decode follicle ID to get display-ready names
-  const follicleId = generateFollicleId(hairAnalysis)
-  const decoded = decodeFollicleIdForDisplay(follicleId)
+  // Decode follicle ID
+  const decodedFollicleIdProfiles = decodeFollicleIdToAnalysis(follicleId)
+  // Display names
+  const decodedFollicleIdDisplay = decodeFollicleIdForDisplay(follicleId)
 
-  if (!decoded) {
+  if (!decodedFollicleIdProfiles || !decodedFollicleIdDisplay) {
     // Fallback if decode fails
     if (includeReasons) {
       allReasons.push('⚠️ Could not analyze hair profile')
@@ -68,36 +71,36 @@ export function scoreByIngredients(
     hairType: scoreCategoryMatch(
       productIngredients,
       totalIngredients,
-      INGREDIENT_PROFILES.hairType[hairAnalysis.hairType],
-      decoded.hairType, // "curly hair"
+      INGREDIENT_PROFILES.hairType[decodedFollicleIdProfiles.hairType],
+      decodedFollicleIdDisplay.hairType, // "curly hair"
       includeReasons ? allReasons : null
     ),
     porosity: scoreCategoryMatch(
       productIngredients,
       totalIngredients,
-      INGREDIENT_PROFILES.porosity[hairAnalysis.porosity],
-      decoded.porosity, // "high porosity"
+      INGREDIENT_PROFILES.porosity[decodedFollicleIdProfiles.porosity],
+      decodedFollicleIdDisplay.porosity, // "high porosity"
       includeReasons ? allReasons : null
     ),
     density: scoreCategoryMatch(
       productIngredients,
       totalIngredients,
-      INGREDIENT_PROFILES.density[hairAnalysis.density],
-      decoded.density, // "medium density"
+      INGREDIENT_PROFILES.density[decodedFollicleIdProfiles.density],
+      decodedFollicleIdDisplay.density, // "medium density"
       includeReasons ? allReasons : null
     ),
     thickness: scoreCategoryMatch(
       productIngredients,
       totalIngredients,
-      INGREDIENT_PROFILES.thickness[hairAnalysis.thickness],
-      decoded.thickness, // "fine strands"
+      INGREDIENT_PROFILES.thickness[decodedFollicleIdProfiles.thickness],
+      decodedFollicleIdDisplay.thickness, // "fine strands"
       includeReasons ? allReasons : null
     ),
     damage: scoreCategoryMatch(
       productIngredients,
       totalIngredients,
-      INGREDIENT_PROFILES.damage[hairAnalysis.damage],
-      decoded.damage, // "some damage" or "healthy hair"
+      INGREDIENT_PROFILES.damage[decodedFollicleIdProfiles.damage],
+      decodedFollicleIdDisplay.damage, // "some damage" or "healthy hair"
       includeReasons ? allReasons : null
     ),
   }
@@ -213,142 +216,4 @@ function scoreCategoryMatch(
 
   // Clamp to 0-1 range
   return Math.max(0, Math.min(1, score))
-}
-
-/**
- * Get detailed breakdown of ingredient scoring
- * Useful for debugging and display
- */
-export function getIngredientScoreBreakdown(
-  product: Product,
-  hairAnalysis: HairAnalysis
-): {
-  totalScore: number
-  categoryScores: {
-    hairType: number
-    porosity: number
-    density: number
-    thickness: number
-    damage: number
-  }
-  categoryWeights: typeof INGREDIENT_CATEGORY_WEIGHTS
-  foundIngredients: {
-    beneficial: string[]
-    avoided: string[]
-  }
-} {
-  if (
-    !product.ingredients_normalized ||
-    product.ingredients_normalized.length === 0
-  ) {
-    return {
-      totalScore: SCORING_MODIFIERS.noIngredientData,
-      categoryScores: {
-        hairType: 0.5,
-        porosity: 0.5,
-        density: 0.5,
-        thickness: 0.5,
-        damage: 0.5,
-      },
-      categoryWeights: INGREDIENT_CATEGORY_WEIGHTS,
-      foundIngredients: {
-        beneficial: [],
-        avoided: [],
-      },
-    }
-  }
-
-  const productIngredients = product.ingredients_normalized.map((ing) =>
-    ing.toLowerCase()
-  )
-  const totalIngredients = productIngredients.length
-
-  const categoryScores = {
-    hairType: scoreCategoryMatch(
-      productIngredients,
-      totalIngredients,
-      INGREDIENT_PROFILES.hairType[hairAnalysis.hairType],
-      hairAnalysis.hairType,
-      null
-    ),
-    porosity: scoreCategoryMatch(
-      productIngredients,
-      totalIngredients,
-      INGREDIENT_PROFILES.porosity[hairAnalysis.porosity],
-      hairAnalysis.porosity,
-      null
-    ),
-    density: scoreCategoryMatch(
-      productIngredients,
-      totalIngredients,
-      INGREDIENT_PROFILES.density[hairAnalysis.density],
-      hairAnalysis.density,
-      null
-    ),
-    thickness: scoreCategoryMatch(
-      productIngredients,
-      totalIngredients,
-      INGREDIENT_PROFILES.thickness[hairAnalysis.thickness],
-      hairAnalysis.thickness,
-      null
-    ),
-    damage: scoreCategoryMatch(
-      productIngredients,
-      totalIngredients,
-      INGREDIENT_PROFILES.damage[hairAnalysis.damage],
-      hairAnalysis.damage,
-      null
-    ),
-  }
-
-  const totalScore =
-    categoryScores.hairType * INGREDIENT_CATEGORY_WEIGHTS.hairType +
-    categoryScores.porosity * INGREDIENT_CATEGORY_WEIGHTS.porosity +
-    categoryScores.density * INGREDIENT_CATEGORY_WEIGHTS.density +
-    categoryScores.thickness * INGREDIENT_CATEGORY_WEIGHTS.thickness +
-    categoryScores.damage * INGREDIENT_CATEGORY_WEIGHTS.damage
-
-  // Find all beneficial and avoided ingredients across all categories
-  const allBeneficial = new Set<string>()
-  const allAvoided = new Set<string>()
-
-  Object.entries({
-    hairType: hairAnalysis.hairType,
-    porosity: hairAnalysis.porosity,
-    density: hairAnalysis.density,
-    thickness: hairAnalysis.thickness,
-    damage: hairAnalysis.damage,
-  }).forEach(([category, value]) => {
-    const profile =
-      INGREDIENT_PROFILES[category as keyof typeof INGREDIENT_PROFILES][value]
-    if (profile) {
-      profile.beneficial.forEach((ing) => {
-        if (
-          productIngredients.some((pIng) => pIng.includes(ing.toLowerCase()))
-        ) {
-          allBeneficial.add(ing)
-        }
-      })
-      profile.avoid.forEach((ing) => {
-        if (
-          productIngredients.some((pIng) => pIng.includes(ing.toLowerCase()))
-        ) {
-          allAvoided.add(ing)
-        }
-      })
-    }
-  })
-
-  return {
-    totalScore: Math.max(
-      SCORING_MODIFIERS.minScore,
-      Math.min(SCORING_MODIFIERS.maxScore, totalScore)
-    ),
-    categoryScores,
-    categoryWeights: INGREDIENT_CATEGORY_WEIGHTS,
-    foundIngredients: {
-      beneficial: Array.from(allBeneficial),
-      avoided: Array.from(allAvoided),
-    },
-  }
 }

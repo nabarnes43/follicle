@@ -8,12 +8,12 @@ import { Header } from '@/components/navigation/Header'
  * /products - All products, scored for the user
  *
  * Reads pre-computed scores from users/{userId}/product_scores
- * Scores are computed by Firebase Function when hairAnalysis changes
+ * Scores are computed by Firebase Function when follicleId changes
  */
 export default async function ProductsPage() {
   const user = await getServerUser()
 
-  if (!user?.hairAnalysis || !user?.follicleId) {
+  if (!user?.follicleId) {
     redirect('/analysis')
   }
 

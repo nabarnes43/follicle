@@ -8,7 +8,7 @@ export default async function PrivateRoutinesPage() {
   const user = await getServerUser()
   headers()
 
-  if (!user?.hairAnalysis || !user?.follicleId) {
+  if (!user?.follicleId) {
     redirect('/analysis')
   }
 

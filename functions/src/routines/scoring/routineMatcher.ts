@@ -1,6 +1,5 @@
 import { Routine } from '../../types/routine'
 import { Product } from '../../types/product'
-import { HairAnalysis } from '../../types/user'
 import { RoutineMatchScore } from '../../types/routineMatching'
 import { scoreRoutineProducts } from './routineProductScoring'
 import { scoreRoutineByEngagement } from './routineEngagementScoring'
@@ -11,7 +10,6 @@ import { ROUTINE_ALGORITHM_WEIGHTS } from '../config/routineWeights'
  */
 async function scoreRoutine(
   routine: Routine,
-  hairAnalysis: HairAnalysis,
   follicleId: string,
   allProducts: Product[],
   db: FirebaseFirestore.Firestore
@@ -22,7 +20,6 @@ async function scoreRoutine(
   const productScore = await scoreRoutineProducts(
     routine,
     allProducts,
-    hairAnalysis,
     follicleId,
     db
   )
@@ -57,21 +54,18 @@ async function scoreRoutine(
  * Match routines for a user
  */
 export async function matchRoutinesForUser(
-  user: { hairAnalysis: HairAnalysis },
   routines: Routine[],
   follicleId: string,
   allProducts: Product[],
   db: FirebaseFirestore.Firestore,
-  options: { limit?: number } = {}
 ): Promise<RoutineMatchScore[]> {
-  const { limit = 9999 } = options
 
   const scoredRoutines: RoutineMatchScore[] = []
 
   // Process all routines (small dataset, no batching needed)
   const scores = await Promise.all(
     routines.map((routine) =>
-      scoreRoutine(routine, user.hairAnalysis, follicleId, allProducts, db)
+      scoreRoutine(routine, follicleId, allProducts, db)
     )
   )
 
@@ -81,5 +75,4 @@ export async function matchRoutinesForUser(
 
   return scoredRoutines
     .sort((a, b) => b.totalScore - a.totalScore)
-    .slice(0, limit)
 }
