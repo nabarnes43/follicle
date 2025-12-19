@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { User, ProviderData } from '@/types/user'
+import { updateProfile } from 'firebase/auth'
 
 // Helper typed function
 function getProfileData(providers: ProviderData[]) {
@@ -56,9 +57,7 @@ async function updateUserProfile(firebaseUser: any) {
     userId: firebaseUser.uid,
     email: profile.email,
     photoUrl: profile.photoUrl,
-    displayName: profile.displayName, // Add this
-    follicleId: '',
-    analysisComplete: null,
+    displayName: firebaseUser.displayName || profile.displayName, // Use Firebase Auth displayName first
     isAnonymous: firebaseUser.isAnonymous,
     providerData: providerData,
     lastLoginAt: serverTimestamp(),
@@ -74,6 +73,7 @@ interface SignUpFormProps {
 export default function SignUpForm({ onSuccess }: SignUpFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -129,6 +129,11 @@ export default function SignUpForm({ onSuccess }: SignUpFormProps) {
         const credential = EmailAuthProvider.credential(email, password)
         const result = await linkWithCredential(currentUser, credential)
         console.log('✅ Email linked:', result.user.email)
+        // Set displayName immediately after linking
+        await updateProfile(result.user, { displayName: name.trim() })
+        console.log('✅ Display name set:', name.trim())
+
+        // THEN update Firestore (will sync the displayName)
         await updateUserProfile(result.user)
       } else {
         // Otherwise, create new account
@@ -139,6 +144,11 @@ export default function SignUpForm({ onSuccess }: SignUpFormProps) {
           password
         )
         console.log('✅ Account created:', result.user.email)
+        // Set displayName immediately after account creation
+        await updateProfile(result.user, { displayName: name.trim() })
+        console.log('✅ Display name set:', name.trim())
+
+        // THEN update Firestore (will sync the displayName)
         await updateUserProfile(result.user)
       }
 
@@ -186,6 +196,18 @@ export default function SignUpForm({ onSuccess }: SignUpFormProps) {
       </div>
 
       <form onSubmit={handleEmailSignUp} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="signup-name">Display Name</Label>
+          <Input
+            id="signup-name"
+            type="text"
+            placeholder="Your Display Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="signup-email">Email</Label>
           <Input
