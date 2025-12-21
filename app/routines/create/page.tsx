@@ -1,22 +1,18 @@
-import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedAllScores } from '@/lib/server/productScores'
 import { RoutineForm } from '@/components/routines/RoutineForm'
+import { AnalysisRequired } from '@/components/auth/AnalysisRequired'
 
 export default async function CreateRoutinePage() {
-  // Get authenticated user
   const userData = await getServerUser()
 
-  // Redirect if not authenticated or no follicleId
-  if (!userData) {
-    redirect('/auth/signin')
+  // Check for follicleId (works for both anonymous and authenticated)
+  if (!userData?.follicleId) {
+    return (
+      <AnalysisRequired message="Complete your hair analysis to create personalized routines" />
+    )
   }
 
-  if (!userData.follicleId) {
-    redirect('/quiz')
-  }
-
-  // Fetch user's product scores
   const productScores = await getCachedAllScores(userData.userId)
 
   return (

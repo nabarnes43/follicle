@@ -4,6 +4,7 @@ import { getCachedAllScores } from '@/lib/server/productScores'
 import { adminDb } from '@/lib/firebase/admin'
 import { RoutineForm } from '@/components/routines/RoutineForm'
 import { Routine } from '@/types/routine'
+import { AnalysisRequired } from '@/components/auth/AnalysisRequired'
 
 interface AdaptRoutinePageProps {
   params: {
@@ -16,21 +17,16 @@ export default async function AdaptRoutinePage({
 }: AdaptRoutinePageProps) {
   const { id } = await params
 
-  console.log('Fetching routine with ID:', id)
-
   if (!id || id.length === 0) {
-    notFound() // Show a 404 page if the ID is missing or empty
+    notFound()
   }
 
-  // Get authenticated user
   const userData = await getServerUser()
 
-  if (!userData) {
-    redirect('/auth/signin')
-  }
-
-  if (!userData.follicleId) {
-    redirect('/quiz')
+  if (!userData?.follicleId) {
+    return (
+      <AnalysisRequired message="Complete your hair analysis to adapt routines" />
+    )
   }
 
   // Fetch the source routine

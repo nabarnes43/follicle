@@ -31,6 +31,9 @@ export interface RoutineStep {
   order: number
   step_name: ProductCategory // Must be one of the valid product categories
   product_id: string // Single product ID instead of array
+  product_name: string        
+  product_brand: string      
+  product_image_url: string | null  
   amount?: Amount // Optional amount for this product
   frequency: Frequency
   notes?: string

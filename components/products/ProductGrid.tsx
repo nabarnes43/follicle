@@ -16,6 +16,14 @@ import { Package, Search, X } from 'lucide-react'
 import type { PreComputedProductMatchScore } from '@/types/productMatching'
 import { ProductCardSkeleton } from '@/components/products/ProductCardSkeleton'
 import { useRouter } from 'next/navigation'
+import { PRODUCT_CATEGORIES } from '@/lib/constants/categories'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const INITIAL_DISPLAY_LIMIT = 48
 const LOAD_MORE_INCREMENT = 48
@@ -55,16 +63,20 @@ export function ProductGrid({
 }: ProductGridProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [displayLimit, setDisplayLimit] = useState(INITIAL_DISPLAY_LIMIT)
-  const [selectedMatch, setSelectedMatch] =
-    useState<PreComputedProductMatchScore | null>(null)
-
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  // Filter by search query (client-side)
+  // Filter by search query and category (client-side)
   const { displayedProducts, totalCount } = useMemo(() => {
     let filtered = products
 
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter((m) => m.product.category === selectedCategory)
+    }
+
+    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
@@ -78,12 +90,12 @@ export function ProductGrid({
       displayedProducts: filtered.slice(0, displayLimit),
       totalCount: filtered.length,
     }
-  }, [products, searchQuery, displayLimit])
+  }, [products, searchQuery, selectedCategory, displayLimit])
 
-  // Reset pagination when search changes
+  // Reset pagination when search or category changes
   useEffect(() => {
     setDisplayLimit(INITIAL_DISPLAY_LIMIT)
-  }, [searchQuery])
+  }, [searchQuery, selectedCategory])
 
   // Infinite scroll observer
   useEffect(() => {
@@ -106,9 +118,10 @@ export function ProductGrid({
 
   return (
     <div className="container mx-auto px-4 py-4">
-      {/* Search Bar */}
-      <div className="mb-8">
-        <div className="relative max-w-md">
+      {/* Search Bar & Filters */}
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row">
+        {/* Search Input */}
+        <div className="relative flex-1">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             type="text"
@@ -128,6 +141,21 @@ export function ProductGrid({
             </Button>
           )}
         </div>
+
+        {/* Category Dropdown */}
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {PRODUCT_CATEGORIES.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Skeleton loading state */}

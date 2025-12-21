@@ -3,13 +3,16 @@ import { getServerUser } from '@/lib/server/auth'
 import { getCachedRoutineScoresByIds } from '@/lib/server/routineScores'
 import { PrivateRoutinesClient } from '@/components/routines/PrivateRoutinesClient'
 import { headers } from 'next/headers'
+import { AnalysisRequired } from '@/components/auth/AnalysisRequired'
 
 export default async function PrivateRoutinesPage() {
   const user = await getServerUser()
   headers()
 
   if (!user?.follicleId) {
-    redirect('/analysis')
+    return (
+      <AnalysisRequired message="Complete your hair analysis to manage your routines" />
+    )
   }
 
   const routineIds = {

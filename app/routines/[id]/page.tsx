@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
-import { adminDb } from '@/lib/firebase/admin'
+import { getCachedRoutineById } from '@/lib/server/routines'
 import {
   getCachedRoutineScoresByIds,
   serializeRoutine,
@@ -8,6 +8,8 @@ import {
 import { Routine } from '@/types/routine'
 import { RoutineDetailClient } from '../../../components/routines/RoutineDetailClient'
 import { getCachedScoresByIds } from '@/lib/server/productScores'
+import { getCachedProductsByIds } from '@/lib/server/products'
+import { adminDb } from '@/lib/firebase/admin'
 
 export default async function RoutineDetailPage({
   params,
@@ -17,16 +19,14 @@ export default async function RoutineDetailPage({
   const { id } = await params
   const user = await getServerUser()
 
-  // Fetch routine directly
-  const routineDoc = await adminDb.collection('routines').doc(id).get()
+  // Fetch routine from public cache
+  const routine = await getCachedRoutineById(id)
 
-  if (!routineDoc.exists) {
+  if (!routine) {
     notFound()
   }
 
-  const routine = { id: routineDoc.id, ...routineDoc.data() } as Routine
-
-  // Check privacy
+  // Check privacy - if not public and user doesn't own it, redirect
   if (!routine.is_public && routine.user_id !== user?.userId) {
     redirect('/routines/public')
   }
@@ -37,7 +37,7 @@ export default async function RoutineDetailPage({
     ? authorDoc.data()?.displayName || 'Anonymous'
     : 'Anonymous'
 
-  // Fetch adapted-from author if exists should be stored later
+  // Fetch adapted-from author if exists
   let adaptedFromAuthor: string | null = null
   if (routine.adaptedFrom) {
     const sourceDoc = await adminDb
@@ -56,25 +56,29 @@ export default async function RoutineDetailPage({
     }
   }
 
-  // Fetch match score if user has analysis
-  const matchScore =
-    user?.userId && user?.follicleId
-      ? (await getCachedRoutineScoresByIds(user.userId, [id]))[0]
-      : null
-
   const productIds = routine.steps
     .map((step) => step.product_id)
     .filter((id): id is string => !!id)
 
-  // Fetch product data from scores (includes name, brand, image_url)
-  const productScores = user?.userId
-    ? await getCachedScoresByIds(user.userId, productIds)
-    : []
+  // Fetch match score and products if user has analysis
+  let matchScore = null
+  let productsMap = {}
 
-  // Convert to simple Object for lookup
-  const productsMap = Object.fromEntries(
-    productScores.map((score) => [score.product.id, score.product])
-  )
+  if (user?.userId && user?.follicleId) {
+    // Authenticated: fetch scored products and routine score
+    matchScore =
+      (await getCachedRoutineScoresByIds(user.userId, [id]))[0] || null
+    const productScores = await getCachedScoresByIds(user.userId, productIds)
+    productsMap = Object.fromEntries(
+      productScores.map((score) => [score.product.id, score.product])
+    )
+  } else {
+    // Not authenticated: fetch products without scores
+    const products = await getCachedProductsByIds(productIds)
+    productsMap = Object.fromEntries(
+      products.map((product) => [product.id, product])
+    )
+  }
 
   return (
     <RoutineDetailClient

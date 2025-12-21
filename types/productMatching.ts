@@ -13,12 +13,12 @@ export interface ProductCardData {
 /** Pre-computed score from Firestore subcollection */
 export interface PreComputedProductMatchScore {
   product: ProductCardData
-  totalScore: number
-  breakdown: {
+  totalScore?: number
+  breakdown?: {
     ingredientScore: number
     engagementScore: number
   }
-  matchReasons: string[]
+  matchReasons?: string[]
 }
 
 /**

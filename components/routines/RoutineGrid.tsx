@@ -20,12 +20,14 @@ interface RoutineGridProps {
   routines: PreComputedRoutineMatchScore[]
   showMatchScore?: boolean
   loading?: boolean
+  hideSaveButton?: boolean
 }
 
 export function RoutineGrid({
   routines,
   showMatchScore = true,
   loading = false,
+  hideSaveButton = false,
 }: RoutineGridProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
@@ -112,6 +114,7 @@ export function RoutineGrid({
               routineScore={score}
               showMatchScore={showMatchScore}
               onView={() => handleView(score.routine.id)}
+              hideSaveButton={hideSaveButton}
             />
           ))}
         </div>

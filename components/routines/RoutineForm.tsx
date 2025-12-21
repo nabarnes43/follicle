@@ -87,6 +87,9 @@ export function RoutineForm({
       order: routine.steps.length + 1,
       step_name: 'Shampoos' as any,
       product_id: '',
+      product_name: '',
+      product_brand: '',
+      product_image_url: null,
       amount: undefined,
       frequency: { interval: 1, unit: 'day' },
       notes: '',
@@ -97,6 +100,19 @@ export function RoutineForm({
 
   const handleUpdateStep = (index: number, updatedStep: RoutineStep) => {
     const newSteps = [...routine.steps]
+
+    // If product changed, update product metadata
+    if (updatedStep.product_id !== newSteps[index].product_id) {
+      const product = productScores.find(
+        (p) => p.product.id === updatedStep.product_id
+      )
+      if (product) {
+        updatedStep.product_name = product.product.name
+        updatedStep.product_brand = product.product.brand
+        updatedStep.product_image_url = product.product.image_url
+      }
+    }
+
     newSteps[index] = updatedStep
     setRoutine({ ...routine, steps: newSteps })
   }

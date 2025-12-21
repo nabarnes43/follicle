@@ -1,8 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
-import { adminDb } from '@/lib/firebase/admin'
-import { getCachedScoresByIds, serializeProduct } from '@/lib/server/productScores'
-import { Product } from '@/types/product'
+import { getCachedProductById } from '@/lib/server/products'
+import { getCachedScoresByIds } from '@/lib/server/productScores'
 import { ProductDetailClient } from '../../../components/products/ProductDetailClient'
 
 export default async function ProductDetailPage({
@@ -13,22 +12,18 @@ export default async function ProductDetailPage({
   const { id } = await params
   const user = await getServerUser()
 
-  // Fetch product
-  const productDoc = await adminDb.collection('products').doc(id).get()
+  // Fetch product from public collection
+  const product = await getCachedProductById(id)
 
-  if (!productDoc.exists) {
+  if (!product) {
     notFound()
   }
 
-  const product = serializeProduct({
-    id: productDoc.id,
-    ...productDoc.data(),
-  }) as Product
-
-  // Fetch score if user logged in (includes matchReasons)
-  const productScore = user?.userId
-    ? (await getCachedScoresByIds(user.userId, [id]))[0] || null
-    : null
+  // Fetch score only if user has analysis
+  const productScore =
+    user?.userId && user?.follicleId
+      ? (await getCachedScoresByIds(user.userId, [id]))[0] || null
+      : null
 
   return <ProductDetailClient product={product} productScore={productScore} />
 }

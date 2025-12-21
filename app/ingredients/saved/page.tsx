@@ -2,12 +2,16 @@ import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedIngredientsByIds } from '@/lib/server/ingredients'
 import { SavedIngredientsClient } from '@/components/ingredients/SavedIngredientsClient'
+import { AnalysisRequired } from '@/components/auth/AnalysisRequired'
 
 export default async function SavedIngredientsPage() {
   const user = await getServerUser()
 
-  if (!user?.userId) {
-    redirect('/login')
+  // Check for follicleId (works for both anonymous and authenticated)
+  if (!user?.follicleId) {
+    return (
+      <AnalysisRequired message="Complete your hair analysis to create personalized routines" />
+    )
   }
 
   const ingredientIds = {

@@ -86,7 +86,7 @@ export function RoutineCard({
             {showMatchScore && (
               <div className="text-center">
                 <p className="text-primary text-md leading-none font-semibold">
-                  {Math.round(totalScore * 100)}%
+                  {totalScore && `${Math.round(totalScore * 100)}%`}
                 </p>
                 <p className="text-muted-foreground text-[9px] leading-tight">
                   Match

@@ -45,12 +45,7 @@ export function ProductDetailClient({
   useEffect(() => {
     if (isReady && !hasTrackedView.current) {
       hasTrackedView.current = true
-      console.log(
-        'Tracking view for product:',
-        product.id,
-        'isReady:',
-        isReady
-      )
+      console.log('Tracking view for product:', product.id, 'isReady:', isReady)
       trackView()
     }
   }, [isReady, trackView, product.id])
@@ -97,7 +92,7 @@ export function ProductDetailClient({
     await refetchScore()
   }
 
-  const scorePercent = productScore
+  const scorePercent = productScore?.totalScore
     ? Math.round(productScore.totalScore * 100)
     : null
 
@@ -129,20 +124,22 @@ export function ProductDetailClient({
           </span>
         </div>
       </div>
-
       {/* Match Reasons */}
-      {productScore && productScore.matchReasons.length > 0 && (
-        <div className="mb-6 flex flex-wrap gap-2">
-          {productScore.matchReasons.map((reason, idx) => (
-            <div
-              key={idx}
-              className="bg-muted text-muted-foreground rounded-md px-3 py-1.5 text-sm"
-            >
-              {reason}
-            </div>
-          ))}
-        </div>
-      )}
+      {productScore &&
+        productScore.totalScore !== undefined &&
+        productScore.matchReasons &&
+        productScore.matchReasons.length > 0 && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {productScore.matchReasons.map((reason, idx) => (
+              <div
+                key={idx}
+                className="bg-muted text-muted-foreground rounded-md px-3 py-1.5 text-sm"
+              >
+                {reason}
+              </div>
+            ))}
+          </div>
+        )}
 
       {/* Product Image */}
       <div className="mb-6 flex aspect-square max-w-md items-center justify-center overflow-hidden rounded-lg bg-white">
@@ -157,41 +154,43 @@ export function ProductDetailClient({
         )}
       </div>
 
-      {/* Interaction Buttons */}
-      <div className="mb-8 flex gap-2">
-        <Button
-          onClick={handleLike}
-          disabled={isLoading || !isReady || isRefreshing}
-          variant={interactions.like ? 'default' : 'outline'}
-        >
-          <Heart
-            className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
-          />
-          {interactions.like ? 'Liked' : 'Like'}
-        </Button>
+      {/* Interaction Buttons - Only show if user has completed analysis */}
+      {productScore && (
+        <div className="mb-8 flex gap-2">
+          <Button
+            onClick={handleLike}
+            disabled={isLoading || !isReady || isRefreshing}
+            variant={interactions.like ? 'default' : 'outline'}
+          >
+            <Heart
+              className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
+            />
+            {interactions.like ? 'Liked' : 'Like'}
+          </Button>
 
-        <Button
-          onClick={handleDislike}
-          disabled={isLoading || !isReady || isRefreshing}
-          variant={interactions.dislike ? 'destructive' : 'outline'}
-        >
-          <ThumbsDown
-            className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
-          />
-          {interactions.dislike ? 'Disliked' : 'Dislike'}
-        </Button>
+          <Button
+            onClick={handleDislike}
+            disabled={isLoading || !isReady || isRefreshing}
+            variant={interactions.dislike ? 'destructive' : 'outline'}
+          >
+            <ThumbsDown
+              className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
+            />
+            {interactions.dislike ? 'Disliked' : 'Dislike'}
+          </Button>
 
-        <Button
-          onClick={handleSave}
-          disabled={isLoading || !isReady || isRefreshing}
-          variant={interactions.save ? 'default' : 'outline'}
-        >
-          <Bookmark
-            className={`mr-2 h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
-          />
-          {interactions.save ? 'Saved' : 'Save'}
-        </Button>
-      </div>
+          <Button
+            onClick={handleSave}
+            disabled={isLoading || !isReady || isRefreshing}
+            variant={interactions.save ? 'default' : 'outline'}
+          >
+            <Bookmark
+              className={`mr-2 h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
+            />
+            {interactions.save ? 'Saved' : 'Save'}
+          </Button>
+        </div>
+      )}
 
       {/* Description */}
       {product.description && (

@@ -22,13 +22,13 @@ import { ProductCard } from '@/components/products/ProductCard'
 interface IngredientDetailClientProps {
   ingredient: Ingredient
   products: PreComputedProductMatchScore[]
-  userId?: string
+  hideSaveButton?: boolean
 }
 
 export function IngredientDetailClient({
   ingredient,
   products,
-  userId,
+  hideSaveButton = false,
 }: IngredientDetailClientProps) {
   const router = useRouter()
   const {
@@ -108,57 +108,59 @@ export function IngredientDetailClient({
 
           {/* Interaction Buttons & Product Count */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Buttons on the left */}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={toggleLike}
-                disabled={interactionLoading || !isReady}
-                variant={interactions.like ? 'default' : 'outline'}
-                size="sm"
-              >
-                <ThumbsUp
-                  className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
-                />
-                {interactions.like ? 'Liked' : 'Like'}
-              </Button>
+            {/* Buttons on the left - Only show if hideSaveButton is false */}
+            {!hideSaveButton && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={toggleLike}
+                  disabled={interactionLoading || !isReady}
+                  variant={interactions.like ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <ThumbsUp
+                    className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
+                  />
+                  {interactions.like ? 'Liked' : 'Like'}
+                </Button>
 
-              <Button
-                onClick={toggleDislike}
-                disabled={interactionLoading || !isReady}
-                variant={interactions.dislike ? 'destructive' : 'outline'}
-                size="sm"
-              >
-                <ThumbsDown
-                  className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
-                />
-                {interactions.dislike ? 'Disliked' : 'Dislike'}
-              </Button>
+                <Button
+                  onClick={toggleDislike}
+                  disabled={interactionLoading || !isReady}
+                  variant={interactions.dislike ? 'destructive' : 'outline'}
+                  size="sm"
+                >
+                  <ThumbsDown
+                    className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
+                  />
+                  {interactions.dislike ? 'Disliked' : 'Dislike'}
+                </Button>
 
-              <Button
-                onClick={toggleAvoid}
-                disabled={interactionLoading || !isReady}
-                variant={interactions.avoid ? 'destructive' : 'outline'}
-                size="sm"
-              >
-                <Ban className="mr-2 h-4 w-4" />
-                {interactions.avoid ? 'Avoiding' : 'Avoid'}
-              </Button>
+                <Button
+                  onClick={toggleAvoid}
+                  disabled={interactionLoading || !isReady}
+                  variant={interactions.avoid ? 'destructive' : 'outline'}
+                  size="sm"
+                >
+                  <Ban className="mr-2 h-4 w-4" />
+                  {interactions.avoid ? 'Avoiding' : 'Avoid'}
+                </Button>
 
-              <Button
-                onClick={toggleAllergic}
-                disabled={interactionLoading || !isReady}
-                variant={interactions.allergic ? 'destructive' : 'outline'}
-                size="sm"
-              >
-                <AlertTriangle
-                  className={`mr-2 h-4 w-4 ${interactions.allergic ? 'fill-current' : ''}`}
-                />
-                {interactions.allergic ? 'Allergic' : 'Mark Allergic'}
-              </Button>
-            </div>
+                <Button
+                  onClick={toggleAllergic}
+                  disabled={interactionLoading || !isReady}
+                  variant={interactions.allergic ? 'destructive' : 'outline'}
+                  size="sm"
+                >
+                  <AlertTriangle
+                    className={`mr-2 h-4 w-4 ${interactions.allergic ? 'fill-current' : ''}`}
+                  />
+                  {interactions.allergic ? 'Allergic' : 'Mark Allergic'}
+                </Button>
+              </div>
+            )}
 
-            {/* Product count on the right */}
-            <span className="text-muted-foreground text-sm">
+            {/* Product count on the right - Always visible */}
+            <span className="text-muted-foreground ml-auto text-sm">
               Found in {ingredient.product_count?.toLocaleString() ?? 0}{' '}
               products
             </span>
@@ -246,6 +248,7 @@ export function IngredientDetailClient({
                     key={score.product.id}
                     product={score.product}
                     matchScore={score.totalScore}
+                    hideSaveButton={hideSaveButton}
                   />
                 ))}
               </div>
@@ -269,17 +272,13 @@ export function IngredientDetailClient({
           </Card>
         )}
 
-        {/* Show message if no products (user not logged in or no analysis) */}
-        {products.length === 0 && !userId && (
+        {/* Show message if no products at all */}
+        {products.length === 0 && (
           <Card>
             <CardContent className="p-6 text-center">
               <p className="text-muted-foreground">
-                Complete your hair analysis to see products containing this
-                ingredient
+                No products found containing this ingredient
               </p>
-              <Button onClick={() => router.push('/analysis')} className="mt-4">
-                Take Hair Analysis
-              </Button>
             </CardContent>
           </Card>
         )}

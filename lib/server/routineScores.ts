@@ -110,7 +110,7 @@ export async function getCachedRoutineScoresByIds(
     }
   }
 
-  return scores.sort((a, b) => b.totalScore - a.totalScore)
+  return scores.sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0))
 }
 
 /**

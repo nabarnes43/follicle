@@ -22,12 +22,12 @@ export interface PreComputedRoutineMatchScore {
     userId: string
     steps: PreComputedRoutineStep[]
   }
-  totalScore: number
-  breakdown: {
+  totalScore?: number
+  breakdown?: {
     productScore: number
     engagementScore: number
   }
-  matchReasons: string[]
+  matchReasons?: string[]
 }
 
 /**

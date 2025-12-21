@@ -210,7 +210,7 @@ export function RoutineDetailClient({
             )}
 
             {/* Match Score Badge - Inline with title */}
-            {matchScore && (
+            {matchScore && matchScore.totalScore !== undefined && (
               <div className="bg-primary/10 flex items-center gap-1.5 rounded-full px-3 py-1">
                 <span className="text-primary text-sm font-semibold">
                   {Math.round(matchScore.totalScore * 100)}%
@@ -219,106 +219,109 @@ export function RoutineDetailClient({
               </div>
             )}
           </div>
-
           {/* Match Reasons as Chips - Only if exists */}
-          {matchScore && matchScore.matchReasons.length > 0 && (
-            <div className="mb-4 flex flex-wrap gap-2">
-              {matchScore.matchReasons.slice(0, 5).map((reason, idx) => (
-                <div
-                  key={idx}
-                  className="bg-muted text-muted-foreground rounded-md px-3 py-1.5 text-xs"
-                >
-                  {reason}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Interaction Buttons Row */}
-          <div className="mb-4 flex items-center justify-between gap-4">
-            {/* Left: Like, Dislike, Save, Adapt/Edit */}
-            <div className="flex gap-2">
-              <Button
-                onClick={handleLike}
-                disabled={interactionLoading || isRefreshing}
-                variant={interactions.like ? 'default' : 'outline'}
-                size="sm"
-              >
-                <Heart
-                  className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
-                />
-                {interactions.like ? 'Liked' : 'Like'}
-              </Button>
-
-              <Button
-                onClick={handleDislike}
-                disabled={interactionLoading || isRefreshing}
-                variant={interactions.dislike ? 'destructive' : 'outline'}
-                size="sm"
-              >
-                <ThumbsDown
-                  className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
-                />
-                {interactions.dislike ? 'Disliked' : 'Dislike'}
-              </Button>
-
-              <Button
-                onClick={handleSave}
-                disabled={interactionLoading || isRefreshing}
-                variant={interactions.save ? 'default' : 'outline'}
-                size="sm"
-              >
-                <Bookmark
-                  className={`mr-2 h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
-                />
-                {interactions.save ? 'Saved' : 'Save'}
-              </Button>
-
-              {/* Show Adapt button if NOT owner */}
-              {!isOwner && routine.id && (
-                <Button
-                  onClick={() => router.push(`/routines/${routine.id}/adapt`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Adapt
-                </Button>
-              )}
-
-              {/* Show Edit button if owner */}
-              {isOwner && (
-                <Button
-                  onClick={() => router.push(`/routines/${routine.id}/edit`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
-              )}
-            </div>
-
-            {/* Right: Share & Delete (only if owner) */}
-            {isOwner && (
-              <div className="flex gap-2">
-                {routine.is_public && (
-                  <Button onClick={handleShare} variant="outline" size="sm">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Share
-                  </Button>
-                )}
-                <Button
-                  onClick={() => setDeleteDialogOpen(true)}
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
+          {matchScore &&
+            matchScore.totalScore !== undefined &&
+            matchScore.matchReasons &&
+            matchScore.matchReasons.length > 0 && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {matchScore.matchReasons.slice(0, 5).map((reason, idx) => (
+                  <div
+                    key={idx}
+                    className="bg-muted text-muted-foreground rounded-md px-3 py-1.5 text-xs"
+                  >
+                    {reason}
+                  </div>
+                ))}
               </div>
             )}
-          </div>
+          {/* Interaction Buttons Row - Only show if user has completed analysis */}
+          {matchScore && (
+            <div className="mb-4 flex items-center justify-between gap-4">
+              {/* Left: Like, Dislike, Save, Adapt/Edit */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleLike}
+                  disabled={interactionLoading || isRefreshing || !isReady}
+                  variant={interactions.like ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <Heart
+                    className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
+                  />
+                  {interactions.like ? 'Liked' : 'Like'}
+                </Button>
+
+                <Button
+                  onClick={handleDislike}
+                  disabled={interactionLoading || isRefreshing || !isReady}
+                  variant={interactions.dislike ? 'destructive' : 'outline'}
+                  size="sm"
+                >
+                  <ThumbsDown
+                    className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
+                  />
+                  {interactions.dislike ? 'Disliked' : 'Dislike'}
+                </Button>
+
+                <Button
+                  onClick={handleSave}
+                  disabled={interactionLoading || isRefreshing || !isReady}
+                  variant={interactions.save ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <Bookmark
+                    className={`mr-2 h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
+                  />
+                  {interactions.save ? 'Saved' : 'Save'}
+                </Button>
+
+                {/* Show Adapt button if NOT owner */}
+                {!isOwner && routine.id && (
+                  <Button
+                    onClick={() => router.push(`/routines/${routine.id}/adapt`)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Adapt
+                  </Button>
+                )}
+
+                {/* Show Edit button if owner */}
+                {isOwner && (
+                  <Button
+                    onClick={() => router.push(`/routines/${routine.id}/edit`)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+
+              {/* Right: Share & Delete (only if owner) */}
+              {isOwner && (
+                <div className="flex gap-2">
+                  {routine.is_public && (
+                    <Button onClick={handleShare} variant="outline" size="sm">
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Share
+                    </Button>
+                  )}
+                  <Button
+                    onClick={() => setDeleteDialogOpen(true)}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Metadata */}
           <p className="text-sm text-gray-600">

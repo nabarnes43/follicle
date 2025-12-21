@@ -2,12 +2,16 @@ import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedScoresByIds } from '@/lib/server/productScores'
 import { SavedProductsClient } from '@/components/products/SavedProductsClient'
+import { AnalysisRequired } from '@/components/auth/AnalysisRequired'
 
 export default async function SavedPage() {
   const user = await getServerUser()
 
+  // Check for follicleId (works for both anonymous and authenticated)
   if (!user?.follicleId) {
-    redirect('/analysis')
+    return (
+      <AnalysisRequired message="Complete your hair analysis to create personalized routines" />
+    )
   }
 
   const productIds = {
