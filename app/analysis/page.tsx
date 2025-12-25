@@ -14,10 +14,17 @@ const QUESTIONS_PER_PAGE = 5
 
 export default function AnalysisPage() {
   const [currentPage, setCurrentPage] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, any>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
   const { user } = useAuth()
+  const [answers, setAnswers] = useState<Record<string, any>>(() => {
+    // Check if we are in the browser
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('analysisAnswers')
+      return saved ? JSON.parse(saved) : {}
+    }
+    return {}
+  })
 
   const totalPages = Math.ceil(
     SHORT_ANALYSIS_QUESTIONS.length / QUESTIONS_PER_PAGE
@@ -28,12 +35,6 @@ export default function AnalysisPage() {
     SHORT_ANALYSIS_QUESTIONS.length
   )
   const currentQuestions = SHORT_ANALYSIS_QUESTIONS.slice(startIdx, endIdx)
-
-  // Load from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('analysisAnswers')
-    if (saved) setAnswers(JSON.parse(saved))
-  }, [])
 
   // Save to localStorage
   useEffect(() => {
@@ -76,17 +77,6 @@ export default function AnalysisPage() {
       console.log('7. Calling saveAnalysisResults...')
       const follicleId = await saveAnalysisResults(user.uid, email, answers)
       console.log('8. Got follicleId:', follicleId)
-
-      // Invalidate cached product scores so user gets fresh recommendations
-      console.log('9. Invalidating cached scores...')
-      const token = await user.getIdToken()
-      await fetch('/api/revalidate-scores', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
       localStorage.removeItem('analysisAnswers')
       console.log('10. Navigating to results...')
       router.push(`/analysis/results?follicleId=${follicleId}`)

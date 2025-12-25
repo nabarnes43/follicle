@@ -74,7 +74,7 @@ export async function getUserFollicleId(
     return null
   }
 
-  return follicleId 
+  return follicleId
 }
 
 /**
@@ -250,31 +250,47 @@ export async function scoreAllProductsForUser(
   const products = await fetchAllProducts(db)
   console.log(`📦 Fetched ${products.length} products for user ${userId}`)
 
-  const scoredProducts = await matchProductsForUser(
-    products,
-    follicleId,
-    db
-  )
+  const scoredProducts = await matchProductsForUser(products, follicleId, db)
 
-  // Delete existing scores
   const scoresRef = db
     .collection('users')
     .doc(userId)
     .collection('product_scores')
 
+  // ✅ DELETE OLD SCORES: Use explicit batching
   const existing = await scoresRef.get()
-  const deleteBatch = db.batch()
-  existing.docs.forEach((doc) => deleteBatch.delete(doc.ref))
   if (!existing.empty) {
-    await deleteBatch.commit()
+    console.log(`🗑️ Deleting ${existing.docs.length} old scores...`)
+
+    const deleteBatches: FirebaseFirestore.WriteBatch[] = []
+    let deleteBatch = db.batch()
+    let deleteCount = 0
+
+    existing.docs.forEach((doc) => {
+      deleteBatch.delete(doc.ref)
+      deleteCount++
+
+      if (deleteCount === 500) {
+        deleteBatches.push(deleteBatch)
+        deleteBatch = db.batch()
+        deleteCount = 0
+      }
+    })
+
+    if (deleteCount > 0) {
+      deleteBatches.push(deleteBatch)
+    }
+
+    await Promise.all(deleteBatches.map((b) => b.commit()))
+    console.log(`✅ Deleted ${existing.docs.length} old scores`)
   }
 
-  // Write new scores in batches
+  // ✅ WRITE NEW SCORES: Use explicit batching
   const writeBatches: FirebaseFirestore.WriteBatch[] = []
   let writeBatch = db.batch()
   let writeCount = 0
 
-  scoredProducts.forEach((item, index) => {
+  scoredProducts.forEach((item) => {
     const docRef = scoresRef.doc(item.product.id)
 
     writeBatch.set(docRef, {
@@ -307,10 +323,25 @@ export async function scoreAllProductsForUser(
     writeBatches.push(writeBatch)
   }
 
+  console.log(
+    `📝 Writing ${scoredProducts.length} scores in ${writeBatches.length} batches...`
+  )
   await Promise.all(writeBatches.map((b) => b.commit()))
+
+  // ✅ Verify count
+  const finalCount = await scoresRef.count().get()
+  const actualCount = finalCount.data().count
+
   console.log(
     `✅ Wrote ${scoredProducts.length} product scores for user ${userId}`
   )
+  console.log(`📊 Verified: ${actualCount} scores in database`)
+
+  if (actualCount !== scoredProducts.length) {
+    console.error(
+      `⚠️ MISMATCH: Expected ${scoredProducts.length}, got ${actualCount}`
+    )
+  }
 }
 
 /**
@@ -341,25 +372,45 @@ export async function scoreAllRoutinesForUser(
     db
   )
 
-  // Delete existing scores
   const scoresRef = db
     .collection('users')
     .doc(userId)
     .collection('routine_scores')
 
+  // ✅ DELETE OLD SCORES: Use explicit batching
   const existing = await scoresRef.get()
-  const deleteBatch = db.batch()
-  existing.docs.forEach((doc) => deleteBatch.delete(doc.ref))
   if (!existing.empty) {
-    await deleteBatch.commit()
+    console.log(`🗑️ Deleting ${existing.docs.length} old routine scores...`)
+
+    const deleteBatches: FirebaseFirestore.WriteBatch[] = []
+    let deleteBatch = db.batch()
+    let deleteCount = 0
+
+    existing.docs.forEach((doc) => {
+      deleteBatch.delete(doc.ref)
+      deleteCount++
+
+      if (deleteCount === 500) {
+        deleteBatches.push(deleteBatch)
+        deleteBatch = db.batch()
+        deleteCount = 0
+      }
+    })
+
+    if (deleteCount > 0) {
+      deleteBatches.push(deleteBatch)
+    }
+
+    await Promise.all(deleteBatches.map((b) => b.commit()))
+    console.log(`✅ Deleted ${existing.docs.length} old routine scores`)
   }
 
-  // Write new scores in batches
+  // ✅ WRITE NEW SCORES: Use explicit batching
   const writeBatches: FirebaseFirestore.WriteBatch[] = []
   let writeBatch = db.batch()
   let writeCount = 0
 
-  scoredRoutines.forEach((item, index) => {
+  scoredRoutines.forEach((item) => {
     const docRef = scoresRef.doc(item.routine.id)
 
     writeBatch.set(docRef, {
@@ -402,8 +453,23 @@ export async function scoreAllRoutinesForUser(
     writeBatches.push(writeBatch)
   }
 
+  console.log(
+    `📝 Writing ${scoredRoutines.length} routine scores in ${writeBatches.length} batches...`
+  )
   await Promise.all(writeBatches.map((b) => b.commit()))
+
+  // ✅ Verify count
+  const finalCount = await scoresRef.count().get()
+  const actualCount = finalCount.data().count
+
   console.log(
     `✅ Wrote ${scoredRoutines.length} routine scores for user ${userId}`
   )
+  console.log(`📊 Verified: ${actualCount} routine scores in database`)
+
+  if (actualCount !== scoredRoutines.length) {
+    console.error(
+      `⚠️ ROUTINE MISMATCH: Expected ${scoredRoutines.length}, got ${actualCount}`
+    )
+  }
 }

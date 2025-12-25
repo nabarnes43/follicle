@@ -59,7 +59,9 @@ export default function ProfileContent({ userData }: ProfileContentProps) {
 
   const handleRetakeAnalysis = () => {
     setShowRetakeDialog(false)
+    localStorage.removeItem('analysisAnswers')
     router.push('/analysis')
+    window.location.href = '/analysis'
   }
 
   // Format wash frequency: "every2-3" → "Every 2-3 days"
