@@ -7,7 +7,10 @@ export default async function ProfilePage() {
 
   if (!userData?.follicleId) {
     return (
-      <AnalysisRequired message="Complete your hair analysis to view your profile" />
+      <AnalysisRequired
+        message="Complete your hair analysis to view your profile"
+        showSignInPrompt={userData?.isAnonymous}
+      />
     )
   }
 

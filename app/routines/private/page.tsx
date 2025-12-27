@@ -11,7 +11,10 @@ export default async function PrivateRoutinesPage() {
 
   if (!user?.follicleId) {
     return (
-      <AnalysisRequired message="Complete your hair analysis to manage your routines" />
+      <AnalysisRequired
+        message="Complete your hair analysis to manage your routines"
+        showSignInPrompt={user?.isAnonymous}
+      />
     )
   }
 

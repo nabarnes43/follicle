@@ -10,7 +10,10 @@ export default async function SavedPage() {
   // Check for follicleId (works for both anonymous and authenticated)
   if (!user?.follicleId) {
     return (
-      <AnalysisRequired message="Complete your hair analysis to create personalized routines" />
+      <AnalysisRequired
+        message="Complete your hair analysis to manage your products"
+        showSignInPrompt={user?.isAnonymous}
+      />
     )
   }
 

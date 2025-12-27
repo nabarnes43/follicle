@@ -9,7 +9,10 @@ export default async function CreateRoutinePage() {
   // Check for follicleId (works for both anonymous and authenticated)
   if (!userData?.follicleId) {
     return (
-      <AnalysisRequired message="Complete your hair analysis to create personalized routines" />
+      <AnalysisRequired
+        message="Complete your hair analysis to create personalized routines"
+        showSignInPrompt={userData?.isAnonymous}
+      />
     )
   }
 

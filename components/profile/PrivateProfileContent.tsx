@@ -28,6 +28,10 @@ import {
   RefreshCw,
   LogOut,
   UserPlus,
+  AlertTriangle,
+  Ban,
+  TestTubes,
+  CalendarDays,
 } from 'lucide-react'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { signOut } from 'firebase/auth'
@@ -38,7 +42,9 @@ interface PrivateProfileContentProps {
   userData: User // ✅ No longer optional
 }
 
-export default function PrivateProfileContent({ userData }: PrivateProfileContentProps) {
+export default function PrivateProfileContent({
+  userData,
+}: PrivateProfileContentProps) {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
@@ -92,67 +98,17 @@ export default function PrivateProfileContent({ userData }: PrivateProfileConten
       })
     : 'Unknown'
 
-  // Stats for cards
-  const stats = [
-    {
-      label: 'Saved Products',
-      count: userData.savedProducts?.length || 0,
-      icon: Bookmark,
-      tab: 'saved',
-    },
-    {
-      label: 'Liked Products',
-      count: userData.likedProducts?.length || 0,
-      icon: Heart,
-      tab: 'liked',
-    },
-    {
-      label: 'Disliked Products',
-      count: userData.dislikedProducts?.length || 0,
-      icon: ThumbsDown,
-      tab: 'disliked',
-    },
-  ]
-
   return (
     <div className="bg-background min-h-screen p-6">
       <div className="mx-auto max-w-4xl space-y-8">
         {/* Profile Header */}
         <div className="text-center">
-          <h1 className="mb-2 text-4xl font-bold">Profile</h1>
-          <p className="text-muted-foreground">
+          <h1 className="mb-2 text-4xl font-bold">
             {userData.displayName || userData.email || 'Anonymous User'}
-          </p>
+          </h1>
           <p className="text-muted-foreground text-sm">
             Member since {memberSince}
           </p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {stats.map((stat) => {
-            const Icon = stat.icon
-            return (
-              <Card
-                key={stat.tab}
-                className="cursor-pointer transition-shadow hover:shadow-lg"
-                onClick={() => router.push(`/products/saved?tab=${stat.tab}`)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    {stat.label}
-                  </CardTitle>
-                  <Icon className="text-muted-foreground h-4 w-4" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.count}</div>
-                  <p className="text-muted-foreground text-xs">
-                    Click to view all
-                  </p>
-                </CardContent>
-              </Card>
-            )
-          })}
         </div>
 
         {/* Follicle ID Card */}
@@ -180,6 +136,146 @@ export default function PrivateProfileContent({ userData }: PrivateProfileConten
                   <Copy className="h-4 w-4" />
                 )}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activity Stats - Products */}
+        <Card
+          className="cursor-pointer transition-shadow hover:shadow-lg"
+          onClick={() => router.push('/products/saved')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bookmark className="h-5 w-5" />
+              My Products
+            </CardTitle>
+            <CardDescription>Your saved and liked products</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Heart className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.likedProducts?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Liked</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Bookmark className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.savedProducts?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Saved</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ThumbsDown className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.dislikedProducts?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Disliked</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activity Stats - Routines */}
+        <Card
+          className="cursor-pointer transition-shadow hover:shadow-lg"
+          onClick={() => router.push('/routines/private')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              My Routines
+            </CardTitle>
+            <CardDescription>Your created and saved routines</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.createdRoutines?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Created</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Heart className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.likedRoutines?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Liked</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Bookmark className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.savedRoutines?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Saved</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ThumbsDown className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.dislikedRoutines?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Disliked</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Copy className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.adaptedRoutines?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Adapted</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activity Stats - Ingredients */}
+        <Card
+          className="cursor-pointer transition-shadow hover:shadow-lg"
+          onClick={() => router.push('/ingredients/saved')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TestTubes className="h-5 w-5" />
+              My Ingredients
+            </CardTitle>
+            <CardDescription>
+              Your ingredient preferences and sensitivities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <Heart className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.likedIngredients?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Liked</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ThumbsDown className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.dislikedIngredients?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Disliked</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Ban className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.avoidIngredients?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Avoided</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="text-muted-foreground h-4 w-4" />
+                <span className="font-semibold">
+                  {userData.allergicIngredients?.length || 0}
+                </span>
+                <span className="text-muted-foreground">Allergic</span>
+              </div>
             </div>
           </CardContent>
         </Card>

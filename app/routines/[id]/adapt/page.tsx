@@ -25,7 +25,10 @@ export default async function AdaptRoutinePage({
 
   if (!userData?.follicleId) {
     return (
-      <AnalysisRequired message="Complete your hair analysis to adapt routines" />
+      <AnalysisRequired
+        message="Complete your hair analysis to adapt a routine"
+        showSignInPrompt={userData?.isAnonymous}
+      />
     )
   }
 
