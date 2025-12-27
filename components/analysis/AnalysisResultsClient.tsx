@@ -17,7 +17,7 @@ import AuthDialog from '@/components/auth/AuthDialog'
 import { User } from '@/types/user'
 import { decodeFollicleIdForDisplay } from '@/functions/src/shared/follicleId'
 import { useScorePolling } from '@/hooks/useScorePolling'
-import { ScoreGeneratingState } from '@/components/shared/ScoreGeneratingState'
+import { ScoreGeneratingState } from '@/components/analysis/ScoreGeneratingState'
 import { bustUserCache } from '@/app/actions/cache'
 
 interface AnalysisResultsClientProps {

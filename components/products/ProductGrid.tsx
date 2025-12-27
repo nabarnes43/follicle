@@ -196,6 +196,7 @@ export function ProductGrid({
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {displayedProducts.map((match) => (
               <ProductCard
+                key={match.product.id}
                 product={match.product}
                 matchScore={showMatchScores ? match.totalScore : undefined}
                 onClick={() => router.push(`/products/${match.product.id}`)}

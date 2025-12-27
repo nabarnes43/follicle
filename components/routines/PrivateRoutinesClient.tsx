@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { PreComputedRoutineMatchScore } from '@/types/routineMatching'
 import { RoutineGrid } from '@/components/routines/RoutineGrid'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ClipboardCheck, Bookmark, Heart, Copy } from 'lucide-react'
+import { ClipboardCheck, Bookmark, Heart, Copy, ArrowLeft } from 'lucide-react'
+import { Button } from '../ui/button'
 
 interface PrivateRoutinesClientProps {
   createdScores: PreComputedRoutineMatchScore[]
@@ -13,6 +14,7 @@ interface PrivateRoutinesClientProps {
   likedScores: PreComputedRoutineMatchScore[]
   dislikedScores: PreComputedRoutineMatchScore[]
   adaptedScores: PreComputedRoutineMatchScore[]
+  profileUserDisplayName?: string
 }
 
 export function PrivateRoutinesClient({
@@ -21,13 +23,32 @@ export function PrivateRoutinesClient({
   likedScores,
   dislikedScores,
   adaptedScores,
+  profileUserDisplayName,
 }: PrivateRoutinesClientProps) {
   const searchParams = useSearchParams()
   const defaultTab = searchParams.get('tab') || 'created'
+  const router = useRouter()
+
+  // Determine title based on context
+  const title = profileUserDisplayName
+    ? `${profileUserDisplayName}'s Routines`
+    : 'My Routines'
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-8 text-3xl font-bold">My Routines</h1>
+      {/* Back button - only show when viewing another user's profile */}
+      {profileUserDisplayName && (
+        <Button
+          onClick={() => router.back()}
+          variant="ghost"
+          size="sm"
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+      )}
+      <h1 className="mb-8 text-3xl font-bold">{title}</h1>
 
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="">
@@ -54,23 +75,43 @@ export function PrivateRoutinesClient({
         </TabsList>
 
         <TabsContent value="created">
-          <RoutineGrid routines={createdScores} showMatchScore={false} />
+          <RoutineGrid
+            routines={createdScores}
+            showMatchScore={false}
+            hideSaveButton
+          />
         </TabsContent>
 
         <TabsContent value="saved">
-          <RoutineGrid routines={savedScores} showMatchScore={false} />
+          <RoutineGrid
+            routines={savedScores}
+            showMatchScore={false}
+            hideSaveButton
+          />
         </TabsContent>
 
         <TabsContent value="liked">
-          <RoutineGrid routines={likedScores} showMatchScore={false} />
+          <RoutineGrid
+            routines={likedScores}
+            showMatchScore={false}
+            hideSaveButton
+          />
         </TabsContent>
 
         <TabsContent value="disliked">
-          <RoutineGrid routines={dislikedScores} showMatchScore={false} />
+          <RoutineGrid
+            routines={dislikedScores}
+            showMatchScore={false}
+            hideSaveButton
+          />
         </TabsContent>
 
         <TabsContent value="adapted">
-          <RoutineGrid routines={adaptedScores} showMatchScore={false} />
+          <RoutineGrid
+            routines={adaptedScores}
+            showMatchScore={false}
+            hideSaveButton
+          />
         </TabsContent>
       </Tabs>
     </div>

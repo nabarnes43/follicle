@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useRoutineInteraction } from '@/hooks/useRoutineInteraction'
+import { UserLink } from '../profile/UserLink'
 
 interface RoutineDetailClientProps {
   routine: Routine
@@ -47,6 +48,7 @@ interface RoutineDetailClientProps {
 
   authorName: string
   adaptedFromAuthor: string | null
+  adaptedFromUserId: string | null
   matchScore: PreComputedRoutineMatchScore | null
   currentUserId?: string
 }
@@ -58,6 +60,7 @@ export function RoutineDetailClient({
   adaptedFromAuthor,
   matchScore: initialMatchScore,
   currentUserId,
+  adaptedFromUserId,
 }: RoutineDetailClientProps) {
   const router = useRouter()
   const { user } = useAuth()
@@ -326,9 +329,22 @@ export function RoutineDetailClient({
           {/* Metadata */}
           <p className="text-sm text-gray-600">
             {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''} •
-            By {authorName}
-            {adaptedFromAuthor && (
-              <span> • Adapted from {adaptedFromAuthor}</span>
+            By{' '}
+            <UserLink
+              userId={routine.user_id}
+              displayName={authorName}
+              className="text-primary font-semibold"
+            />
+            {adaptedFromAuthor && adaptedFromUserId && (
+              <span>
+                {' '}
+                • Adapted from{' '}
+                <UserLink
+                  userId={adaptedFromUserId}
+                  displayName={adaptedFromAuthor}
+                  className="text-primary font-semibold"
+                />
+              </span>
             )}
           </p>
         </div>

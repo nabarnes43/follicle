@@ -74,7 +74,7 @@ export default function HomePage() {
           {user && !user.isAnonymous && (
             <div className="bg-muted mb-4 rounded-lg p-3">
               <p className="text-sm font-medium">
-                Welcome back, {user.email || user.displayName}!
+                Welcome back, {user.displayName}!
               </p>
             </div>
           )}

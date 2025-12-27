@@ -1,6 +1,6 @@
 import { getServerUser } from '@/lib/server/auth'
 import { AnalysisRequired } from '@/components/auth/AnalysisRequired'
-import ProfileContent from '@/components/profile/ProfileContent'
+import PrivateProfileContent from '@/components/profile/PrivateProfileContent'
 
 export default async function ProfilePage() {
   const userData = await getServerUser()
@@ -11,5 +11,5 @@ export default async function ProfilePage() {
     )
   }
 
-  return <ProfileContent userData={userData} />
+  return <PrivateProfileContent userData={userData} />
 }

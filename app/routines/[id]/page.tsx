@@ -35,10 +35,10 @@ export default async function RoutineDetailPage({
   const authorDoc = await adminDb.collection('users').doc(routine.user_id).get()
   const authorName = authorDoc.exists
     ? authorDoc.data()?.displayName || 'Anonymous'
-    : 'Anonymous'
-
-  // Fetch adapted-from author if exists
+    : '[Deleted User]'
+  // Fetch adapted-from author if exists - handle deleted users
   let adaptedFromAuthor: string | null = null
+  let adaptedFromUserId: string | null = null // ✅ Track the actual user ID
   if (routine.adaptedFrom) {
     const sourceDoc = await adminDb
       .collection('routines')
@@ -47,11 +47,14 @@ export default async function RoutineDetailPage({
     if (sourceDoc.exists) {
       const sourceUserId = sourceDoc.data()?.user_id
       if (sourceUserId) {
+        adaptedFromUserId = sourceUserId // ✅ Store it
         const sourceUserDoc = await adminDb
           .collection('users')
           .doc(sourceUserId)
           .get()
-        adaptedFromAuthor = sourceUserDoc.data()?.displayName || 'Anonymous'
+        adaptedFromAuthor = sourceUserDoc.exists
+          ? sourceUserDoc.data()?.displayName || 'Anonymous'
+          : '[Deleted User]'
       }
     }
   }
@@ -86,6 +89,7 @@ export default async function RoutineDetailPage({
       productsMap={productsMap}
       authorName={authorName}
       adaptedFromAuthor={adaptedFromAuthor}
+      adaptedFromUserId={adaptedFromUserId}
       matchScore={matchScore}
       currentUserId={user?.userId}
     />

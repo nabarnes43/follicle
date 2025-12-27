@@ -1,9 +1,17 @@
 'use client'
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { ThumbsUp, ThumbsDown, Ban, AlertTriangle } from 'lucide-react'
+import {
+  ThumbsUp,
+  ThumbsDown,
+  Ban,
+  AlertTriangle,
+  ArrowLeft,
+} from 'lucide-react'
 import { Ingredient } from '@/types/ingredient'
 import { IngredientsGrid } from '@/components/ingredients/IngredientsGrid'
+import { Button } from '../ui/button'
+import { useRouter } from 'next/navigation'
 
 interface SavedIngredientsClientProps {
   likedIngredients: Ingredient[]
@@ -11,6 +19,7 @@ interface SavedIngredientsClientProps {
   avoidIngredients: Ingredient[]
   allergicIngredients: Ingredient[]
   loading?: boolean
+  profileUserDisplayName?: string
 }
 
 export function SavedIngredientsClient({
@@ -19,11 +28,31 @@ export function SavedIngredientsClient({
   avoidIngredients,
   allergicIngredients,
   loading = false,
+  profileUserDisplayName,
 }: SavedIngredientsClientProps) {
+  const router = useRouter()
+
+  // Determine title based on context
+  const title = profileUserDisplayName
+    ? `${profileUserDisplayName}'s Ingredients`
+    : 'Saved Ingredients'
+
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Back button - only show when viewing another user's profile */}
+      {profileUserDisplayName && (
+        <Button
+          onClick={() => router.back()}
+          variant="ghost"
+          size="sm"
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+      )}
       {/* Header */}
-      <h1 className="mb-8 text-3xl font-bold">Saved Ingredients</h1>
+      <h1 className="mb-8 text-3xl font-bold">{title}</h1>
 
       {/* Tabs */}
       <Tabs defaultValue="liked" className="w-full">

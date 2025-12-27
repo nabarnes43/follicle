@@ -34,11 +34,11 @@ import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase/client'
 import { decodeFollicleIdForDisplay } from '@/functions/src/shared/follicleId'
 
-interface ProfileContentProps {
+interface PrivateProfileContentProps {
   userData: User // ✅ No longer optional
 }
 
-export default function ProfileContent({ userData }: ProfileContentProps) {
+export default function PrivateProfileContent({ userData }: PrivateProfileContentProps) {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
