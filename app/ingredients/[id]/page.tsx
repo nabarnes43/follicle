@@ -4,6 +4,7 @@ import { getCachedIngredientById } from '@/lib/server/ingredients'
 import { getCachedScoresByIngredient } from '@/lib/server/productScores'
 import { getCachedProductsByIngredient } from '@/lib/server/products'
 import { IngredientDetailClient } from '@/components/ingredients/IngredientDetailClient'
+import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 
 export default async function IngredientDetailPage({
   params,
@@ -45,10 +46,16 @@ export default async function IngredientDetailPage({
   }
 
   return (
-    <IngredientDetailClient
-      ingredient={ingredient}
-      products={products}
-      hideSaveButton={!user?.follicleId}
-    />
+    <>
+      <AnalysisPromptModal
+        shouldShow={!user?.follicleId}
+        isAnonymous={user?.isAnonymous}
+      />
+      <IngredientDetailClient
+        ingredient={ingredient}
+        products={products}
+        hideSaveButton={!user?.follicleId}
+      />
+    </>
   )
 }

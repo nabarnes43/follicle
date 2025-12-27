@@ -3,6 +3,7 @@ import { getServerUser } from '@/lib/server/auth'
 import { getCachedProductById } from '@/lib/server/products'
 import { getCachedScoresByIds } from '@/lib/server/productScores'
 import { ProductDetailClient } from '../../../components/products/ProductDetailClient'
+import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 
 export default async function ProductDetailPage({
   params,
@@ -25,5 +26,13 @@ export default async function ProductDetailPage({
       ? (await getCachedScoresByIds(user.userId, [id]))[0] || null
       : null
 
-  return <ProductDetailClient product={product} productScore={productScore} />
+  return (
+    <>
+      <AnalysisPromptModal
+        shouldShow={!user?.follicleId}
+        isAnonymous={user?.isAnonymous}
+      />
+      <ProductDetailClient product={product} productScore={productScore} />
+    </>
+  )
 }

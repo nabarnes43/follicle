@@ -10,6 +10,7 @@ import { RoutineDetailClient } from '../../../components/routines/RoutineDetailC
 import { getCachedScoresByIds } from '@/lib/server/productScores'
 import { getCachedProductsByIds } from '@/lib/server/products'
 import { adminDb } from '@/lib/firebase/admin'
+import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 
 export default async function RoutineDetailPage({
   params,
@@ -84,14 +85,20 @@ export default async function RoutineDetailPage({
   }
 
   return (
-    <RoutineDetailClient
-      routine={serializeRoutine(routine)}
-      productsMap={productsMap}
-      authorName={authorName}
-      adaptedFromAuthor={adaptedFromAuthor}
-      adaptedFromUserId={adaptedFromUserId}
-      matchScore={matchScore}
-      currentUserId={user?.userId}
-    />
+    <>
+      <AnalysisPromptModal
+        shouldShow={!user?.follicleId}
+        isAnonymous={user?.isAnonymous}
+      />
+      <RoutineDetailClient
+        routine={serializeRoutine(routine)}
+        productsMap={productsMap}
+        authorName={authorName}
+        adaptedFromAuthor={adaptedFromAuthor}
+        adaptedFromUserId={adaptedFromUserId}
+        matchScore={matchScore}
+        currentUserId={user?.userId}
+      />
+    </>
   )
 }

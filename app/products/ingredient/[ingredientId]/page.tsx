@@ -5,6 +5,7 @@ import { getCachedScoresByIngredient } from '@/lib/server/productScores'
 import { getCachedProductsByIngredient } from '@/lib/server/products'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { Header } from '@/components/navigation/Header'
+import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 
 export default async function IngredientProductsPage({
   params,
@@ -61,6 +62,10 @@ export default async function IngredientProductsPage({
 
   return (
     <div>
+      <AnalysisPromptModal
+        shouldShow={!user?.follicleId}
+        isAnonymous={user?.isAnonymous}
+      />
       <Header
         title={`Products with ${ingredientName}`}
         subtitle={`${rawProducts.length} products containing this ingredient`}

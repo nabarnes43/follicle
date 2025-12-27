@@ -3,6 +3,7 @@ import { getCachedAllScores } from '@/lib/server/productScores'
 import { getCachedAllProducts } from '@/lib/server/products'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { Header } from '@/components/navigation/Header'
+import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 
 /**
  * /products - All products
@@ -45,6 +46,11 @@ export default async function ProductsPage() {
 
   return (
     <div>
+      {/* Modal will appear after seconds if user has no follicleId */}
+      <AnalysisPromptModal
+        shouldShow={!user?.follicleId}
+        isAnonymous={user?.isAnonymous}
+      />
       <Header
         title="Products"
         subtitle={`Browse ${products.length.toLocaleString()} hair care products`}

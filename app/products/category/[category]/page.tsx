@@ -5,6 +5,7 @@ import { getCachedProductsByCategory } from '@/lib/server/products'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { PRODUCT_CATEGORIES } from '@/lib/constants/categories'
 import { Header } from '@/components/navigation/Header'
+import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 
 export default async function CategoryProductsPage({
   params,
@@ -55,6 +56,10 @@ export default async function CategoryProductsPage({
 
   return (
     <div>
+      <AnalysisPromptModal
+        shouldShow={!user?.follicleId}
+        isAnonymous={user?.isAnonymous}
+      />
       <Header
         title={decodedCategory}
         subtitle={`${products.length} products in this category`}

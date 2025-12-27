@@ -2,6 +2,8 @@ import { getServerUser } from '@/lib/server/auth'
 import { getCachedAllRoutineScores } from '@/lib/server/routineScores'
 import { getCachedPublicRoutines } from '@/lib/server/routines'
 import { RoutineGrid } from '@/components/routines/RoutineGrid'
+import { Header } from '@/components/navigation/Header'
+import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 
 export default async function PublicRoutinesPage() {
   const user = await getServerUser()
@@ -57,13 +59,15 @@ export default async function PublicRoutinesPage() {
   }))
 
   return (
-    <div className="">
-      <div className="container mx-auto px-4 py-4">
-        <h1 className="mb-2 text-3xl font-bold">Browse Routines</h1>
-        <p className="text-muted-foreground">
-          Discover {routines.length} hair care routines shared by the community
-        </p>
-      </div>
+    <div>
+      <AnalysisPromptModal
+        shouldShow={!user?.follicleId}
+        isAnonymous={user?.isAnonymous}
+      />
+      <Header
+        title="Browse Routines"
+        subtitle={`Explore ${routines.length} hair care routines shared by the community`}
+      />
       <RoutineGrid
         routines={routinesWithoutScores}
         showMatchScore={false}
