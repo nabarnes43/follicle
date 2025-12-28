@@ -191,7 +191,7 @@ export function RoutineDetailClient({
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-3">
           {/* Back Button */}
           <div className="pb-4">
             <BackButton />
@@ -229,7 +229,7 @@ export function RoutineDetailClient({
           )}
 
           {/* Author & Attribution */}
-          <p className="text-muted-foreground mb-6 text-sm">
+          <p className="text-muted-foreground mb-3 text-sm">
             By{' '}
             <UserLink
               userId={routine.user_id}
@@ -251,7 +251,7 @@ export function RoutineDetailClient({
 
           {/* Interaction Buttons Row - Only show if user has completed analysis */}
           {matchScore && (
-            <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="mb-3 flex items-center justify-between gap-4">
               {/* Left: Like, Dislike, Save, Adapt/Edit */}
               <div className="flex gap-2">
                 <Button
@@ -343,7 +343,7 @@ export function RoutineDetailClient({
           {matchScore &&
             matchScore.matchReasons &&
             matchScore.matchReasons.length > 0 && (
-              <div className="mb-6">
+              <div className="mb-3">
                 <h3 className="mb-3 text-sm font-semibold">
                   Why this matches your hair
                 </h3>
@@ -362,7 +362,7 @@ export function RoutineDetailClient({
         </div>
 
         {/* Metadata before grid */}
-        <div className="mb-6">
+        <div className="mb-4">
           <p className="text-muted-foreground text-xs tracking-wide uppercase">
             {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''} •{' '}
             {routine.frequency.unit === 'day'

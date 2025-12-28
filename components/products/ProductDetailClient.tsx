@@ -125,8 +125,8 @@ export function ProductDetailClient({
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6">
-          <BackButton className='mb-4'/>
+        <div className="mb-3">
+          <BackButton className="mb-4" />
           <h1 className="mb-1 text-3xl font-bold text-gray-900">
             {product.name}
           </h1>
@@ -134,51 +134,53 @@ export function ProductDetailClient({
         </div>
 
         {/* Score & Interaction Buttons - Same Row */}
-        <div className="mb-6 flex items-center justify-between gap-4">
-          {productScore?.totalScore !== undefined && (
-            <MatchScoreBadge score={productScore.totalScore} />
-          )}
+        {(productScore?.totalScore !== undefined || !hideSaveButton) && (
+          <div className="mb-4 flex items-center justify-between gap-4">
+            {productScore?.totalScore !== undefined && (
+              <MatchScoreBadge score={productScore.totalScore} />
+            )}
 
-          {!hideSaveButton && (
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={handleLike}
-                disabled={isLoading || !isReady || isRefreshing}
-                variant={interactions.like ? 'default' : 'outline'}
-                size="sm"
-              >
-                <Heart
-                  className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
-                />
-                {interactions.like ? 'Liked' : 'Like'}
-              </Button>
+            {!hideSaveButton && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={handleLike}
+                  disabled={isLoading || !isReady || isRefreshing}
+                  variant={interactions.like ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <Heart
+                    className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
+                  />
+                  {interactions.like ? 'Liked' : 'Like'}
+                </Button>
 
-              <Button
-                onClick={handleDislike}
-                disabled={isLoading || !isReady || isRefreshing}
-                variant={interactions.dislike ? 'destructive' : 'outline'}
-                size="sm"
-              >
-                <ThumbsDown
-                  className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
-                />
-                {interactions.dislike ? 'Disliked' : 'Dislike'}
-              </Button>
+                <Button
+                  onClick={handleDislike}
+                  disabled={isLoading || !isReady || isRefreshing}
+                  variant={interactions.dislike ? 'destructive' : 'outline'}
+                  size="sm"
+                >
+                  <ThumbsDown
+                    className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
+                  />
+                  {interactions.dislike ? 'Disliked' : 'Dislike'}
+                </Button>
 
-              <Button
-                onClick={handleSave}
-                disabled={isLoading || !isReady || isRefreshing}
-                variant={interactions.save ? 'default' : 'outline'}
-                size="sm"
-              >
-                <Bookmark
-                  className={`mr-2 h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
-                />
-                {interactions.save ? 'Saved' : 'Save'}
-              </Button>
-            </div>
-          )}
-        </div>
+                <Button
+                  onClick={handleSave}
+                  disabled={isLoading || !isReady || isRefreshing}
+                  variant={interactions.save ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  <Bookmark
+                    className={`mr-2 h-4 w-4 ${interactions.save ? 'fill-current' : ''}`}
+                  />
+                  {interactions.save ? 'Saved' : 'Save'}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Product Image - Larger */}
         <div className="mb-3 flex h-[500px] w-full items-center justify-center overflow-hidden rounded-lg bg-white">
@@ -194,7 +196,7 @@ export function ProductDetailClient({
         </div>
 
         {/* Price - Small, centered */}
-        <div className="mb-6 text-center">
+        <div className="mb-3 text-center">
           <span className="text-muted-foreground text-sm">
             {product.price
               ? `$${product.price.toFixed(2)}`
