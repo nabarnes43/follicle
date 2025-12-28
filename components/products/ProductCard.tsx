@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Bookmark } from 'lucide-react'
 import { useProductInteraction } from '@/hooks/useProductInteraction'
 import { ProductCardData } from '@/types/productMatching'
+import { MatchScoreBadge } from '@/components/shared/MatchScoreBadge'
 
 interface ProductCardProps {
   product: ProductCardData
@@ -17,12 +18,12 @@ interface ProductCardProps {
 
 export function ProductCard({
   product,
-  matchScore: initialMatchScore, // 👈 Rename
+  matchScore: initialMatchScore,
   onClick,
   hideSaveButton,
 }: ProductCardProps) {
   const { user } = useAuth()
-  const [matchScore, setMatchScore] = useState(initialMatchScore) // 👈 Local state
+  const [matchScore, setMatchScore] = useState(initialMatchScore)
   const { interactions, toggleSave, isLoading } = useProductInteraction(
     product.id
   )
@@ -31,7 +32,6 @@ export function ProductCard({
     e.stopPropagation()
     await toggleSave()
 
-    // 👇 NEW: Fetch fresh score after interaction
     if (user) {
       try {
         const token = await user.getIdToken()
@@ -42,7 +42,7 @@ export function ProductCard({
         if (response.ok) {
           const data = await response.json()
           if (data.score) {
-            setMatchScore(data.score.totalScore) // 👈 Update local state
+            setMatchScore(data.score.totalScore)
             console.log('✅ Updated score in card:', data.score.totalScore)
           }
         }
@@ -110,12 +110,11 @@ export function ProductCard({
           </div>
 
           {matchScore !== undefined && (
-            <div className="text-right">
-              <p className="text-primary text-2xl font-bold">
-                {Math.round(matchScore * 100)}%
-              </p>
-              <p className="text-muted-foreground text-xs">Match</p>
-            </div>
+            <MatchScoreBadge
+              score={matchScore}
+              variant="compact"
+              className="text-right"
+            />
           )}
         </div>
       </CardContent>

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Routine } from '@/types/routine'
 import { PreComputedRoutineMatchScore } from '@/types/routineMatching'
+import { MatchScoreBadge } from '@/components/shared/MatchScoreBadge'
 import {
   ArrowLeft,
   Share2,
@@ -187,9 +188,20 @@ export function RoutineDetailClient({
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
+          {/* Back Button */}
+          <Button
+            onClick={() => router.back()}
+            variant="ghost"
+            size="sm"
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+
           {/* Refreshing Indicator */}
           {isRefreshing && (
             <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
@@ -197,50 +209,54 @@ export function RoutineDetailClient({
             </div>
           )}
 
-          {/* Title Row with Back Button */}
-          <div className="mb-4 flex items-center gap-3">
-            <Button onClick={() => router.back()} variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              {routine.name}
-            </h1>
+          {/* Title Row with Match Score */}
+          <div className="mb-3 flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">{routine.name}</h1>
+
+            {/* Match Score Badge */}
+            {matchScore?.totalScore !== undefined && (
+              <MatchScoreBadge score={matchScore.totalScore} />
+            )}
+
+            {/* Privacy Icon at end */}
             {routine.is_public ? (
               <Globe className="h-5 w-5 text-gray-400" />
             ) : (
               <Lock className="h-5 w-5 text-gray-400" />
             )}
-
-            {/* Match Score Badge - Inline with title */}
-            {matchScore && matchScore.totalScore !== undefined && (
-              <div className="bg-primary/10 flex items-center gap-1.5 rounded-full px-3 py-1">
-                <span className="text-primary text-sm font-semibold">
-                  {Math.round(matchScore.totalScore * 100)}%
-                </span>
-                <span className="text-muted-foreground text-xs">Match</span>
-              </div>
-            )}
           </div>
-          {/* Match Reasons as Chips - Only if exists */}
-          {matchScore &&
-            matchScore.totalScore !== undefined &&
-            matchScore.matchReasons &&
-            matchScore.matchReasons.length > 0 && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {matchScore.matchReasons.slice(0, 5).map((reason, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-muted text-muted-foreground rounded-md px-3 py-1.5 text-xs"
-                  >
-                    {reason}
-                  </div>
-                ))}
-              </div>
+
+          {/* Description */}
+          {routine.description && (
+            <p className="text-muted-foreground mb-4 text-lg">
+              {routine.description}
+            </p>
+          )}
+
+          {/* Author & Attribution */}
+          <p className="text-muted-foreground mb-6 text-sm">
+            By{' '}
+            <UserLink
+              userId={routine.user_id}
+              displayName={authorName}
+              className="text-primary font-semibold"
+            />
+            {adaptedFromAuthor && adaptedFromUserId && (
+              <span>
+                {' '}
+                • Adapted from{' '}
+                <UserLink
+                  userId={adaptedFromUserId}
+                  displayName={adaptedFromAuthor}
+                  className="text-primary font-semibold"
+                />
+              </span>
             )}
+          </p>
+
           {/* Interaction Buttons Row - Only show if user has completed analysis */}
           {matchScore && (
-            <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="mb-6 flex items-center justify-between gap-4">
               {/* Left: Like, Dislike, Save, Adapt/Edit */}
               <div className="flex gap-2">
                 <Button
@@ -304,53 +320,66 @@ export function RoutineDetailClient({
                 )}
               </div>
 
-              {/* Right: Share & Delete (only if owner) */}
-              {isOwner && (
-                <div className="flex gap-2">
-                  {routine.is_public && (
-                    <Button onClick={handleShare} variant="outline" size="sm">
-                      <Share2 className="mr-2 h-4 w-4" />
-                      Share
+              {/* Right: Share & Delete (only if owner) - or empty space */}
+              <div className="flex gap-2">
+                {isOwner && (
+                  <>
+                    {routine.is_public && (
+                      <Button onClick={handleShare} variant="outline" size="sm">
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => setDeleteDialogOpen(true)}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
                     </Button>
-                  )}
-                  <Button
-                    onClick={() => setDeleteDialogOpen(true)}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </Button>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Metadata */}
-          <p className="text-sm text-gray-600">
-            {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''} •
-            By{' '}
-            <UserLink
-              userId={routine.user_id}
-              displayName={authorName}
-              className="text-primary font-semibold"
-            />
-            {adaptedFromAuthor && adaptedFromUserId && (
-              <span>
-                {' '}
-                • Adapted from{' '}
-                <UserLink
-                  userId={adaptedFromUserId}
-                  displayName={adaptedFromAuthor}
-                  className="text-primary font-semibold"
-                />
-              </span>
+          {/* Match Reasons Pills - After buttons */}
+          {matchScore &&
+            matchScore.matchReasons &&
+            matchScore.matchReasons.length > 0 && (
+              <div className="mb-6">
+                <h3 className="mb-3 text-sm font-semibold">
+                  Why this matches your hair
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {matchScore.matchReasons.map((reason, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-primary/10 text-primary rounded-full px-3 py-1.5 text-xs"
+                    >
+                      {reason}
+                    </span>
+                  ))}
+                </div>
+              </div>
             )}
+        </div>
+
+        {/* Metadata before grid */}
+        <div className="mb-6">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">
+            {routine.steps.length} step{routine.steps.length !== 1 ? 's' : ''} •{' '}
+            {routine.frequency.unit === 'day'
+              ? 'Daily'
+              : routine.frequency.unit === 'week'
+                ? 'Weekly'
+                : 'Monthly'}
           </p>
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
           {routine.steps.map((step, stepIndex) => {
             // Skip steps without a product
             if (!step.product_id) return null

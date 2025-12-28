@@ -20,6 +20,7 @@ import { Product } from '@/types/product'
 import { Ingredient } from '@/types/ingredient'
 import { PreComputedProductMatchScore } from '@/types/productMatching'
 import { IngredientCard } from '@/components/ingredients/IngredientCard'
+import { MatchScoreBadge } from '@/components/shared/MatchScoreBadge'
 
 interface ProductDetailClientProps {
   product: Product
@@ -142,8 +143,8 @@ export function ProductDetailClient({
 
         {/* Score & Interaction Buttons - Same Row */}
         <div className="mb-6 flex items-center justify-between gap-4">
-          {scorePercent !== null && (
-            <Badge className="px-3 py-1 text-lg">{scorePercent}% Match</Badge>
+          {productScore?.totalScore !== undefined && (
+            <MatchScoreBadge score={productScore.totalScore} />
           )}
 
           {!hideSaveButton && (

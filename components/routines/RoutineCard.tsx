@@ -8,6 +8,7 @@ import { Bookmark, Lock, Globe } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { PreComputedRoutineMatchScore } from '@/types/routineMatching'
 import { useRoutineInteraction } from '@/hooks/useRoutineInteraction'
+import { MatchScoreBadge } from '@/components/shared/MatchScoreBadge'
 
 interface RoutineCardProps {
   routineScore: PreComputedRoutineMatchScore
@@ -83,15 +84,8 @@ export function RoutineCard({
           </div>
           {/* Match Score & Save Button */}
           <div className="flex flex-shrink-0 items-center gap-2">
-            {showMatchScore && (
-              <div className="text-center">
-                <p className="text-primary text-md leading-none font-semibold">
-                  {totalScore && `${Math.round(totalScore * 100)}%`}
-                </p>
-                <p className="text-muted-foreground text-[9px] leading-tight">
-                  Match
-                </p>
-              </div>
+            {showMatchScore && totalScore !== undefined && (
+              <MatchScoreBadge score={totalScore} variant="compact" />
             )}
             {!hideSaveButton && (
               <Button
