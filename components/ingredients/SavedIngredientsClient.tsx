@@ -1,17 +1,10 @@
 'use client'
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import {
-  ThumbsUp,
-  ThumbsDown,
-  Ban,
-  AlertTriangle,
-  ArrowLeft,
-} from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Ingredient } from '@/types/ingredient'
 import { IngredientsGrid } from '@/components/ingredients/IngredientsGrid'
-import { Button } from '../ui/button'
-import { useRouter } from 'next/navigation'
+import { SavedPageLayout } from '@/components/shared/SavedPageLayout'
+import { Heart, ThumbsDown, Ban, AlertTriangle } from 'lucide-react'
 
 interface SavedIngredientsClientProps {
   likedIngredients: Ingredient[]
@@ -30,73 +23,64 @@ export function SavedIngredientsClient({
   loading = false,
   profileUserDisplayName,
 }: SavedIngredientsClientProps) {
-  const router = useRouter()
-
   // Determine title based on context
   const title = profileUserDisplayName
     ? `${profileUserDisplayName}'s Ingredients`
     : 'Saved Ingredients'
 
+  const subtitle = profileUserDisplayName
+    ? 'Ingredient preferences and sensitivities'
+    : 'Your ingredient preferences and sensitivities'
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Back button - only show when viewing another user's profile */}
-      {profileUserDisplayName && (
-        <Button
-          onClick={() => router.back()}
-          variant="ghost"
-          size="sm"
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-      )}
-      {/* Header */}
-      <h1 className="mb-8 text-3xl font-bold">{title}</h1>
-
-      {/* Tabs */}
-      <Tabs defaultValue="liked" className="w-full">
-        <TabsList className="mb-8">
-          <TabsTrigger value="liked" disabled={loading}>
-            <ThumbsUp className="mr-2 h-4 w-4" />
-            Liked {!loading && `(${likedIngredients.length})`}
-          </TabsTrigger>
-          <TabsTrigger value="disliked" disabled={loading}>
-            <ThumbsDown className="mr-2 h-4 w-4" />
-            Disliked {!loading && `(${dislikedIngredients.length})`}
-          </TabsTrigger>
-          <TabsTrigger value="avoid" disabled={loading}>
-            <Ban className="mr-2 h-4 w-4" />
-            Avoid {!loading && `(${avoidIngredients.length})`}
-          </TabsTrigger>
-          <TabsTrigger value="allergic" disabled={loading}>
-            <AlertTriangle className="mr-2 h-4 w-4" />
-            Allergic {!loading && `(${allergicIngredients.length})`}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="liked">
-          <IngredientsGrid ingredients={likedIngredients} loading={loading} />
-        </TabsContent>
-
-        <TabsContent value="disliked">
-          <IngredientsGrid
-            ingredients={dislikedIngredients}
-            loading={loading}
-          />
-        </TabsContent>
-
-        <TabsContent value="avoid">
-          <IngredientsGrid ingredients={avoidIngredients} loading={loading} />
-        </TabsContent>
-
-        <TabsContent value="allergic">
-          <IngredientsGrid
-            ingredients={allergicIngredients}
-            loading={loading}
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
+    <SavedPageLayout
+      title={title}
+      subtitle={subtitle}
+      showBackButton={!!profileUserDisplayName}
+      tabs={[
+        {
+          value: 'liked',
+          label: 'Liked',
+          icon: <Heart className="h-4 w-4" />,
+          count: likedIngredients.length,
+          content: (
+            <IngredientsGrid ingredients={likedIngredients} loading={loading} />
+          ),
+        },
+        {
+          value: 'disliked',
+          label: 'Disliked',
+          icon: <ThumbsDown className="h-4 w-4" />,
+          count: dislikedIngredients.length,
+          content: (
+            <IngredientsGrid
+              ingredients={dislikedIngredients}
+              loading={loading}
+            />
+          ),
+        },
+        {
+          value: 'avoid',
+          label: 'Avoid',
+          icon: <Ban className="h-4 w-4" />,
+          count: avoidIngredients.length,
+          content: (
+            <IngredientsGrid ingredients={avoidIngredients} loading={loading} />
+          ),
+        },
+        {
+          value: 'allergic',
+          label: 'Allergic',
+          icon: <AlertTriangle className="h-4 w-4" />,
+          count: allergicIngredients.length,
+          content: (
+            <IngredientsGrid
+              ingredients={allergicIngredients}
+              loading={loading}
+            />
+          ),
+        },
+      ]}
+    />
   )
 }

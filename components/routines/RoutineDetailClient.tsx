@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dialog'
 import { useRoutineInteraction } from '@/hooks/useRoutineInteraction'
 import { UserLink } from '../profile/UserLink'
+import { BackButton } from '../navigation/BackButton'
 
 interface RoutineDetailClientProps {
   routine: Routine
@@ -192,15 +193,9 @@ export function RoutineDetailClient({
         {/* Header */}
         <div className="mb-8">
           {/* Back Button */}
-          <Button
-            onClick={() => router.back()}
-            variant="ghost"
-            size="sm"
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
+          <div className="pb-4">
+            <BackButton />
+          </div>
 
           {/* Refreshing Indicator */}
           {isRefreshing && (

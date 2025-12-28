@@ -1,4 +1,4 @@
-import { Header } from '@/components/navigation/Header'
+import { Header } from '@/components/shared/Header'
 import { ProductGrid } from '@/components/products/ProductGrid'
 
 export default function ProductsLoading() {
@@ -8,7 +8,7 @@ export default function ProductsLoading() {
         title="Loading Products"
         subtitle="Personalized with follicle matching algorithm"
       />
-      <ProductGrid products={[]} loading={true}/>
+      <ProductGrid products={[]} loading={true} />
     </div>
   )
 }

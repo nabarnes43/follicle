@@ -31,7 +31,7 @@ import {
   AlertTriangle,
   Ban,
   TestTubes,
-  CalendarDays,
+  ClipboardCheck,
 } from 'lucide-react'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { signOut } from 'firebase/auth'
@@ -186,15 +186,15 @@ export default function PrivateProfileContent({
         >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
-              My Routines
+              <ClipboardCheck className="h-5 w-5" />
+              Routines
             </CardTitle>
             <CardDescription>Your created and saved routines</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <CalendarDays className="text-muted-foreground h-4 w-4" />
+                <ClipboardCheck className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
                   {userData.createdRoutines?.length || 0}
                 </span>

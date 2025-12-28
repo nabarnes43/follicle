@@ -42,27 +42,6 @@ export async function getCachedAllScores(userId: string) {
 }
 
 /**
- * Get product scores filtered by category (cached)
- */
-export async function getCachedScoresByCategory(
-  userId: string,
-  category: string
-) {
-  'use cache'
-  cacheTag(`user-scores-${userId}`)
-
-  const snapshot = await adminDb
-    .collection('users')
-    .doc(userId)
-    .collection('product_scores')
-    .where('category', '==', category)
-    .orderBy('score', 'desc') // CHANGED: from orderBy('rank')
-    .get()
-
-  return snapshot.docs.map(docToScore)
-}
-
-/**
  * Get product scores filtered by ingredient (cached)
  */
 export async function getCachedScoresByIngredient(

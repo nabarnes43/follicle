@@ -1,6 +1,6 @@
 import { getCachedAllIngredients } from '@/lib/server/ingredients'
 import { IngredientsGrid } from '@/components/ingredients/IngredientsGrid'
-import { Header } from '@/components/navigation/Header'
+import { Header } from '@/components/shared/Header'
 import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 import { getServerUser } from '@/lib/server/auth'
 

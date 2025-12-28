@@ -21,6 +21,7 @@ import { Ingredient } from '@/types/ingredient'
 import { PreComputedProductMatchScore } from '@/types/productMatching'
 import { IngredientCard } from '@/components/ingredients/IngredientCard'
 import { MatchScoreBadge } from '@/components/shared/MatchScoreBadge'
+import { BackButton } from '../navigation/BackButton'
 
 interface ProductDetailClientProps {
   product: Product
@@ -125,16 +126,7 @@ export function ProductDetailClient({
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6">
-          <Button
-            onClick={() => router.back()}
-            variant="ghost"
-            size="sm"
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-
+          <BackButton className='mb-4'/>
           <h1 className="mb-1 text-3xl font-bold text-gray-900">
             {product.name}
           </h1>

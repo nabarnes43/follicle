@@ -4,8 +4,9 @@ import { adminDb } from '@/lib/firebase/admin'
 import { getCachedScoresByIngredient } from '@/lib/server/productScores'
 import { getCachedProductsByIngredient } from '@/lib/server/products'
 import { ProductGrid } from '@/components/products/ProductGrid'
-import { Header } from '@/components/navigation/Header'
+import { Header } from '@/components/shared/Header'
 import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
+import { BackButton } from '@/components/navigation/BackButton'
 
 export default async function IngredientProductsPage({
   params,
@@ -36,6 +37,9 @@ export default async function IngredientProductsPage({
 
     return (
       <div>
+        <div className="container mx-auto px-4 pt-2">
+          <BackButton />
+        </div>
         <Header
           title={`Products with ${ingredientName}`}
           subtitle={`${products.length} products containing this ingredient`}
@@ -62,6 +66,9 @@ export default async function IngredientProductsPage({
 
   return (
     <div>
+      <div className="container mx-auto px-4">
+        <BackButton />
+      </div>
       <AnalysisPromptModal
         shouldShow={!user?.follicleId}
         isAnonymous={user?.isAnonymous}

@@ -1,32 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
 import { ProductCard } from '@/components/products/ProductCard'
-import { Spinner } from '@/components/ui/spinner'
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Package, Search, X } from 'lucide-react'
-import type { PreComputedProductMatchScore } from '@/types/productMatching'
 import { ProductCardSkeleton } from '@/components/products/ProductCardSkeleton'
+import { BaseGrid } from '@/components/shared/BaseGrid'
+import { Package } from 'lucide-react'
+import type { PreComputedProductMatchScore } from '@/types/productMatching'
 import { useRouter } from 'next/navigation'
 import { PRODUCT_CATEGORIES } from '@/lib/constants/categories'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-
-const INITIAL_DISPLAY_LIMIT = 48
-const LOAD_MORE_INCREMENT = 48
 
 interface ProductGridProps {
   /** Pre-scored products from firebase */
@@ -46,13 +26,9 @@ interface ProductGridProps {
  *
  * Receives pre-scored products from Server Component, then handles:
  * - Search filtering (client-side, instant)
+ * - Category filtering (client-side)
  * - Infinite scroll pagination
- * - Product detail dialog
- *
- * Why is search client-side?
- * - Products are already fetched and scored
- * - Client-side search is instant (no network round-trip)
- * - Only filters what's displayed, doesn't re-score
+ * - Product detail navigation
  */
 export function ProductGrid({
   products,
@@ -61,158 +37,42 @@ export function ProductGrid({
   loading = false,
   hideSaveButton = false,
 }: ProductGridProps) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [displayLimit, setDisplayLimit] = useState(INITIAL_DISPLAY_LIMIT)
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-  const loadMoreRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  // Filter by search query and category (client-side)
-  const { displayedProducts, totalCount } = useMemo(() => {
-    let filtered = products
-
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter((m) => m.product.category === selectedCategory)
-    }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (m) =>
-          m.product.name.toLowerCase().includes(query) ||
-          m.product.brand.toLowerCase().includes(query)
-      )
-    }
-
-    return {
-      displayedProducts: filtered.slice(0, displayLimit),
-      totalCount: filtered.length,
-    }
-  }, [products, searchQuery, selectedCategory, displayLimit])
-
-  // Reset pagination when search or category changes
-  useEffect(() => {
-    setDisplayLimit(INITIAL_DISPLAY_LIMIT)
-  }, [searchQuery, selectedCategory])
-
-  // Infinite scroll observer
-  useEffect(() => {
-    const currentRef = loadMoreRef.current
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && displayLimit < totalCount) {
-          setDisplayLimit((prev) => prev + LOAD_MORE_INCREMENT)
-        }
-      },
-      { rootMargin: '200px', threshold: 0 }
-    )
-
-    if (currentRef) observer.observe(currentRef)
-    return () => {
-      if (currentRef) observer.unobserve(currentRef)
-    }
-  }, [displayLimit, totalCount])
-
   return (
-    <div className="container mx-auto px-4 py-4">
-      {/* Search Bar & Filters */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row">
-        {/* Search Input */}
-        <div className="relative flex-1">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          <Input
-            type="text"
-            placeholder="Search by product or brand name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
-              onClick={() => setSearchQuery('')}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-
-        {/* Category Dropdown */}
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full sm:w-[200px]">
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {PRODUCT_CATEGORIES.map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Skeleton loading state */}
-      {loading && (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <ProductCardSkeleton key={i} />
-          ))}
-        </div>
+    <BaseGrid
+      items={products}
+      loading={loading}
+      gridClassName="grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      searchPlaceholder="Search by product or brand name..."
+      getSearchableText={(match) =>
+        `${match.product.name} ${match.product.brand}`
+      }
+      filters={[
+        {
+          getFilterValue: (match) => match.product.category,
+          options: [
+            { value: 'all', label: 'All Categories' },
+            ...PRODUCT_CATEGORIES.map((cat) => ({ value: cat, label: cat })),
+          ],
+          allValue: 'all',
+        },
+      ]}
+      emptyIcon={<Package />}
+      emptyTitle="No Products Found"
+      emptyDescription={emptyMessage}
+      renderCard={(match) => (
+        <ProductCard
+          product={match.product}
+          matchScore={showMatchScores ? match.totalScore : undefined}
+          onClick={() => router.push(`/products/${match.product.id}`)}
+          hideSaveButton={hideSaveButton}
+        />
       )}
-
-      {/* Product Count */}
-      {totalCount > 0 && (
-        <div className="mb-4">
-          <p className="text-muted-foreground text-sm">
-            Showing {displayedProducts.length} of {totalCount} products
-          </p>
-        </div>
-      )}
-
-      {/* Empty State: Only displays if NOT loading AND totalCount is 0 */}
-      {!loading && totalCount === 0 && (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Package />
-            </EmptyMedia>
-            <EmptyTitle>No Products Found</EmptyTitle>
-            <EmptyDescription>{emptyMessage}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      )}
-
-      {/* Product Grid & Infinite Scroll: Only displays if NOT loading AND totalCount > 0 */}
-      {!loading && totalCount > 0 && (
-        <>
-          {/* Product Grid */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {displayedProducts.map((match) => (
-              <ProductCard
-                key={match.product.id}
-                product={match.product}
-                matchScore={showMatchScores ? match.totalScore : undefined}
-                onClick={() => router.push(`/products/${match.product.id}`)}
-                hideSaveButton={hideSaveButton}
-              />
-            ))}
-          </div>
-
-          {/* Infinite scroll trigger */}
-          {displayLimit < totalCount && (
-            <div ref={loadMoreRef} className="mt-8 flex justify-center py-8">
-              <Spinner className="h-8 w-8" />
-            </div>
-          )}
-        </>
-      )}
-    </div>
+      renderSkeleton={() => <ProductCardSkeleton />}
+      resultsCountLabel={(displayed, total) =>
+        `Showing ${displayed} of ${total} products`
+      }
+    />
   )
 }

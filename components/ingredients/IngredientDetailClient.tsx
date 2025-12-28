@@ -20,6 +20,7 @@ import { useIngredientInteraction } from '@/hooks/useIngredientInteraction'
 import { PreComputedProductMatchScore } from '@/types/productMatching'
 import { ProductCard } from '@/components/products/ProductCard'
 import { getRestrictionInfo } from '@/lib/constants/restrictions'
+import { BackButton } from '../navigation/BackButton'
 
 interface IngredientDetailClientProps {
   ingredient: Ingredient
@@ -71,11 +72,8 @@ export function IngredientDetailClient({
         {/* Header */}
         <div className="mb-4">
           {/* Back Button & Title */}
-          <div className="mb-4 flex items-center gap-3">
-            <Button onClick={() => router.back()} variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
+          <div className="pb-4">
+            <BackButton />
           </div>
 
           {/* Ingredient Name */}

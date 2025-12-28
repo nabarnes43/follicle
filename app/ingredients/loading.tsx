@@ -1,5 +1,5 @@
 import { IngredientsGrid } from '@/components/ingredients/IngredientsGrid'
-import { Header } from '@/components/navigation/Header'
+import { Header } from '@/components/shared/Header'
 
 export default function IngredientsLoading() {
   return (

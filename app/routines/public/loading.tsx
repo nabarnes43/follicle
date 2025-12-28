@@ -1,4 +1,4 @@
-import { Header } from '@/components/navigation/Header'
+import { Header } from '@/components/shared/Header'
 import { RoutineGrid } from '@/components/routines/RoutineGrid'
 
 export default function PublicRoutinesLoading() {
@@ -8,7 +8,7 @@ export default function PublicRoutinesLoading() {
         title="Loading Routines"
         subtitle="Personalized with follicle matching algorithm"
       />
-      <RoutineGrid routines={[]} loading={true}/>
+      <RoutineGrid routines={[]} loading={true} />
     </div>
   )
 }

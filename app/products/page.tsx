@@ -2,7 +2,7 @@ import { getServerUser } from '@/lib/server/auth'
 import { getCachedAllScores } from '@/lib/server/productScores'
 import { getCachedAllProducts } from '@/lib/server/products'
 import { ProductGrid } from '@/components/products/ProductGrid'
-import { Header } from '@/components/navigation/Header'
+import { Header } from '@/components/shared/Header'
 import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
 
 /**
