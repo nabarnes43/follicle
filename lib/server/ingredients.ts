@@ -69,8 +69,5 @@ export async function getCachedIngredientsByIds(
     }
   }
 
-  // Sort by product count (descending) - most common first
-  return ingredients.sort(
-    (a, b) => (b.product_count ?? 0) - (a.product_count ?? 0)
-  )
+  return ingredients
 }

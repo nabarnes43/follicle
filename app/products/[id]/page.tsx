@@ -2,8 +2,10 @@ import { notFound } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedProductById } from '@/lib/server/products'
 import { getCachedScoresByIds } from '@/lib/server/productScores'
+import { getCachedIngredientsByIds } from '@/lib/server/ingredients'
 import { ProductDetailClient } from '../../../components/products/ProductDetailClient'
 import { AnalysisPromptModal } from '@/components/analysis/AnalysisPromptModal'
+import { Ingredient } from '@/types/ingredient'
 
 export default async function ProductDetailPage({
   params,
@@ -26,13 +28,24 @@ export default async function ProductDetailPage({
       ? (await getCachedScoresByIds(user.userId, [id]))[0] || null
       : null
 
+  // Fetch ingredient details (filter out null refs and preserve order)
+  const validIngredientIds = (product.ingredient_refs || []).filter(
+    (ref): ref is string => ref !== null
+  )
+  const ingredients = await getCachedIngredientsByIds(validIngredientIds)
+
   return (
     <>
       <AnalysisPromptModal
         shouldShow={!user?.follicleId}
         isAnonymous={user?.isAnonymous}
       />
-      <ProductDetailClient product={product} productScore={productScore} />
+      <ProductDetailClient
+        product={product}
+        productScore={productScore}
+        ingredients={ingredients}
+        hideSaveButton={!user?.follicleId}
+      />
     </>
   )
 }
