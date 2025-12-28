@@ -13,11 +13,13 @@ import {
   AlertTriangle,
   FlaskConical,
   Package,
+  Info,
 } from 'lucide-react'
 import { Ingredient } from '@/types/ingredient'
 import { useIngredientInteraction } from '@/hooks/useIngredientInteraction'
 import { PreComputedProductMatchScore } from '@/types/productMatching'
 import { ProductCard } from '@/components/products/ProductCard'
+import { getRestrictionInfo } from '@/lib/constants/restrictions'
 
 interface IngredientDetailClientProps {
   ingredient: Ingredient
@@ -67,7 +69,7 @@ export function IngredientDetailClient({
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4">
           {/* Back Button & Title */}
           <div className="mb-4 flex items-center gap-3">
             <Button onClick={() => router.back()} variant="ghost" size="sm">
@@ -88,83 +90,86 @@ export function IngredientDetailClient({
                 </p>
               )}
           </div>
+          {/* Function Types - as metadata */}
+          {ingredient.functionType && (
+            <p className="text-foreground mb-4 text-xs tracking-wide uppercase">
+              {ingredient.functionType}
+            </p>
+          )}
 
-          {/* Function Type & Product Count */}
-          <div className="mb-4 flex flex-col items-start gap-2">
-            {ingredient.functionType && (
-              <Badge variant="secondary">{ingredient.functionType}</Badge>
-            )}
-          </div>
+          {/* Restriction Info - Badge inline with description */}
+          {(() => {
+            const restrictionInfo = getRestrictionInfo(ingredient.restriction)
+            if (!restrictionInfo) return null
 
-          {/* Restriction Warning */}
-          {ingredient.restriction &&
-            ingredient.restriction.toLowerCase() !== 'none' && (
-              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
-                <p className="text-sm font-medium text-red-800">
-                  ⚠️ Restriction: {ingredient.restriction}
-                </p>
+            return (
+              <div className="mb-4">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="border-gray-300 bg-gray-100 text-gray-700"
+                  >
+                    <Info className="mr-1.5 h-3 w-3" />
+                    {restrictionInfo.displayText}
+                  </Badge>
+                  <span className="text-muted-foreground text-sm">
+                    {restrictionInfo.description}
+                  </span>
+                </div>
               </div>
-            )}
+            )
+          })()}
 
-          {/* Interaction Buttons & Product Count */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            {/* Buttons on the left - Only show if hideSaveButton is false */}
-            {!hideSaveButton && (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  onClick={toggleLike}
-                  disabled={interactionLoading || !isReady}
-                  variant={interactions.like ? 'default' : 'outline'}
-                  size="sm"
-                >
-                  <ThumbsUp
-                    className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
-                  />
-                  {interactions.like ? 'Liked' : 'Like'}
-                </Button>
+          {/* Interaction Buttons - Only show if user has completed analysis */}
+          {!hideSaveButton && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              <Button
+                onClick={toggleLike}
+                disabled={interactionLoading || !isReady}
+                variant={interactions.like ? 'default' : 'outline'}
+                size="sm"
+              >
+                <ThumbsUp
+                  className={`mr-2 h-4 w-4 ${interactions.like ? 'fill-current' : ''}`}
+                />
+                {interactions.like ? 'Liked' : 'Like'}
+              </Button>
 
-                <Button
-                  onClick={toggleDislike}
-                  disabled={interactionLoading || !isReady}
-                  variant={interactions.dislike ? 'destructive' : 'outline'}
-                  size="sm"
-                >
-                  <ThumbsDown
-                    className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
-                  />
-                  {interactions.dislike ? 'Disliked' : 'Dislike'}
-                </Button>
+              <Button
+                onClick={toggleDislike}
+                disabled={interactionLoading || !isReady}
+                variant={interactions.dislike ? 'destructive' : 'outline'}
+                size="sm"
+              >
+                <ThumbsDown
+                  className={`mr-2 h-4 w-4 ${interactions.dislike ? 'fill-current' : ''}`}
+                />
+                {interactions.dislike ? 'Disliked' : 'Dislike'}
+              </Button>
 
-                <Button
-                  onClick={toggleAvoid}
-                  disabled={interactionLoading || !isReady}
-                  variant={interactions.avoid ? 'destructive' : 'outline'}
-                  size="sm"
-                >
-                  <Ban className="mr-2 h-4 w-4" />
-                  {interactions.avoid ? 'Avoiding' : 'Avoid'}
-                </Button>
+              <Button
+                onClick={toggleAvoid}
+                disabled={interactionLoading || !isReady}
+                variant={interactions.avoid ? 'destructive' : 'outline'}
+                size="sm"
+              >
+                <Ban className="mr-2 h-4 w-4" />
+                {interactions.avoid ? 'Avoiding' : 'Avoid'}
+              </Button>
 
-                <Button
-                  onClick={toggleAllergic}
-                  disabled={interactionLoading || !isReady}
-                  variant={interactions.allergic ? 'destructive' : 'outline'}
-                  size="sm"
-                >
-                  <AlertTriangle
-                    className={`mr-2 h-4 w-4 ${interactions.allergic ? 'fill-current' : ''}`}
-                  />
-                  {interactions.allergic ? 'Allergic' : 'Mark Allergic'}
-                </Button>
-              </div>
-            )}
-
-            {/* Product count on the right - Always visible */}
-            <span className="text-muted-foreground ml-auto text-sm">
-              Found in {ingredient.product_count?.toLocaleString() ?? 0}{' '}
-              products
-            </span>
-          </div>
+              <Button
+                onClick={toggleAllergic}
+                disabled={interactionLoading || !isReady}
+                variant={interactions.allergic ? 'destructive' : 'outline'}
+                size="sm"
+              >
+                <AlertTriangle
+                  className={`mr-2 h-4 w-4 ${interactions.allergic ? 'fill-current' : ''}`}
+                />
+                {interactions.allergic ? 'Allergic' : 'Mark Allergic'}
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Ingredient Details Card */}
