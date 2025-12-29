@@ -9,13 +9,25 @@ if (getApps().length === 0) {
     !!process.env.FIREBASE_SERVICE_ACCOUNT
   )
   console.log(
-    '🔍 First 100 chars:',
-    process.env.FIREBASE_SERVICE_ACCOUNT?.substring(0, 100)
+    '🔍 First 1000 chars:',
+    process.env.FIREBASE_SERVICE_ACCOUNT?.substring(0, 1000)
   )
 
   const serviceAccount = JSON.parse(
     process.env.FIREBASE_SERVICE_ACCOUNT || '{}'
   )
+
+  // Fix the private key formatting
+  if (serviceAccount.private_key) {
+    serviceAccount.private_key = serviceAccount.private_key.replace(
+      /\\n/g,
+      '\n'
+    )
+    console.log(
+      '🔍 First 1000 chars replaced \n:',
+      serviceAccount.private_key?.substring(0, 1000)
+    )
+  }
 
   console.log('🔍 Parsed project_id:', serviceAccount.project_id)
 
