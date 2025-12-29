@@ -1,73 +1,98 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { Ingredient } from '@/types/ingredient'
-import { cacheTag } from 'next/cache'
+import { unstable_cache } from 'next/cache'
 
 /**
- * Get all ingredients (cached globally, not user-specific)
+ * Get all ingredients (cached with Next.js)
  */
-export async function getCachedAllIngredients(): Promise<Ingredient[]> {
-  'use cache'
-  cacheTag('ingredients')
+export const getCachedAllIngredients = unstable_cache(
+  async (): Promise<Ingredient[]> => {
+    const snapshot = await adminDb
+      .collection('ingredients')
+      .select(
+        'inciName',
+        'casNo',
+        'innName',
+        'functionType',
+        'product_count',
+        'restriction'
+      )
+      .orderBy('product_count', 'desc')
+      .get()
 
-  const snapshot = await adminDb
-    .collection('ingredients')
-    .orderBy('product_count', 'desc') // Most common ingredients first
-    .get()
-
-  return snapshot.docs.map(
-    (doc) =>
-      ({
-        id: doc.id,
-        ...doc.data(),
-      }) as Ingredient
-  )
-}
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      inciName: doc.get('inciName'),
+      innName: doc.get('innName'),
+      functionType: doc.get('functionType'),
+      product_count: doc.get('product_count'),
+      restriction: doc.get('restriction'),
+      // Other fields not needed for list view
+      cosingRefNo: '',
+      phEurName: '',
+      casNo: '',
+      ecNo: '',
+      chemIupacDescription: '',
+      updateDate: '',
+      createdAt: '',
+      updatedAt: '',
+    })) as Ingredient[]
+  },
+  ['ingredients-all'],
+  {
+    revalidate: 3600,
+    tags: ['ingredients'],
+  }
+)
 
 /**
  * Get single ingredient by ID (cached)
  */
-export async function getCachedIngredientById(
-  id: string
-): Promise<Ingredient | null> {
-  'use cache'
-  cacheTag('ingredients')
+export const getCachedIngredientById = unstable_cache(
+  async (id: string): Promise<Ingredient | null> => {
+    const doc = await adminDb.collection('ingredients').doc(id).get()
 
-  const doc = await adminDb.collection('ingredients').doc(id).get()
+    if (!doc.exists) {
+      return null
+    }
 
-  if (!doc.exists) {
-    return null
+    return {
+      id: doc.id,
+      ...doc.data(),
+    } as Ingredient
+  },
+  ['ingredients-by-id'],
+  {
+    revalidate: 3600,
+    tags: ['ingredients'],
   }
-
-  return {
-    id: doc.id,
-    ...doc.data(),
-  } as Ingredient
-}
+)
 
 /**
  * Get ingredients by IDs (cached)
- * Used for saved/liked/disliked/avoid/allergic pages
  */
-export async function getCachedIngredientsByIds(
-  ids: string[]
-): Promise<Ingredient[]> {
-  'use cache'
-  cacheTag('ingredients')
+export const getCachedIngredientsByIds = unstable_cache(
+  async (ids: string[]): Promise<Ingredient[]> => {
+    if (ids.length === 0) return []
 
-  if (ids.length === 0) return []
+    const ingredients: Ingredient[] = []
 
-  const ingredients: Ingredient[] = []
+    for (const id of ids) {
+      const doc = await adminDb.collection('ingredients').doc(id).get()
 
-  for (const id of ids) {
-    const doc = await adminDb.collection('ingredients').doc(id).get()
-
-    if (doc.exists) {
-      ingredients.push({
-        id: doc.id,
-        ...doc.data()
-      } as Ingredient)
+      if (doc.exists) {
+        ingredients.push({
+          id: doc.id,
+          ...doc.data(),
+        } as Ingredient)
+      }
     }
-  }
 
-  return ingredients
-}
+    return ingredients
+  },
+  ['ingredients-by-ids'],
+  {
+    revalidate: 3600,
+    tags: ['ingredients'],
+  }
+)

@@ -1,6 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { PreComputedProductMatchScore } from '@/types/productMatching'
-import { cacheTag } from 'next/cache'
 
 /**
  * Transform Firestore doc to PreComputedProductMatchScore
@@ -28,14 +27,11 @@ function docToScore(
  * Get all product scores for a user (cached)
  */
 export async function getCachedAllScores(userId: string) {
-  'use cache'
-  cacheTag(`user-scores-${userId}`)
-
   const snapshot = await adminDb
     .collection('users')
     .doc(userId)
     .collection('product_scores')
-    .orderBy('score', 'desc') // CHANGED: from orderBy('rank')
+    .orderBy('score', 'desc')
     .get()
 
   return snapshot.docs.map(docToScore)
@@ -49,15 +45,13 @@ export async function getCachedScoresByIngredient(
   ingredientId: string,
   options?: { limit?: number }
 ) {
-  'use cache'
-  cacheTag(`user-scores-${userId}`)
-
+  const limit = options?.limit || 'all'
   let query = adminDb
     .collection('users')
     .doc(userId)
     .collection('product_scores')
     .where('ingredientRefs', 'array-contains', ingredientId)
-    .orderBy('score', 'desc') // CHANGED: from orderBy('rank')
+    .orderBy('score', 'desc')
 
   if (options?.limit) {
     query = query.limit(options.limit)
@@ -74,9 +68,6 @@ export async function getCachedScoresByIds(
   userId: string,
   productIds: string[]
 ) {
-  'use cache'
-  cacheTag(`user-scores-${userId}`)
-
   if (productIds.length === 0) return []
 
   const scores: PreComputedProductMatchScore[] = []
@@ -108,26 +99,4 @@ export async function getCachedScoresByIds(
   }
 
   return scores.sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0))
-}
-
-/**
- * Convert Firestore Timestamp to milliseconds (serializable)
- */
-function toTimestamp(ts: any): number | null {
-  if (!ts) return null
-  if (ts._seconds) return ts._seconds * 1000
-  if (ts.seconds) return ts.seconds * 1000
-  if (ts instanceof Date) return ts.getTime()
-  return null
-}
-
-/**
- * Serialize product for client component (converts Timestamps)
- */
-export function serializeProduct(product: any): any {
-  return {
-    ...product,
-    created_at: toTimestamp(product.created_at),
-    updated_at: toTimestamp(product.updated_at),
-  }
 }

@@ -3,7 +3,6 @@ import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
 import { InteractionType } from '@/types/productInteraction'
 import { scoreProductForUser } from '@/functions/src/helpers/scoring'
-import { invalidateUserScores } from '@/lib/server/cache'
 import {
   createInteraction,
   deleteInteraction,
@@ -99,9 +98,6 @@ export async function POST(
       // Don't block response - Cloud Function will rescore anyway
     }
 
-    // Invalidate cache
-    await invalidateUserScores(userId)
-
     return NextResponse.json(
       {
         success: true,
@@ -183,9 +179,6 @@ export async function DELETE(
     } catch (error) {
       console.error(`Failed to rescore product ${productId}:`, error)
     }
-
-    // Invalidate cache
-    await invalidateUserScores(userId)
 
     return NextResponse.json(
       {

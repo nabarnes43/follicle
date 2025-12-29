@@ -3,7 +3,6 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb } from '@/lib/firebase/admin'
 import { verifyAuthToken } from '@/lib/firebase/auth'
 import { scoreProductForUser } from '@/functions/src/helpers/scoring'
-import { invalidateUserScores } from '@/lib/server/cache'
 import { removeProductInteractionsFromRoutine } from '@/lib/server/routineScores'
 
 /**
@@ -95,9 +94,6 @@ export async function DELETE(
 
       console.log(`✅ Rescored ${uniqueProductIds.length} products`)
     }
-
-    // Invalidate cache
-    await invalidateUserScores(userId)
 
     console.log(`✅ Routine deleted: ${routineId}`)
 

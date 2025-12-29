@@ -1,32 +1,16 @@
+// lib/server/routineScores.ts
 import { adminDb } from '@/lib/firebase/admin'
 import { PreComputedRoutineMatchScore } from '@/types/routineMatching'
 import { Routine } from '@/types/routine'
-import { cacheTag } from 'next/cache'
 import { FieldValue } from 'firebase-admin/firestore'
 import { scoreRoutineForUser } from '@/functions/src/helpers/scoring'
-import { invalidateUserScores } from './cache'
-
-/**
- * Convert Firestore Timestamp to Date (serializable)
- */
-function toDate(ts: any): Date | null {
-  if (!ts) return null
-  if (ts._seconds !== undefined) return new Date(ts._seconds * 1000)
-  if (ts.seconds !== undefined) return new Date(ts.seconds * 1000)
-  if (ts instanceof Date) return ts
-  return null
-}
+import { serializeFirestoreDoc } from './serialization'
 
 /**
  * Serialize routine for client component (converts Timestamps)
  */
 export function serializeRoutine(routine: any): Routine {
-  return {
-    ...routine,
-    created_at: toDate(routine.created_at),
-    updated_at: toDate(routine.updated_at),
-    deleted_at: toDate(routine.deleted_at),
-  }
+  return serializeFirestoreDoc<Routine>(routine)
 }
 
 /**
@@ -56,14 +40,11 @@ function docToScore(
  * Get all routine scores for a user (cached, serialized)
  */
 export async function getCachedAllRoutineScores(userId: string) {
-  'use cache'
-  cacheTag(`user-routine-scores-${userId}`)
-
   const snapshot = await adminDb
     .collection('users')
     .doc(userId)
     .collection('routine_scores')
-    .orderBy('score', 'desc') // CHANGED: from orderBy('rank')
+    .orderBy('score', 'desc')
     .get()
 
   return snapshot.docs.map(docToScore)
@@ -76,9 +57,6 @@ export async function getCachedRoutineScoresByIds(
   userId: string,
   routineIds: string[]
 ) {
-  'use cache'
-  cacheTag(`user-routine-scores-${userId}`)
-
   if (routineIds.length === 0) return []
 
   const scores: PreComputedRoutineMatchScore[] = []
@@ -244,9 +222,6 @@ export async function scoreRoutineAndInvalidateCache(
     console.error(`Failed to score routine ${routine.id}:`, error)
     // Don't throw - Cloud Function will retry scoring in background
   }
-
-  // Invalidate cache
-  await invalidateUserScores(userId)
 }
 
 /**

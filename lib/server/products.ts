@@ -1,151 +1,129 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { Product } from '@/types/product'
-import { cacheTag } from 'next/cache'
+import { serializeFirestoreDoc } from './serialization'
+import { unstable_cache } from 'next/cache'
 
 /**
- * Convert Firestore Timestamp to milliseconds (serializable)
+ * Get all products (cached with Next.js)
  */
-function toTimestamp(ts: any): number | null {
-  if (!ts) return null
-  if (ts._seconds) return ts._seconds * 1000
-  if (ts.seconds) return ts.seconds * 1000
-  if (ts instanceof Date) return ts.getTime()
-  return null
-}
+export const getCachedAllProducts = unstable_cache(
+  async (): Promise<Product[]> => {
+    const snapshot = await adminDb
+      .collection('products')
+      .select('brand', 'name', 'category', 'price', 'image_url')
+      .orderBy('name', 'asc')
+      .get()
 
-/**
- * Serialize product for client component (converts Timestamps)
- */
-function serializeProduct(product: any): Product {
-  return {
-    ...product,
-    created_at: toTimestamp(product.created_at),
-    updated_at: toTimestamp(product.updated_at),
-  } as Product
-}
-
-/**
- * Get all products (cached globally, not user-specific)
- * Ordered alphabetically by name since we don't have interaction_count yet
- */
-export async function getCachedAllProducts(): Promise<Product[]> {
-  'use cache'
-  cacheTag('products')
-
-  const snapshot = await adminDb
-    .collection('products')
-    .orderBy('name', 'asc') // Alphabetical for now
-    .get()
-
-  return snapshot.docs.map((doc) =>
-    serializeProduct({
-      id: doc.id,
-      ...doc.data(),
-    })
-  )
-}
+    return snapshot.docs.map((doc) =>
+      serializeFirestoreDoc<Product>({
+        id: doc.id,
+        brand: doc.get('brand'),
+        name: doc.get('name'),
+        category: doc.get('category'),
+        price: doc.get('price'),
+        image_url: doc.get('image_url'),
+        created_at: null,
+        updated_at: null,
+      } as any)
+    )
+  },
+  ['products-all'],
+  {
+    revalidate: 3600, // 1 hour
+    tags: ['products'],
+  }
+)
 
 /**
  * Get products by IDs (cached)
- * Used for routine detail pages
  */
-export async function getCachedProductsByIds(
-  productIds: string[]
-): Promise<Product[]> {
-  'use cache'
-  cacheTag('products')
+export const getCachedProductsByIds = unstable_cache(
+  async (productIds: string[]): Promise<Product[]> => {
+    if (productIds.length === 0) return []
 
-  if (productIds.length === 0) return []
+    const products: Product[] = []
 
-  const products: Product[] = []
+    for (const id of productIds) {
+      const doc = await adminDb.collection('products').doc(id).get()
 
-  for (const id of productIds) {
-    const doc = await adminDb.collection('products').doc(id).get()
-
-    if (doc.exists) {
-      products.push(
-        serializeProduct({
-          id: doc.id,
-          ...doc.data(),
-        })
-      )
+      if (doc.exists) {
+        products.push(
+          serializeFirestoreDoc<Product>({
+            id: doc.id,
+            ...doc.data(),
+          })
+        )
+      }
     }
-  }
 
-  return products
-}
+    return products
+  },
+  ['products-by-ids'],
+  {
+    revalidate: 3600,
+    tags: ['products'],
+  }
+)
 
 /**
  * Get single product by ID (cached)
  */
-export async function getCachedProductById(
-  id: string
-): Promise<Product | null> {
-  'use cache'
-  cacheTag('products')
+export const getCachedProductById = unstable_cache(
+  async (id: string): Promise<Product | null> => {
+    const doc = await adminDb.collection('products').doc(id).get()
 
-  const doc = await adminDb.collection('products').doc(id).get()
+    if (!doc.exists) {
+      return null
+    }
 
-  if (!doc.exists) {
-    return null
-  }
-
-  return serializeProduct({
-    id: doc.id,
-    ...doc.data(),
-  })
-}
-
-/**
- * Get products by category (cached)
- * Ordered alphabetically by name
- */
-export async function getCachedProductsByCategory(
-  category: string
-): Promise<Product[]> {
-  'use cache'
-  cacheTag('products')
-
-  const snapshot = await adminDb
-    .collection('products')
-    .where('category', '==', category)
-    .orderBy('name', 'asc') // Alphabetical for now
-    .get()
-
-  return snapshot.docs.map((doc) =>
-    serializeProduct({
+    return serializeFirestoreDoc<Product>({
       id: doc.id,
       ...doc.data(),
     })
-  )
-}
+  },
+  ['products-by-id'],
+  {
+    revalidate: 3600,
+    tags: ['products'],
+  }
+)
 
 /**
  * Get products by ingredient ID (cached)
- * Used for ingredient detail pages
  */
-export async function getCachedProductsByIngredient(
-  ingredientId: string,
-  options?: { limit?: number }
-): Promise<Product[]> {
-  'use cache'
-  cacheTag('products')
+export const getCachedProductsByIngredient = unstable_cache(
+  async (
+    ingredientId: string,
+    options?: { limit?: number }
+  ): Promise<Product[]> => {
+    let query = adminDb
+      .collection('products')
+      .where('ingredient_refs', 'array-contains', ingredientId)
+      .select('brand', 'name', 'category', 'price', 'image_url')
+      .orderBy('name', 'asc')
 
-  let query = adminDb
-    .collection('products')
-    .where('ingredient_refs', 'array-contains', ingredientId)
-    .orderBy('name', 'asc') // Alphabetical for now
+    if (options?.limit) {
+      query = query.limit(options.limit)
+    }
 
-  if (options?.limit) {
-    query = query.limit(options.limit)
+    const snapshot = await query.get()
+
+    return snapshot.docs.map((doc) =>
+      serializeFirestoreDoc<Product>({
+        id: doc.id,
+        brand: doc.get('brand'),
+        name: doc.get('name'),
+        category: doc.get('category'),
+        price: doc.get('price'),
+        image_url: doc.get('image_url'),
+        created_at: null,
+        updated_at: null,
+      } as any)
+    )
+  },
+  ['products-by-ingredient'],
+  {
+    revalidate: 3600,
+    tags: ['products'],
   }
-
-  const snapshot = await query.get()
-
-  return snapshot.docs.map((doc) =>
-    serializeProduct({
-      id: doc.id,
-      ...doc.data(),
-    })
-  )
-}
+)
