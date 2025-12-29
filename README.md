@@ -8,3 +8,10 @@ AI-powered hair care recommendation engine.
 npm install
 npm run dev
 ```
+
+# Delete the cache directories
+rm -rf .next
+rm -rf node_modules/.cache
+
+# Then rebuild
+npm run build
