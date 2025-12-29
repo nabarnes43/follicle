@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { adminAuth, adminDb } from '@/lib/firebase/admin'
 import { User } from '@/types/user'
+import { cache } from 'react'
 
 /**
  * Convert Firestore Timestamp to Date (serializable)
@@ -39,7 +40,11 @@ function serializeUser(user: any): User {
  * Get the current user's data from a Server Component
  * Returns serialized user data (safe to pass to client components)
  */
-export async function getServerUser(): Promise<User | null> {
+/**
+ * Get the current user's data from a Server Component
+ * CACHED - will only run once per request even if called multiple times
+ */
+export const getServerUser = cache(async (): Promise<User | null> => {
   try {
     let cookieStore
     try {
@@ -50,29 +55,12 @@ export async function getServerUser(): Promise<User | null> {
     }
 
     const sessionCookie = cookieStore.get('session')
-    console.log('🔐 getServerUser - cookie exists:', !!sessionCookie?.value)
 
     if (!sessionCookie?.value) {
-      console.log('🔐 No session cookie found')
       return null
     }
 
-    console.log('🔐 Verifying token...')
-
-    let decodedToken
-    try {
-      decodedToken = await adminAuth.verifyIdToken(sessionCookie.value)
-    } catch (verifyError: any) {
-      console.error(
-        '🔐 Token verification failed:',
-        verifyError.code,
-        verifyError.message
-      )
-      // Token is invalid/expired - return null instead of crashing
-      return null
-    }
-
-    console.log('🔐 Token verified for user:', decodedToken.uid)
+    const decodedToken = await adminAuth.verifyIdToken(sessionCookie.value)
     const userId = decodedToken.uid
 
     const userDoc = await adminDb.collection('users').doc(userId).get()
@@ -86,4 +74,4 @@ export async function getServerUser(): Promise<User | null> {
     console.error('getServerUser error:', error)
     return null
   }
-}
+})
