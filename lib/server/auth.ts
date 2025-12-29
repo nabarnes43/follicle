@@ -41,12 +41,10 @@ function serializeUser(user: any): User {
  */
 export async function getServerUser(): Promise<User | null> {
   try {
-    // Handle prerender case - cookies() will reject during prerender
     let cookieStore
     try {
       cookieStore = await cookies()
     } catch (error) {
-      // During prerender, cookies() rejects - return null
       console.log('🔐 Prerender detected, returning null user')
       return null
     }
@@ -60,7 +58,20 @@ export async function getServerUser(): Promise<User | null> {
     }
 
     console.log('🔐 Verifying token...')
-    const decodedToken = await adminAuth.verifyIdToken(sessionCookie.value)
+
+    let decodedToken
+    try {
+      decodedToken = await adminAuth.verifyIdToken(sessionCookie.value)
+    } catch (verifyError: any) {
+      console.error(
+        '🔐 Token verification failed:',
+        verifyError.code,
+        verifyError.message
+      )
+      // Token is invalid/expired - return null instead of crashing
+      return null
+    }
+
     console.log('🔐 Token verified for user:', decodedToken.uid)
     const userId = decodedToken.uid
 
