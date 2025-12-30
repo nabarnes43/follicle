@@ -77,7 +77,7 @@ export function useScorePolling<T>({
     }
 
     fetchScores()
-    intervalRef.current = setInterval(fetchScores, 5000)
+    intervalRef.current = setInterval(fetchScores, 2500)
 
     return () => {
       if (intervalRef.current) {

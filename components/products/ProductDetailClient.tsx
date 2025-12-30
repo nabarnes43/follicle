@@ -56,6 +56,10 @@ export function ProductDetailClient({
 
   const hasTrackedView = useRef(false)
 
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   // Reset tracking when product changes
   useEffect(() => {
     hasTrackedView.current = false

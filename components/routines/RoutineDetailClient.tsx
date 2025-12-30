@@ -82,6 +82,10 @@ export function RoutineDetailClient({
   } = useRoutineInteraction(routine.id)
 
   const hasTrackedView = useRef(false)
+  
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   // Reset tracking when product changes
   useEffect(() => {

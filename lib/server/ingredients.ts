@@ -9,33 +9,16 @@ export const getCachedAllIngredients = unstable_cache(
   async (): Promise<Ingredient[]> => {
     const snapshot = await adminDb
       .collection('ingredients')
-      .select(
-        'inciName',
-        'casNo',
-        'innName',
-        'functionType',
-        'product_count',
-        'restriction'
-      )
+      .select('inciName', 'casNo', 'functionType', 'product_count')
       .orderBy('product_count', 'desc')
       .get()
 
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       inciName: doc.get('inciName'),
-      innName: doc.get('innName'),
+      casNo: doc.get('casNo'),
       functionType: doc.get('functionType'),
       product_count: doc.get('product_count'),
-      restriction: doc.get('restriction'),
-      // Other fields not needed for list view
-      cosingRefNo: '',
-      phEurName: '',
-      casNo: '',
-      ecNo: '',
-      chemIupacDescription: '',
-      updateDate: '',
-      createdAt: '',
-      updatedAt: '',
     })) as Ingredient[]
   },
   ['ingredients-all'],
