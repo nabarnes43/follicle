@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Follicle - AI Hair Care Recommendations',
+  title: 'Follicle - Hair Care Recommendations',
   description: 'Data-driven hair product recommendations',
 }
 
