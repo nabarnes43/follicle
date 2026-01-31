@@ -1,23 +1,28 @@
-import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedRoutineScoresByIds } from '@/lib/server/routineScores'
 import { PrivateRoutinesClient } from '@/components/routines/PrivateRoutinesClient'
 import { headers } from 'next/headers'
 import { AnalysisRequired } from '@/components/auth/AnalysisRequired'
+import { AccessCodeForm } from '@/components/auth/AccessCodeForm'
 
 export default async function PrivateRoutinesPage() {
   const user = await getServerUser()
   headers()
 
+  // Needs access code (everyone, including anonymous)
+  if (!user?.accessCode) {
+    return <AccessCodeForm />
+  }
+
+  // Needs analysis
   if (!user?.follicleId) {
     return (
       <AnalysisRequired
-        message="Complete your hair analysis to manage your routines"
         showSignInPrompt={user?.isAnonymous}
       />
     )
   }
-
+  
   const routineIds = {
     created: user.createdRoutines || [],
     saved: user.savedRoutines || [],

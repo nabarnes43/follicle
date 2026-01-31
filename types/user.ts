@@ -12,6 +12,8 @@ export interface User {
   isAnonymous: boolean
   providerData: ProviderData[]
   lastLoginAt: Timestamp | FieldValue | null
+  accessCode?: string //Access code for closed beta
+  accessGrantedAt?: Date
   // Products Cache
   likedProducts?: string[] // Cache for fast UI checks
   dislikedProducts?: string[] // Cache for fast UI checks

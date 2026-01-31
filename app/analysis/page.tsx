@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/button'
 import { SHORT_ANALYSIS_QUESTIONS } from '@/lib/analysis/questions-short'
 import { saveAnalysisResults } from '@/lib/analysis/analysis'
 import { useAuth } from '@/contexts/auth'
+//Access Code
+import { AccessCodeForm } from '@/components/auth/AccessCodeForm'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/lib/firebase/client'
 
 const QUESTIONS_PER_PAGE = 5
 
@@ -17,6 +21,7 @@ export default function AnalysisPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
   const { user } = useAuth()
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null)
   const [answers, setAnswers] = useState<Record<string, any>>(() => {
     // Check if we are in the browser
     if (typeof window !== 'undefined') {
@@ -92,6 +97,19 @@ export default function AnalysisPage() {
     if (Array.isArray(answer)) return answer.length > 0
     return answer !== undefined && answer !== ''
   })
+
+  //Access Code
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!user) return
+      const userDoc = await getDoc(doc(db, 'users', user.uid))
+      setHasAccess(!!userDoc.data()?.accessCode)
+    }
+    checkAccess()
+  }, [user])
+
+  if (hasAccess === null) return null
+  if (!hasAccess) return <AccessCodeForm />
 
   return (
     <div className="bg-background min-h-screen">

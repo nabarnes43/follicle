@@ -15,6 +15,11 @@
 ### IMPORTANT: Get your auth token first
 ### 1. Open browser console on your app
 ### 2. Copy the token and paste it below
+### const { getAuth } = await import('firebase/auth')
+### const token = await getAuth().currentUser.getIdToken()
+### console.log(token)
+
+
 @authToken = eyJhbGciOiJSUzI1NiIsImtpZCI6IjdjNzQ5NTFmNjBhMDE0NzE3ZjFlMzA4ZDZiMjgwZjQ4ZjFlODhmZGEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vZm9sbGljbGUtOTBlYTgiLCJhdWQiOiJmb2xsaWNsZS05MGVhOCIsImF1dGhfdGltZSI6MTc2MzI0MDY4MywidXNlcl9pZCI6IkYyV1hyb2w0V0lPRkVUZUdENmFLME1kYXZINTIiLCJzdWIiOiJGMldYcm9sNFdJT0ZFVGVHRDZhSzBNZGF2SDUyIiwiaWF0IjoxNzY0Mzg0MTg5LCJleHAiOjE3NjQzODc3ODksImVtYWlsIjoibmFzaXIuYmFybmVzQG1vcmVob3VzZS5lZHUiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsibmFzaXIuYmFybmVzQG1vcmVob3VzZS5lZHUiXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.KOOWVa4B_pYCjIQpBrjMf2d-fjylXvyZi_gOl_pFOjhTC2pdkkwQs1cjZVG22yaS9wsWzhuLS_Sl7EowJqfqrI1pNnMBZa9BET0b-vUT-5YTOOKpFoSv8fgdHmprVB_qSKPKzLGW35PfHz-21k1nLgm9RCAEqA42kN_m4odKJ-XhLb2HT0aUPCdvHj6XisrknxtNvHFJ_bnPxv8HiskSYrLlCUJRctyGgfreFruACIzBx3PefBN2C8AP60ikRhDfoEQXtW6nVbwb4NvohJQYndxH_OdwpFZgvtDZuc--eDbx3tof9VhHVp9GvGv1t4y344IOlfM5pkfQZZVf1GIASA
 
 ### ==============================================
@@ -395,6 +400,43 @@ Authorization: Bearer {{authToken}}
 ### Test delete non-existent interaction (should return 404)
 DELETE {{baseUrl}}/api/interactions/ingredients/nonexistent_ingredient/like
 Authorization: Bearer {{authToken}}
+
+### ==============================================
+### ACCESS CODE API
+### ==============================================
+
+### Validate access code (success)
+POST {{baseUrl}}/api/validate-code
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "code": "FOLLICLE-ADEN"
+}
+
+### Test missing code (should return 400)
+POST {{baseUrl}}/api/validate-code
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{}
+
+### Test invalid code (should return 400)
+POST {{baseUrl}}/api/validate-code
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "code": "INVALID-CODE"
+}
+
+### Test without auth (should return 401)
+POST {{baseUrl}}/api/validate-code
+Content-Type: application/json
+
+{
+  "code": "FOLLICLE-XXXX"
+}
 
 ### ==============================================
 ### NOTES

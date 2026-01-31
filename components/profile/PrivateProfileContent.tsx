@@ -39,11 +39,11 @@ import { auth } from '@/lib/firebase/client'
 import { decodeFollicleIdForDisplay } from '@/functions/src/shared/follicleId'
 
 interface PrivateProfileContentProps {
-  userData: User // ✅ No longer optional
+  user: User // ✅ No longer optional
 }
 
 export default function PrivateProfileContent({
-  userData,
+  user,
 }: PrivateProfileContentProps) {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
@@ -51,8 +51,8 @@ export default function PrivateProfileContent({
   const [showRetakeDialog, setShowRetakeDialog] = useState(false)
 
   const copyFollicleId = () => {
-    if (userData.follicleId) {
-      navigator.clipboard.writeText(userData.follicleId)
+    if (user.follicleId) {
+      navigator.clipboard.writeText(user.follicleId)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
@@ -81,17 +81,17 @@ export default function PrivateProfileContent({
     return map[freq] || freq
   }
 
-  const decoded = userData.follicleId
-    ? decodeFollicleIdForDisplay(userData.follicleId)
+  const decoded = user.follicleId
+    ? decodeFollicleIdForDisplay(user.follicleId)
     : null
   const follicleIdDescription = decoded
     ? Object.values(decoded).join(' • ')
     : 'No analysis completed'
-  const hair = userData.hairAnalysis
-  const isAnonymous = userData.isAnonymous
-  const memberSince = userData.createdAt
+  const hair = user.hairAnalysis
+  const isAnonymous = user.isAnonymous
+  const memberSince = user.createdAt
     ? new Date(
-        (userData.createdAt as any).toDate?.() || userData.createdAt
+        (user.createdAt as any).toDate?.() || user.createdAt
       ).toLocaleDateString('en-US', {
         month: 'long',
         year: 'numeric',
@@ -104,7 +104,7 @@ export default function PrivateProfileContent({
         {/* Profile Header */}
         <div className="text-center">
           <h1 className="mb-2 text-4xl font-bold">
-            {userData.displayName || userData.email || 'Anonymous User'}
+            {user.displayName || user.email || 'Anonymous User'}
           </h1>
           <p className="text-muted-foreground text-sm">
             Member since {memberSince}
@@ -123,7 +123,7 @@ export default function PrivateProfileContent({
             <div className="bg-muted flex items-center justify-between rounded-lg p-4">
               <div>
                 <p className="text-primary mb-2 font-mono text-3xl font-bold">
-                  {userData.follicleId}
+                  {user.follicleId}
                 </p>
                 <p className="text-muted-foreground text-sm">
                   {follicleIdDescription}
@@ -157,21 +157,21 @@ export default function PrivateProfileContent({
               <div className="flex items-center gap-2">
                 <Heart className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.likedProducts?.length || 0}
+                  {user.likedProducts?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Liked</span>
               </div>
               <div className="flex items-center gap-2">
                 <Bookmark className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.savedProducts?.length || 0}
+                  {user.savedProducts?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Saved</span>
               </div>
               <div className="flex items-center gap-2">
                 <ThumbsDown className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.dislikedProducts?.length || 0}
+                  {user.dislikedProducts?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Disliked</span>
               </div>
@@ -196,35 +196,35 @@ export default function PrivateProfileContent({
               <div className="flex items-center gap-2">
                 <ClipboardCheck className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.createdRoutines?.length || 0}
+                  {user.createdRoutines?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Created</span>
               </div>
               <div className="flex items-center gap-2">
                 <Heart className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.likedRoutines?.length || 0}
+                  {user.likedRoutines?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Liked</span>
               </div>
               <div className="flex items-center gap-2">
                 <Bookmark className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.savedRoutines?.length || 0}
+                  {user.savedRoutines?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Saved</span>
               </div>
               <div className="flex items-center gap-2">
                 <ThumbsDown className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.dislikedRoutines?.length || 0}
+                  {user.dislikedRoutines?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Disliked</span>
               </div>
               <div className="flex items-center gap-2">
                 <Copy className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.adaptedRoutines?.length || 0}
+                  {user.adaptedRoutines?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Adapted</span>
               </div>
@@ -251,28 +251,28 @@ export default function PrivateProfileContent({
               <div className="flex items-center gap-2">
                 <Heart className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.likedIngredients?.length || 0}
+                  {user.likedIngredients?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Liked</span>
               </div>
               <div className="flex items-center gap-2">
                 <ThumbsDown className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.dislikedIngredients?.length || 0}
+                  {user.dislikedIngredients?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Disliked</span>
               </div>
               <div className="flex items-center gap-2">
                 <Ban className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.avoidIngredients?.length || 0}
+                  {user.avoidIngredients?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Avoided</span>
               </div>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="text-muted-foreground h-4 w-4" />
                 <span className="font-semibold">
-                  {userData.allergicIngredients?.length || 0}
+                  {user.allergicIngredients?.length || 0}
                 </span>
                 <span className="text-muted-foreground">Allergic</span>
               </div>

@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-codes": "node scripts/generate-access-codes.js",
+    "revoke-access": "node scripts/revoke-access.js",
+    "list-access": "node scripts/list-access-users.js"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -42,6 +45,7 @@
     "@types/node": "^20",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.0.6",
     "firebase-admin": "^13.6.0",

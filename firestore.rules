@@ -81,5 +81,11 @@ service cloud.firestore {
       allow update, delete: if request.auth != null 
                             && request.auth.uid == resource.data.user_id;
     }
+    
+    // Access codes collection - admin/server only
+    match /access_codes/{code} {
+      allow read: if false;   // Validation happens via API route with admin SDK
+      allow write: if false;  // Generated via admin script only
+    }
   }
 }

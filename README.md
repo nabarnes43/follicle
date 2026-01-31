@@ -1,6 +1,6 @@
 # Follicle v0.0
 
-AI-powered hair care recommendation engine.
+The Intelligence Layer for Hair Care
 
 ## Setup
 
@@ -13,5 +13,6 @@ npm run dev
 rm -rf .next
 rm -rf node_modules/.cache
 
-# Then rebuild
+# Then rebuild/ Production Start
 npm run build
+npm run start

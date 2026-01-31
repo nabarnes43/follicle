@@ -1,17 +1,21 @@
-import { redirect } from 'next/navigation'
 import { getServerUser } from '@/lib/server/auth'
 import { getCachedIngredientsByIds } from '@/lib/server/ingredients'
 import { SavedIngredientsClient } from '@/components/ingredients/SavedIngredientsClient'
 import { AnalysisRequired } from '@/components/auth/AnalysisRequired'
+import { AccessCodeForm } from '@/components/auth/AccessCodeForm'
 
 export default async function SavedIngredientsPage() {
   const user = await getServerUser()
 
-  // Check for follicleId (works for both anonymous and authenticated)
+  // Needs access code (everyone, including anonymous)
+  if (!user?.accessCode) {
+    return <AccessCodeForm />
+  }
+
+  // Needs analysis
   if (!user?.follicleId) {
     return (
       <AnalysisRequired
-        message="Complete your hair analysis to manage your ingredients"
         showSignInPrompt={user?.isAnonymous}
       />
     )
