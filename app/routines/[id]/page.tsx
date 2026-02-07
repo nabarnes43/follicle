@@ -39,7 +39,7 @@ export default async function RoutineDetailPage({
     : '[Deleted User]'
   // Fetch adapted-from author if exists - handle deleted users
   let adaptedFromAuthor: string | null = null
-  let adaptedFromUserId: string | null = null // ✅ Track the actual user ID
+  let adaptedFromUserId: string | null = null // Track the actual user ID
   if (routine.adaptedFrom) {
     const sourceDoc = await adminDb
       .collection('routines')
@@ -48,7 +48,7 @@ export default async function RoutineDetailPage({
     if (sourceDoc.exists) {
       const sourceUserId = sourceDoc.data()?.user_id
       if (sourceUserId) {
-        adaptedFromUserId = sourceUserId // ✅ Store it
+        adaptedFromUserId = sourceUserId // Store it
         const sourceUserDoc = await adminDb
           .collection('users')
           .doc(sourceUserId)
@@ -68,7 +68,11 @@ export default async function RoutineDetailPage({
   let matchScore = null
   let productsMap = {}
 
-  if (user?.userId && user?.follicleId) {
+  if (
+    user?.userId &&
+    user?.follicleId &&
+    user?.scoringStatus !== 'in_progress'
+  ) {
     // Authenticated: fetch scored products and routine score
     matchScore =
       (await getCachedRoutineScoresByIds(user.userId, [id]))[0] || null

@@ -30,6 +30,10 @@ export interface User {
   dislikedIngredients?: string[]
   avoidIngredients?: string[]
   allergicIngredients?: string[]
+  // Scoring status
+  scoringStatus?: 'in_progress' | 'complete' | 'failed' | null
+  currentScoringId?: string
+  scoringStartedAt?: Timestamp | FieldValue | null
 }
 
 export interface ProviderData {

@@ -24,7 +24,7 @@ export default async function ProductDetailPage({
 
   // Fetch score only if user has analysis
   const productScore =
-    user?.userId && user?.follicleId
+    user?.userId && user?.follicleId && user?.scoringStatus !== 'in_progress'
       ? (await getCachedScoresByIds(user.userId, [id]))[0] || null
       : null
 

@@ -1,6 +1,8 @@
 import { adminDb } from '@/lib/firebase/admin'
 import { PreComputedProductMatchScore } from '@/types/productMatching'
 
+//TODO had to remove caching as it was making the launch fail will re implement likely with redis when needed
+
 /**
  * Transform Firestore doc to PreComputedProductMatchScore
  */

@@ -16,9 +16,6 @@ import { useAuth } from '@/contexts/auth'
 import AuthDialog from '@/components/auth/AuthDialog'
 import { User } from '@/types/user'
 import { decodeFollicleIdForDisplay } from '@/functions/src/shared/follicleId'
-import { useScorePolling } from '@/hooks/useScorePolling'
-import { ScoreGeneratingState } from '@/components/analysis/ScoreGeneratingState'
-import { bustUserCache } from '@/app/actions/cache'
 
 interface AnalysisResultsClientProps {
   follicleId: string
@@ -40,34 +37,6 @@ export function AnalysisResultsClient({
   // Anonymous account linking
   const [previousUserId, setPreviousUserId] = useState<string | null>(null)
   const hasToastRun = useRef(false)
-
-  // Poll for scores
-  const {
-    data: productScores,
-    isChecking: isCheckingProducts,
-    progress: productProgress,
-    isComplete: productsComplete,
-  } = useScorePolling({
-    enabled: !!follicleId && !!authUser,
-    apiEndpoint: '/api/products/scores',
-    initialData: [],
-  })
-
-  const {
-    data: routineScores,
-    isChecking: isCheckingRoutines,
-    progress: routineProgress,
-    isComplete: routinesComplete,
-  } = useScorePolling({
-    enabled: !!follicleId && !!authUser,
-    apiEndpoint: '/api/routines/scores',
-    initialData: [],
-  })
-
-  // 2. Determine overall completion
-  const isEverythingComplete = productsComplete && routinesComplete
-
-  const isGenerating = isCheckingProducts || isCheckingRoutines
 
   // Track anonymous user ID before they sign in
   useEffect(() => {
@@ -99,25 +68,6 @@ export function AnalysisResultsClient({
     handleAccountLink()
   }, [authUser, previousUserId])
 
-  // Inside AnalysisResultsClient.tsx
-
-  // Handle the Cache Busting
-  useEffect(() => {
-    const finalize = async () => {
-      // Check if everything is done and we have a valid user UID
-      if (isEverythingComplete && authUser?.uid) {
-        try {
-          console.log('🚀 Scores ready! Busting cache...')
-          await bustUserCache(authUser.uid)
-        } catch (err) {
-          console.error('Cache bust failed:', err)
-        }
-      }
-    }
-
-    finalize()
-  }, [isEverythingComplete, authUser?.uid, router])
-
   // Copy follicleId to clipboard
   const copyFollicleId = () => {
     if (follicleId) {
@@ -136,57 +86,6 @@ export function AnalysisResultsClient({
   const hair = userData?.hairAnalysis
   const isAnonymous = authUser?.isAnonymous
 
-  // Show score generation UI
-  if (isGenerating) {
-    return (
-      <div className="bg-background min-h-screen">
-        <div className="mx-auto max-w-4xl p-6">
-          <div className="mb-8 text-center">
-            <h1 className="mb-4 text-4xl font-bold">Your Hair Profile</h1>
-            <p className="text-muted-foreground text-xl">
-              Analyzing your unique hair identity
-            </p>
-          </div>
-
-          {/* Follicle ID Card */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Your Follicle ID</CardTitle>
-              <CardDescription>
-                Connects you with others who have similar hair
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-muted flex items-center justify-between rounded-lg p-4">
-                <div>
-                  <p className="text-primary mb-2 font-mono text-3xl font-bold">
-                    {follicleId}
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    {follicleIdDescription}
-                  </p>
-                </div>
-                <Button variant="outline" size="icon" onClick={copyFollicleId}>
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Progress */}
-          <ScoreGeneratingState
-            productProgress={productProgress}
-            routineProgress={routineProgress}
-          />
-        </div>
-      </div>
-    )
-  }
-
   // Main results UI
   return (
     <div className="bg-background min-h-screen p-6">
@@ -194,7 +93,8 @@ export function AnalysisResultsClient({
         <div className="mb-12 text-center">
           <h1 className="mb-4 text-4xl font-bold">Your Hair Profile</h1>
           <p className="text-muted-foreground text-xl">
-            Your unique hair identity
+            Your analysis is complete. Personalized scores are being calculated
+            in the background.
           </p>
         </div>
 
@@ -263,17 +163,6 @@ export function AnalysisResultsClient({
           </Card>
         )}
 
-        {/* Success Message (Authenticated) */}
-        {!isAnonymous && authUser && (
-          <Card className="bg-primary/5 border-primary mb-8">
-            <CardContent className="pt-6">
-              <p className="text-center font-medium">
-                ✅ Your personalized recommendations are ready!
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Hair Analysis */}
         <Card className="mb-8">
           <CardHeader>
@@ -320,12 +209,16 @@ export function AnalysisResultsClient({
           <Button
             size="lg"
             onClick={() => router.push('/products')}
-            onMouseEnter={() => router.prefetch('/products')} // Pre-warms the engine
+            onMouseEnter={() => router.prefetch('/products')}
           >
-            View Product Recommendations
+            Browse Products
           </Button>
-          <Button size="lg" variant="outline" onClick={() => router.push('/')}>
-            Back to Home
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => router.push('/routines/public')}
+          >
+            Browse Routines
           </Button>
         </div>
       </div>

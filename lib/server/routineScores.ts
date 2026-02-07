@@ -6,6 +6,9 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { scoreRoutineForUser } from '@/functions/src/helpers/scoring'
 import { serializeFirestoreDoc } from './serialization'
 
+//TODO had to remove caching as it was making the launch fail will re implement likely with redis when needed
+
+
 /**
  * Serialize routine for client component (converts Timestamps)
  */

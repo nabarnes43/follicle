@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/contexts/auth'
 import NavBar from '@/components/navigation/NavBar'
 import { Toaster } from '@/components/ui/sonner'
+import { ScoringToast } from '@/components/analysis/ScoringToast'
 import { Suspense } from 'react'
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export default function RootLayout({
         </Suspense>
         <AuthProvider>
           {children}
+          <ScoringToast />
           <Toaster />
         </AuthProvider>
       </body>

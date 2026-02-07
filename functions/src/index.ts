@@ -467,6 +467,15 @@ export const onRoutineWrite = onDocumentWritten(
 // ============================================================================
 
 /**
+ * Generate a unique scoring ID for this run
+ */
+function generateScoringId(): string {
+  return db.collection('_').doc().id
+}
+
+// Chunk Size product and routine scoring
+const CHUNKSIZE = 23
+/**
  * When user's follicleId changes (quiz completed/retaken), rescore everything
  */
 export const onUserAnalysisChange = onDocumentWritten(
@@ -501,22 +510,63 @@ export const onUserAnalysisChange = onDocumentWritten(
       return
     }
 
+    // Skip if scoring is already in progress (prevents re-trigger from our own writes)
+    const afterScoringStatus = afterData.scoringStatus as string | undefined
+    if (afterScoringStatus === 'in_progress') {
+      console.log(`User ${userId} scoring already in progress, skipping`)
+      return
+    }
+
     console.log(
-      `📊 FollicleId changed for user ${userId}: ${beforeFollicleId || 'none'} → ${afterFollicleId}`
+      `FollicleId changed for user ${userId}: ${beforeFollicleId || 'none'} -> ${afterFollicleId}`
     )
 
     try {
-      // Rescore all products for this user
-      console.log(`🚀 Scoring products for user ${userId}...`)
-      await scoreAllProductsForUser(userId, db)
+      // Generate shared scoringId for this analysis run
+      const scoringId = generateScoringId()
+      
+      await db.collection('users').doc(userId).update({
+        currentScoringId: scoringId,
+        scoringStartedAt: new Date(),
+        scoringStatus: 'in_progress',
+      })
 
-      // Rescore all routines for this user
-      console.log(`🚀 Scoring routines for user ${userId}...`)
-      await scoreAllRoutinesForUser(userId, db)
+      await db
+        .collection('users')
+        .doc(userId)
+        .collection('scoring_status')
+        .doc('current')
+        .set({
+          products: 0,
+          totalProducts: 0,
+          routines: 0,
+          totalRoutines: 0,
+        })
 
-      console.log(`✅ Finished rescoring everything for user ${userId}`)
+      console.log(`Generated scoringId: ${scoringId}`)
+
+      // Score products and routines in parallel
+      console.log(`Starting parallel scoring for user ${userId}...`)
+
+      await Promise.all([
+        scoreAllProductsForUser(userId, db, scoringId, CHUNKSIZE),
+        scoreAllRoutinesForUser(userId, db, scoringId, CHUNKSIZE),
+      ])
+
+      await db.collection('users').doc(userId).update({
+        scoringStatus: 'complete',
+      })
+
+      console.log(`Finished rescoring everything for user ${userId}`)
     } catch (error) {
-      console.error(`❌ Error rescoring for user ${userId}:`, error)
+      console.error(`Error rescoring for user ${userId}:`, error)
+      await db
+        .collection('users')
+        .doc(userId)
+        .update({
+          scoringStatus: 'failed',
+        })
+        .catch(() => {})
       throw error
     }
   }

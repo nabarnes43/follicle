@@ -15,7 +15,7 @@ export default async function ProductsPage() {
   const user = await getServerUser()
 
   // If user has analysis, show scored products
-  if (user?.follicleId) {
+  if (user?.follicleId && user?.scoringStatus !== 'in_progress') {
     const products = await getCachedAllScores(user.userId)
 
     return (
