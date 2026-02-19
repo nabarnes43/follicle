@@ -61,10 +61,13 @@ interface BaseGridProps<T> {
   // Results count
   showResultsCount?: boolean
   resultsCountLabel?: (displayed: number, total: number) => string
+
+  emptyAction?: React.ReactNode
 }
 
 export function BaseGrid<T>({
   items,
+  emptyAction,
   loading = false,
   renderCard,
   renderSkeleton,
@@ -233,6 +236,7 @@ export function BaseGrid<T>({
             <EmptyMedia variant="icon">{emptyIcon}</EmptyMedia>
             <EmptyTitle>{emptyTitle}</EmptyTitle>
             <EmptyDescription>{emptyDescription}</EmptyDescription>
+            {emptyAction && <div className="mt-4">{emptyAction}</div>}
           </EmptyHeader>
         </Empty>
       )}

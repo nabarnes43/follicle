@@ -7,6 +7,8 @@ import { Package } from 'lucide-react'
 import type { PreComputedProductMatchScore } from '@/types/productMatching'
 import { useRouter } from 'next/navigation'
 import { PRODUCT_CATEGORIES } from '@/lib/constants/categories'
+import Link from 'next/link'
+import { Plus } from 'lucide-react'
 
 interface ProductGridProps {
   /** Pre-scored products from firebase */
@@ -33,7 +35,7 @@ interface ProductGridProps {
 export function ProductGrid({
   products,
   showMatchScores = true,
-  emptyMessage = 'No products found',
+  emptyMessage = 'Try adjusting your search or filter criteria.',
   loading = false,
   hideSaveButton = false,
 }: ProductGridProps) {
@@ -72,6 +74,15 @@ export function ProductGrid({
       renderSkeleton={() => <ProductCardSkeleton />}
       resultsCountLabel={(displayed, total) =>
         `Showing ${displayed} of ${total} products`
+      }
+      emptyAction={
+        <Link
+          href="/products/add"
+          className="text-primary flex items-center gap-1 text-sm hover:underline"
+        >
+          <Plus className="h-4 w-4" />
+          Can't find your product? Add it
+        </Link>
       }
     />
   )
