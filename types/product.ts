@@ -28,6 +28,10 @@ export interface Product {
   // Optional fields
   description?: string
   affiliate_url?: string
+  //Add products
+  status: 'approved' | 'pending_review'
+  addedByUserId: string | null
+  addedByUserName: string | null
 }
 
 //This is really for the future and because it is already a field in the database
