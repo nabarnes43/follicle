@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Search, X, Star } from 'lucide-react'
+import { Search, X, Star, Plus } from 'lucide-react'
 import { PreComputedProductMatchScore } from '@/types/productMatching'
 import Fuse from 'fuse.js'
+import Link from 'next/link'
 
 interface ProductSearchProps {
   onSelect: (match: PreComputedProductMatchScore) => void // Pass full match object
@@ -22,7 +23,7 @@ export function ProductSearch({
   excludeIds = [],
   savedProductIds = [],
   likedProductIds = [],
-  productScores, 
+  productScores,
 }: ProductSearchProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<PreComputedProductMatchScore[]>([])
@@ -208,13 +209,27 @@ export function ProductSearch({
           {showEmptyState && (
             <div className="text-muted-foreground p-4 text-center text-sm">
               <p>Start typing to search products</p>
+              <Link
+                href="/products/add"
+                className="text-primary mt-2 flex items-center justify-center gap-1 hover:underline"
+              >
+                <Plus className="h-4 w-4" />
+                Can't find your product? Add it
+              </Link>
             </div>
           )}
 
           {/* No results */}
           {showNoResults && (
             <div className="text-muted-foreground p-4 text-center text-sm">
-              No products found
+              <p>No products found</p>
+              <Link
+                href={`/products/add?name=${encodeURIComponent(query)}`}
+                className="text-primary mt-2 flex items-center justify-center gap-1 hover:underline"
+              >
+                <Plus className="h-4 w-4" />
+                Can't find your product? Add it
+              </Link>
             </div>
           )}
         </div>

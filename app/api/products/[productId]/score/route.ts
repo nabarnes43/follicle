@@ -47,7 +47,7 @@ export async function GET(
     }
 
     console.log(
-      `✅ Fetched fresh score for product ${productId}: ${data.score.toFixed(4)}`
+      `Fetched fresh score for product ${productId}: ${data.score.toFixed(4)}`
     )
 
     return NextResponse.json({ score }, { status: 200 })

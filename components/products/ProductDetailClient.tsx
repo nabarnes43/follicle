@@ -90,7 +90,7 @@ export function ProductDetailClient({
         const data = await response.json()
         if (data.score) {
           setProductScore(data.score)
-          console.log('✅ Fetched fresh score:', data.score.totalScore)
+          console.log('Fetched fresh score:', data.score.totalScore)
         }
       }
     } catch (error) {
@@ -131,9 +131,19 @@ export function ProductDetailClient({
         {/* Header */}
         <div className="mb-3">
           <BackButton className="mb-4" />
-          <h1 className="mb-1 text-3xl font-bold text-gray-900">
-            {product.name}
-          </h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="mb-1 text-3xl font-bold text-gray-900">
+              {product.name}
+            </h1>
+            {product.status === 'pending_review' && (
+              <Badge
+                variant="outline"
+                className="mt-1 border-yellow-400 bg-center whitespace-nowrap text-yellow-600"
+              >
+                Pending Review
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground mb-3 text-lg">{product.brand}</p>
         </div>
 
@@ -199,13 +209,27 @@ export function ProductDetailClient({
           )}
         </div>
 
-        {/* Price - Small, centered */}
-        <div className="mb-3 text-center">
+        {/* Price + Attribution Row */}
+        <div className="mb-3 flex items-center justify-between">
           <span className="text-muted-foreground text-sm">
             {product.price
               ? `$${product.price.toFixed(2)}`
               : 'Price not available'}
           </span>
+          <p className="text-muted-foreground text-xs">
+            Added by {product.addedByUserName || 'Follicle'}
+            {product.created_at && (
+              <span>
+                {' '}
+                •{' '}
+                {new Date(product.created_at).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </span>
+            )}
+          </p>
         </div>
 
         {/* Match Reasons - Pills with minimal layout */}

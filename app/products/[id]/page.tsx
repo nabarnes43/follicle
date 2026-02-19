@@ -16,7 +16,7 @@ export default async function ProductDetailPage({
   const user = await getServerUser()
 
   // Fetch product from public collection
-  const product = await getCachedProductById(id)
+  const product = await getCachedProductById(id, user?.userId)
 
   if (!product) {
     notFound()

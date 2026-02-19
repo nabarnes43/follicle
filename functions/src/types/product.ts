@@ -19,6 +19,9 @@ export interface Product {
   data_source: string
   description?: string
   affiliate_url?: string
+  status: 'approved' | 'pending_review'
+  addedByUserId: string | null
+  addedByUserName: string | null
 }
 
 export interface ProductReview {

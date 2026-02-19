@@ -71,6 +71,15 @@ export default function NavBar() {
                   <span>My Products</span>
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/products/add"
+                  className="flex w-full items-center space-x-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Product</span>
+                </Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

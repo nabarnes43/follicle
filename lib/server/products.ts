@@ -10,6 +10,7 @@ export const getCachedAllProducts = unstable_cache(
   async (): Promise<Product[]> => {
     const snapshot = await adminDb
       .collection('products')
+      .where('status', '==', 'approved')
       .select('brand', 'name', 'category', 'price', 'image_url')
       .orderBy('name', 'asc')
       .get()
@@ -45,8 +46,7 @@ export const getCachedProductsByIds = unstable_cache(
 
     for (const id of productIds) {
       const doc = await adminDb.collection('products').doc(id).get()
-
-      if (doc.exists) {
+      if (doc.exists && doc.data()?.status === 'approved') {
         products.push(
           serializeFirestoreDoc<Product>({
             id: doc.id,
@@ -69,12 +69,14 @@ export const getCachedProductsByIds = unstable_cache(
  * Get single product by ID (cached)
  */
 export const getCachedProductById = unstable_cache(
-  async (id: string): Promise<Product | null> => {
+  async (id: string, userId?: string): Promise<Product | null> => {
     const doc = await adminDb.collection('products').doc(id).get()
 
-    if (!doc.exists) {
-      return null
-    }
+    if (!doc.exists) return null
+
+    const data = doc.data()!
+    // Allow if approved or if the requesting user submitted it
+    if (data.status !== 'approved' && data.addedByUserId !== userId) return null
 
     return serializeFirestoreDoc<Product>({
       id: doc.id,
@@ -99,6 +101,7 @@ export const getCachedProductsByIngredient = unstable_cache(
     let query = adminDb
       .collection('products')
       .where('ingredient_refs', 'array-contains', ingredientId)
+      .where('status', '==', 'approved')
       .select('brand', 'name', 'category', 'price', 'image_url')
       .orderBy('name', 'asc')
 
