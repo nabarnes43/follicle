@@ -29,11 +29,10 @@ export function IngredientsGrid({
 
   const activeFilterCount = [
     filters.functionType !== 'all',
-    filters.sort !== 'products_asc',
+    filters.sort !== 'products_desc',
   ].filter(Boolean).length
 
   const processedIngredients = useMemo(() => {
-    if (filters.sort === 'products_asc') return ingredients
     return [...ingredients].sort((a, b) => {
       const pa = a.product_count ?? 0
       const pb = b.product_count ?? 0

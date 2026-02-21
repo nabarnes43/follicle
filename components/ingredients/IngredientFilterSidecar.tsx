@@ -14,12 +14,12 @@ import { INGREDIENT_FUNCTION_TYPES } from '@/lib/constants/functionTypes'
 
 export interface IngredientFilterState {
   functionType: string
-  sort: 'products_asc' | 'products_desc'
+  sort: 'products_desc' | 'products_asc'
 }
 
 export const DEFAULT_INGREDIENT_FILTER_STATE: IngredientFilterState = {
   functionType: 'all',
-  sort: 'products_asc',
+  sort: 'products_desc',
 }
 
 interface IngredientFilterSidecarProps {
@@ -68,8 +68,8 @@ export function IngredientFilterSidecar({
             </p>
             <div className="flex flex-col gap-1">
               {[
-                { value: 'products_asc', label: 'Products: Low to High' },
                 { value: 'products_desc', label: 'Products: High to Low' },
+                { value: 'products_asc', label: 'Products: Low to High' },
               ].map((option) => (
                 <button
                   key={option.value}
