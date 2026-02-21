@@ -6,7 +6,6 @@ import { BaseGrid } from '@/components/shared/BaseGrid'
 import { Package } from 'lucide-react'
 import type { PreComputedProductMatchScore } from '@/types/productMatching'
 import { useRouter } from 'next/navigation'
-import { PRODUCT_CATEGORIES } from '@/lib/constants/categories'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import {
@@ -14,7 +13,7 @@ import {
   FilterSidecarState,
   ProductFilterSidecar,
 } from './ProductsFilterSidecar'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 interface ProductGridProps {
   /** Pre-scored products from firebase */
@@ -55,19 +54,44 @@ export function ProductGrid({
     filters.category !== 'all',
   ].filter(Boolean).length
 
+  const processedProducts = useMemo(() => {
+    let result = [...products]
+
+    // Max price — null price always passes, sorted last
+    if (filters.maxPrice !== null) {
+      result = result.filter(
+        (m) => m.product.price == null || m.product.price <= filters.maxPrice!
+      )
+    }
+
+    // Sort by price
+    const shouldSort = filters.sort !== 'default' || filters.maxPrice !== null
+    if (shouldSort) {
+      result.sort((a, b) => {
+        const pa = a.product.price ?? null
+        const pb = b.product.price ?? null
+        if (pa == null && pb == null) return 0
+        if (pa == null) return 1 // null last
+        if (pb == null) return -1
+        if (filters.sort === 'price_asc') return pa - pb
+        if (filters.sort === 'price_desc') return pb - pa
+        return 0
+      })
+    }
+
+    return result
+  }, [products, filters.sort, filters.maxPrice])
+
   return (
     <BaseGrid
-      items={products}
+      items={processedProducts}
       loading={loading}
       gridClassName="grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       searchPlaceholder="Search by product or brand name..."
       getSearchableText={(match) =>
         `${match.product.name} ${match.product.brand}`
       }
-      sort={filters.sort}
-      maxPrice={filters.maxPrice}
       category={filters.category}
-      getPrice={(match) => match.product.price ?? null}
       getCategory={(match) => match.product.category}
       sidecar={
         <ProductFilterSidecar

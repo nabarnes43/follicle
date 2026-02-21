@@ -156,7 +156,7 @@ export function ProductFilterSidecar({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="h-10 gap-2">
+        <Button variant="outline" size="sm" className="h-10 w-40 gap-2">
           <SlidersHorizontal className="h-4 w-4" />
           Filters
           {activeFilterCount > 0 && (

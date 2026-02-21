@@ -33,11 +33,8 @@ interface BaseGridProps<T> {
   // Sidecar
   sidecar?: React.ReactNode
 
-  // Filtering & sorting — passed in from parent (e.g. ProductGrid)
-  sort?: 'default' | 'price_asc' | 'price_desc'
-  maxPrice?: number | null
-  category?: string // 'all' or a specific category value
-  getPrice?: (item: T) => number | null
+  // Category filter — generic
+  category?: string
   getCategory?: (item: T) => string
 
   // Empty State
@@ -66,10 +63,7 @@ export function BaseGrid<T>({
   searchPlaceholder = 'Search...',
   getSearchableText,
   sidecar,
-  sort = 'default',
-  maxPrice = null,
   category = 'all',
-  getPrice,
   getCategory,
   emptyIcon,
   emptyTitle,
@@ -87,7 +81,7 @@ export function BaseGrid<T>({
   // Reset pagination when filters change
   useEffect(() => {
     setDisplayLimit(initialDisplayLimit)
-  }, [searchQuery, sort, maxPrice, category, initialDisplayLimit])
+  }, [searchQuery, category, initialDisplayLimit])
 
   const { displayedItems, totalCount } = useMemo(() => {
     let filtered = items
@@ -105,31 +99,6 @@ export function BaseGrid<T>({
       filtered = filtered.filter((item) => getCategory(item) === category)
     }
 
-    // Max price — null price always passes
-    if (maxPrice !== null && getPrice) {
-      filtered = filtered.filter((item) => {
-        const price = getPrice(item)
-        return price == null || price <= maxPrice
-      })
-    }
-
-    // Sort + push null-price items last when price sort or max price is active
-    const shouldPushNullLast =
-      sort !== 'default' || (maxPrice !== null && getPrice !== undefined)
-
-    if (shouldPushNullLast && getPrice) {
-      filtered = [...filtered].sort((a, b) => {
-        const pa = getPrice(a)
-        const pb = getPrice(b)
-        if (pa == null && pb == null) return 0
-        if (pa == null) return 1
-        if (pb == null) return -1
-        if (sort === 'price_asc') return pa - pb
-        if (sort === 'price_desc') return pb - pa
-        return 0
-      })
-    }
-
     return {
       displayedItems: filtered.slice(0, displayLimit),
       totalCount: filtered.length,
@@ -139,10 +108,7 @@ export function BaseGrid<T>({
     searchQuery,
     displayLimit,
     getSearchableText,
-    sort,
-    maxPrice,
     category,
-    getPrice,
     getCategory,
   ])
 
