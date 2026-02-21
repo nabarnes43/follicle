@@ -9,6 +9,12 @@ import { useRouter } from 'next/navigation'
 import { PRODUCT_CATEGORIES } from '@/lib/constants/categories'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
+import {
+  DEFAULT_FILTER_STATE,
+  FilterSidecarState,
+  ProductFilterSidecar,
+} from './ProductsFilterSidecar'
+import { useState } from 'react'
 
 interface ProductGridProps {
   /** Pre-scored products from firebase */
@@ -40,6 +46,14 @@ export function ProductGrid({
   hideSaveButton = false,
 }: ProductGridProps) {
   const router = useRouter()
+  const [filters, setFilters] =
+    useState<FilterSidecarState>(DEFAULT_FILTER_STATE)
+
+  const activeFilterCount = [
+    filters.sort !== 'default',
+    filters.maxPrice !== null,
+    filters.category !== 'all',
+  ].filter(Boolean).length
 
   return (
     <BaseGrid
@@ -50,16 +64,18 @@ export function ProductGrid({
       getSearchableText={(match) =>
         `${match.product.name} ${match.product.brand}`
       }
-      filters={[
-        {
-          getFilterValue: (match) => match.product.category,
-          options: [
-            { value: 'all', label: 'All Categories' },
-            ...PRODUCT_CATEGORIES.map((cat) => ({ value: cat, label: cat })),
-          ],
-          allValue: 'all',
-        },
-      ]}
+      sort={filters.sort}
+      maxPrice={filters.maxPrice}
+      category={filters.category}
+      getPrice={(match) => match.product.price ?? null}
+      getCategory={(match) => match.product.category}
+      sidecar={
+        <ProductFilterSidecar
+          state={filters}
+          onChange={setFilters}
+          activeFilterCount={activeFilterCount}
+        />
+      }
       emptyIcon={<Package />}
       emptyTitle="No Products Found"
       emptyDescription={emptyMessage}

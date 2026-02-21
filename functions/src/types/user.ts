@@ -45,7 +45,6 @@ export interface HairAnalysis {
   length?: 'short' | 'medium' | 'long'
   scalpType?: 'dry' | 'balanced' | 'oily'
   mainGoal?: 'moisture' | 'definition' | 'growth' | 'repair' | 'volume'
-  budget?: number
   washFrequency?: 'daily' | 'every2-3' | 'weekly' | 'biweekly'
   mlClassification?: {
     confidence: number

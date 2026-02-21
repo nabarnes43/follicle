@@ -35,7 +35,6 @@ export interface RecommendationsResponse {
   category: string
   user: {
     follicleId: string
-    budget?: number
   }
   recommendations: ProductMatchScore[]
 }

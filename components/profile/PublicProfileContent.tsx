@@ -334,14 +334,6 @@ export default function PublicProfileContent({
                   </p>
                 </div>
               )}
-              {hair?.budget !== undefined && (
-                <div>
-                  <p className="text-muted-foreground mb-1 text-sm">
-                    Monthly Budget
-                  </p>
-                  <p className="text-lg font-semibold">${hair.budget}</p>
-                </div>
-              )}
               {hair?.washFrequency && (
                 <div>
                   <p className="text-muted-foreground mb-1 text-sm">

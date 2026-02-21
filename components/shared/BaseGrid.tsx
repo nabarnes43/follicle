@@ -3,13 +3,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import {
   Empty,
@@ -23,15 +16,6 @@ import { Search, X } from 'lucide-react'
 const INITIAL_DISPLAY_LIMIT = 48
 const LOAD_MORE_INCREMENT = 48
 
-interface FilterConfig<T> {
-  // How to extract the filterable value from an item
-  getFilterValue: (item: T) => string
-
-  // Filter options
-  options: Array<{ value: string; label: string }>
-  allValue?: string // e.g., 'all' - shows everything (optional)
-}
-
 interface BaseGridProps<T> {
   // Data
   items: T[]
@@ -40,14 +24,21 @@ interface BaseGridProps<T> {
   // Rendering
   renderCard: (item: T, index: number) => React.ReactNode
   renderSkeleton: () => React.ReactNode
-  gridClassName?: string // e.g., "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+  gridClassName?: string
 
   // Search
   searchPlaceholder?: string
-  getSearchableText: (item: T) => string // Extract searchable text from item
+  getSearchableText: (item: T) => string
 
-  // Filters
-  filters?: FilterConfig<T>[]
+  // Sidecar
+  sidecar?: React.ReactNode
+
+  // Filtering & sorting — passed in from parent (e.g. ProductGrid)
+  sort?: 'default' | 'price_asc' | 'price_desc'
+  maxPrice?: number | null
+  category?: string // 'all' or a specific category value
+  getPrice?: (item: T) => number | null
+  getCategory?: (item: T) => string
 
   // Empty State
   emptyIcon: React.ReactNode
@@ -74,7 +65,12 @@ export function BaseGrid<T>({
   gridClassName = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
   searchPlaceholder = 'Search...',
   getSearchableText,
-  filters = [],
+  sidecar,
+  sort = 'default',
+  maxPrice = null,
+  category = 'all',
+  getPrice,
+  getCategory,
   emptyIcon,
   emptyTitle,
   emptyDescription,
@@ -86,21 +82,17 @@ export function BaseGrid<T>({
 }: BaseGridProps<T>) {
   const [searchQuery, setSearchQuery] = useState('')
   const [displayLimit, setDisplayLimit] = useState(initialDisplayLimit)
-  const [filterValues, setFilterValues] = useState<string[]>(
-    filters?.map((f) => f.allValue || f.options[0]?.value || '') || []
-  )
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
-  // Reset pagination when search or filters change
+  // Reset pagination when filters change
   useEffect(() => {
     setDisplayLimit(initialDisplayLimit)
-  }, [searchQuery, filterValues, initialDisplayLimit])
+  }, [searchQuery, sort, maxPrice, category, initialDisplayLimit])
 
-  // Filter and paginate items
   const { displayedItems, totalCount } = useMemo(() => {
     let filtered = items
 
-    // Apply search filter
+    // Search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter((item) =>
@@ -108,16 +100,33 @@ export function BaseGrid<T>({
       )
     }
 
-    // Apply custom filters
-    if (filters && filters.length > 0) {
+    // Category
+    if (category !== 'all' && getCategory) {
+      filtered = filtered.filter((item) => getCategory(item) === category)
+    }
+
+    // Max price — null price always passes
+    if (maxPrice !== null && getPrice) {
       filtered = filtered.filter((item) => {
-        return filters.every((filter, idx) => {
-          const selectedValue = filterValues[idx]
-          // If "all" value selected, don't filter
-          if (filter.allValue && selectedValue === filter.allValue) return true
-          // Otherwise check if item matches selected filter value
-          return filter.getFilterValue(item) === selectedValue
-        })
+        const price = getPrice(item)
+        return price == null || price <= maxPrice
+      })
+    }
+
+    // Sort + push null-price items last when price sort or max price is active
+    const shouldPushNullLast =
+      sort !== 'default' || (maxPrice !== null && getPrice !== undefined)
+
+    if (shouldPushNullLast && getPrice) {
+      filtered = [...filtered].sort((a, b) => {
+        const pa = getPrice(a)
+        const pb = getPrice(b)
+        if (pa == null && pb == null) return 0
+        if (pa == null) return 1
+        if (pb == null) return -1
+        if (sort === 'price_asc') return pa - pb
+        if (sort === 'price_desc') return pb - pa
+        return 0
       })
     }
 
@@ -130,14 +139,16 @@ export function BaseGrid<T>({
     searchQuery,
     displayLimit,
     getSearchableText,
-    filters,
-    filterValues,
+    sort,
+    maxPrice,
+    category,
+    getPrice,
+    getCategory,
   ])
 
-  // Infinite scroll observer
+  // Infinite scroll
   useEffect(() => {
     const currentRef = loadMoreRef.current
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && displayLimit < totalCount) {
@@ -146,7 +157,6 @@ export function BaseGrid<T>({
       },
       { rootMargin: '200px', threshold: 0 }
     )
-
     if (currentRef) observer.observe(currentRef)
     return () => {
       if (currentRef) observer.unobserve(currentRef)
@@ -156,60 +166,31 @@ export function BaseGrid<T>({
   return (
     <div className="container mx-auto px-4 py-4">
       {/* Filter Bar */}
-      {(searchPlaceholder || filters.length > 0) && (
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-          {/* Search Input */}
-          {searchPlaceholder && (
-            <div className="relative flex-1">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                disabled={loading}
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
-                  onClick={() => setSearchQuery('')}
-                  disabled={loading}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Filters */}
-          {filters.map((filter, idx) => (
-            <Select
-              key={idx}
-              value={filterValues[idx]}
-              onValueChange={(value) => {
-                const newValues = [...filterValues]
-                newValues[idx] = value
-                setFilterValues(newValues)
-              }}
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            type="text"
+            placeholder={searchPlaceholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-10 pl-9"
+            disabled={loading}
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+              onClick={() => setSearchQuery('')}
               disabled={loading}
             >
-              <SelectTrigger className={'w-full sm:w-[200px]'}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {filter.options.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ))}
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-      )}
+        {sidecar && <div>{sidecar}</div>}
+      </div>
 
       {/* Results Count */}
       {!loading && totalCount > 0 && showResultsCount && (
@@ -220,7 +201,7 @@ export function BaseGrid<T>({
         </div>
       )}
 
-      {/* Loading State - Skeleton Grid */}
+      {/* Loading State */}
       {loading && (
         <div className={`grid gap-6 ${gridClassName}`}>
           {Array.from({ length: 12 }).map((_, i) => (
@@ -249,8 +230,6 @@ export function BaseGrid<T>({
               <div key={index}>{renderCard(item, index)}</div>
             ))}
           </div>
-
-          {/* Infinite scroll trigger */}
           {displayLimit < totalCount && (
             <div ref={loadMoreRef} className="mt-8 flex justify-center py-8">
               <Spinner className="h-8 w-8" />
