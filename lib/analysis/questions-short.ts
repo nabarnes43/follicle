@@ -107,18 +107,7 @@ export const SHORT_ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     ],
   },
 
-  // 9. Budget
-  {
-    id: 'budget',
-    type: 'slider',
-    question: 'Monthly hair care budget?',
-    min: 0,
-    max: 200,
-    step: 10,
-    unit: '$',
-  },
-
-  // 10. Wash Frequency
+  // 9. Wash Frequency
   {
     id: 'washFrequency',
     type: 'select',

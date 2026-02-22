@@ -237,16 +237,7 @@ export const ANALYSIS_QUESTIONS: AnalysisQuestion[] = [
     ],
   },
 
-  // === BUDGET & LIFESTYLE ===
-  {
-    id: 'budget',
-    type: 'slider',
-    question: 'What is your monthly hair care budget?',
-    min: 0,
-    max: 200,
-    step: 10,
-    unit: '$',
-  },
+  // === LIFESTYLE ===
   {
     id: 'timeCommitment',
     type: 'radio',

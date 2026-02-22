@@ -24,7 +24,6 @@ export async function saveAnalysisResults(
     length: answers.length,
     scalpType: answers.scalpType,
     mainGoal: answers.mainGoal,
-    budget: answers.budget,
     washFrequency: answers.washFrequency,
   }
 
